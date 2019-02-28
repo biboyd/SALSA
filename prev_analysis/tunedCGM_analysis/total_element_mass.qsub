@@ -1,0 +1,13 @@
+#!/bin/bash -login
+#PBS -l walltime=4:00:00,nodes=32:ppn=8
+#PBS -l mem=256gb
+#PBS -j oe
+#PBS -N total_ion_mass
+
+cd /mnt/scratch/f0002318/tunedCGM_analysis
+
+mpirun -np 256 python total_elementmass_save.py "/mnt/scratch/dsilvia/simulations/reu_sims/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/lowerRes/DD????/DD????" "O" 'a' 64
+
+###env | grep PBS  
+
+qstat -f ${PBS_JOBID}     # Print out final statistics about resource uses before job exits

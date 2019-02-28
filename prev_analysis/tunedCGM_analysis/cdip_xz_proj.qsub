@@ -1,0 +1,21 @@
+#!/bin/bash -login
+#PBS -l walltime=4:00:00,nodes=8:ppn=16
+#PBS -l mem=64gb
+#PBS -j oe
+#PBS -N cdip_xz_proj
+
+### load necessary modules, e.g.
+### module load HDF5
+
+### change to the working directory where your code is located
+cd /mnt/scratch/f0002318/tunedCGM_analysis/
+
+### call your executable
+echo "cdip_xz_proj job initialized." > cdip_xz_proj_qsub.log
+
+mpirun -np 128 python cdip_xz_proj.py "/mnt/scratch/dsilvia/simulations/reu_sims/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/lowerRes/DD????/DD????" 128 "/mnt/scratch/f0002318/tunedCGM_analysis/CDIP_XZ_PROJ/"
+echo "tunedCGM completed" >> cdip_xz_proj_qsub.log
+
+###env | grep PBS  
+
+qstat -f ${PBS_JOBID}     # Print out final statistics about resource uses before job exits

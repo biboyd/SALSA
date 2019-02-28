@@ -1,0 +1,14 @@
+#!/bin/bash -login
+#PBS -l walltime=4:00:00,nodes=32:ppn=8
+#PBS -l mem=256gb
+#PBS -j oe
+#PBS -N total_o_sphere
+
+cd /mnt/scratch/f0002318/lowres_analysis
+
+mpirun -np 256 python O_fractions_sphere_save.py '/mnt/scratch/dsilvia/simulations/reu_sims/MW_1638kpcBox_800pcCGM_200pcDisk_lowres/DD????/DD????' 'a' 64
+
+
+###env | grep PBS  
+
+qstat -f ${PBS_JOBID}     # Print out final statistics about resource uses before job exits
