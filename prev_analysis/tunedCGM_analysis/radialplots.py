@@ -362,7 +362,7 @@ def generate_lightrays(ds,
                                     out_radius,
                                     True)
 
-    np.save("allpoints",np.array(allpoints))
+    #np.save("allpoints",np.array(allpoints))
     #ray_list = []
     index_list = np.arange(0,num_points)
     num_procs = 0
@@ -388,8 +388,9 @@ def generate_lightrays(ds,
 
         f.close()
 
-    print(len(allpoints[:][2]))
-    return allpoints[:][2]
+    #print(len(allpoints[:][2]))
+    allpoints= np.array(allpoints)
+    return allpoints[:, 2]
 
 # in and out radius in terms of ds
 # (accepts 1 ion)
