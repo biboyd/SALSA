@@ -750,10 +750,11 @@ def create_cdip_uniform(filenames,
         d = radius_length*2.
         bins = np.arange(0,num_bins)
         impact_parameters=[]
-
+        in_out=[]
         for bin in bins:
             in_radius = bin * dr
             out_radius = (bin + 1) * dr
+            in_out.append([in_radius, out_radius])
             # num_lines = center_num_lines * (3 * bin**2 + 3 * bin + 1)
             num_lines = center_num_lines * ((bin + 1)**2 - bin**2)
 
@@ -774,6 +775,8 @@ def create_cdip_uniform(filenames,
             print(output_filename_head,ds,"bin",bin,"finished")
 
         impact_parameters = np.array(impact_parameters)
+        in_out = np.array(in_out)
+        np.save("in_out_radii", in_out)
         np.save("impact_param", impact_parameters)
         # iterate over each ion
         for ion in ion_species:
