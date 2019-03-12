@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-impact_param = np.load("impact_parameters.npy")
+impact_param = np.load("impact_param.npy")
 
-plt.histo(impact_param, bins=25)
+plt.hist(impact_param, bins=25)
 
 plt.title("Distribution of Impact Parameter")
 plt.xlabel("Impact Parameter (kpc)")
