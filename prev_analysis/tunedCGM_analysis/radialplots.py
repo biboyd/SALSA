@@ -33,24 +33,24 @@ def yt_remove_spaces(ytquan):
 # creates 3-panel plots of column density vs. impact parameter
 # compares median, mean, standard deviation in projection along x- and z- axes
 # creates cdip plots naively, only looking along two projection axes
-#
+# 
 # takes arguments containing:
-# pattern matching for data dumps, number of processes to parallelize over, ion species names, center coordinate,
-# center units, radius length, radius units, pixel number (width of image), number of radial bins,
+# pattern matching for data dumps, number of processes to parallelize over, ion species names, center coordinate, 
+# center units, radius length, radius units, pixel number (width of image), number of radial bins, 
 # y limits for each plot, and the header for the output filenames
 # 'output_filename_head' can be used to place files inside specific directories (end with a '/')
-def create_cdip_xz_proj(filenames,
-                        num_procs,
-                        ion_species = None,
-                        center_coord = None,
-                        center_units = None,
-                        radius_length = None,
-                        radius_units = None,
-                        pix_num = None,
+def create_cdip_xz_proj(filenames, 
+                        num_procs, 
+                        ion_species = None, 
+                        center_coord = None, 
+                        center_units = None, 
+                        radius_length = None, 
+                        radius_units = None, 
+                        pix_num = None, 
                         num_bins = None,
-                        y_lim1 = None,
-                        y_lim2 = None,
-                        y_lim3 = None,
+                        y_lim1 = None, 
+                        y_lim2 = None, 
+                        y_lim3 = None, 
                         output_filename_head = './'):
     if ion_species is None:
         ion_species = ['O VI', 'H I', 'C IV']
@@ -62,7 +62,7 @@ def create_cdip_xz_proj(filenames,
         radius_length = 300
     if radius_units is None:
         radius_units = "kpc"
-    if pix_num is None:
+    if pix_num is None: 
         pix_num = 1000
     if num_bins is None:
         num_bins = 10
@@ -74,7 +74,7 @@ def create_cdip_xz_proj(filenames,
         y_lim3 = [0,0]
     if output_filename_head is None:
         output_filename_head ='./'
-
+        
     # print("----")
     # print(filenames)
     # print(num_procs)
@@ -85,7 +85,7 @@ def create_cdip_xz_proj(filenames,
     # print(y_lim1,y_lim2,y_lim3)
     # print(output_filename_head)
     # print("----")
-
+    
     # set up logging script parameters
     logging.info('Filenames: %s' % filenames)
     logging.info('Number of processes: %s' % num_procs)
@@ -96,11 +96,11 @@ def create_cdip_xz_proj(filenames,
     logging.info('Number of radial bins: %s' % num_bins)
     logging.info('Y-limits, if any set: %s,%s,%s' % (y_lim1,y_lim2,y_lim3))
     logging.info('Output filename head: %s' % output_filename_head)
-
-
+    
+    
     ts = yt.DatasetSeries(filenames, parallel = num_procs)
     logging.info('Stop 1')
-
+    
     for ds in ts.piter():
         logging.info('Stop 2')
         trident.add_ion_fields(ds, ions=ion_species)
@@ -114,7 +114,7 @@ def create_cdip_xz_proj(filenames,
         right_edge = center.in_units(radius_units)+offset
         cube = ds.region(center,left_edge,right_edge)
         d = radius_length*2.
-
+        
         # iterate over each ion
         for ion in ion_species:
             cdip_filename = (output_filename_head+'cdip_xz_'+ion_p_name(ion)+'_%s_'+str(int(d))+radius_units+'_box.png') % ds
@@ -124,7 +124,7 @@ def create_cdip_xz_proj(filenames,
                 proj_ion_0 = yt.ProjectionPlot(ds,0,ion_number_density_name,center,data_source = cube)
                 proj_ion_2 = yt.ProjectionPlot(ds,2,ion_number_density_name,center,data_source = cube)
 
-
+                
                 # pix_num = 1000
                 center_pix = (pix_num - 1) / 2.
 
@@ -169,12 +169,12 @@ def create_cdip_xz_proj(filenames,
                     y_med_ion_2.append(np.median(val_by_r_ion_2[b]))
                     y_mean_ion_2.append(np.mean(val_by_r_ion_2[b]))
                     y_std_ion_2.append(np.std(val_by_r_ion_2[b]))
-
+                    
                 ###
                 # FORMAT FINAL IMAGE
                 ###
 
-
+                
 
                 plt.close('all')
 
@@ -250,20 +250,20 @@ def create_cdip_xz_proj(filenames,
                     file = open(output_filename_head+"filenames_cdip_xz_proj.fn",'a+')
                     file.write(filenames[:-13]+"%s/%s -- %s\n" % (ds,ds,ion))
                     file.close()
-
+            
 # Arguments: number of points, sightline length, inner radius, outer radius, yt_bool
 # Set yt_bool to true if you're generating sightlines on a loaded dataset ds
 # Outputs: list of pairs of endpoints (list of list of lists)
 def generate_sightlines(ds,
-                        num_points,
-                        sightline,
-                        center,
-                        in_radius,
-                        out_radius,
+                        num_points, 
+                        sightline, 
+                        center, 
+                        in_radius, 
+                        out_radius, 
                         yt_bool):
     sightline_array = []
     delta = 5.551115123125783e-17
-
+    
     if yt_bool == True:
         length = sightline.in_units("code_length")
         c = center.in_units("code_length")
@@ -274,7 +274,7 @@ def generate_sightlines(ds,
         c = center
         ri = in_radius
         ro = out_radius
-
+    
     #length = sightline_length.in_units("unitary")
     #c = center.in_units("unitary")
     #ri = in_radius.in_units("unitary")
@@ -286,7 +286,7 @@ def generate_sightlines(ds,
         Z = np.random.uniform(-1.,1.) * R
         X = np.sqrt(1. - (Z/R)**2.) * np.cos(theta) * R
         Y = np.sqrt(1. - (Z/R)**2.) * np.sin(theta) * R
-
+        
         # establish radial vector r / perpendicular vectors r1 & r2
         if yt_bool == True:
             r = ds.arr([X, Y, Z],"code_length")
@@ -298,18 +298,18 @@ def generate_sightlines(ds,
         #print([Y, -X, 0],r1_normalization,r1)
         r2temp = np.cross(r, r1)
         r2 = np.divide(r2temp,np.linalg.norm(r2temp))
-
+        
         # establish direction vector d along random angle alpha from 0 to 2pi
         # d is perpendicular to radial r vector
         alpha = np.random.uniform(0., 2.*np.pi)
         d = r1 * np.cos(alpha) + r2 * np.sin(alpha)
         dnorm = np.linalg.norm(d)
         #d = ds.arr(d, "code_length")
-
-        # calculate endpoints, constrained by [0,1]x[0,1]x[0,1] box
+        
+        # calculate endpoints, constrained by [0,1]x[0,1]x[0,1] box 
         p_start=[sum(i) for i in zip(c,r,-np.multiply(np.divide(d,dnorm),length/2.))]
         p_end=[sum(i) for i in zip(c,r,np.multiply(np.divide(d,dnorm),length/2.))]
-
+        
         if yt_bool == True:
             zero = ds.quan(0.,"code_length")
             one = ds.quan(1.,"code_length")
@@ -332,22 +332,22 @@ def generate_sightlines(ds,
                 element = zero
             if (np.abs(element - one)<=delta):
                 element = one
-
+    
     # add to final list
-        sightline_array.append([p_start,p_end,ds.quan(R,"code_length")]) #last part of array is the start end and R
+        sightline_array.append([p_start,p_end,ds.quan(R,"code_length")])
     return sightline_array
 
 ###### put it in terms of ds
 # line light, N, sightline length, plot center, inner radius, outer radius
 def generate_lightrays(ds,
-                       num_points,
+                       num_points, 
                        ion_species,
-                       sightline,
-                       center,
-                       in_radius,
-                       out_radius,
+                       sightline, 
+                       center, 
+                       in_radius, 
+                       out_radius, 
                         output_filename_head = './'):
-
+    
     try:
         os.makedirs(output_filename_head+"rays")
     except OSError as e:
@@ -386,18 +386,17 @@ def generate_lightrays(ds,
             print("%s,%s,%s,%s ray done" % (in_radius,out_radius,ds,index))
         f.close()
 
-    return allpoints[:][2]
 
 # in and out radius in terms of ds
 # (accepts 1 ion)
 def create_spectrum(ds,
-                      index,
-                      ion,
-                      in_radius,
+                      index, 
+                      ion, 
+                      in_radius, 
                       out_radius,
                       spec_lambda_min = 1000,
                       spec_lambda_max = 1050,
-                      spec_dlambda = 0.1,
+                      spec_dlambda = 0.1, 
                         output_filename_head = './'):
     try:
         os.makedirs(output_filename_head+"spectra")
@@ -415,12 +414,12 @@ def create_spectrum(ds,
 # in and out radius in terms of ds
 # (accepts 1 ion)
 def create_ndpl_plot(ds,
-                      index,
-                      ion,
-                      in_radius,
+                      index, 
+                      ion, 
+                      in_radius, 
                       out_radius,
                       ndpl_y_lim = (1e-12,1e-6),
-                      ndpl_log = False,
+                      ndpl_log = False, 
                         output_filename_head = './'):
     try:
         os.makedirs(output_filename_head+"ndpl")
@@ -449,26 +448,26 @@ def create_ndpl_plot(ds,
     #plt.ylim(1e-12,1e-6)
     plt.plot(x,y,'-')
     f.close()
-
+    
     plt.savefig(output_filename_head+'ndpl/ndpl_%s_r%s-%s_%s_%s.png' % (ion_p_name(ion),yt_remove_spaces(in_radius),
         yt_remove_spaces(out_radius),ds,index))
 
 # produces a column density from ndpl along a sightline
 # (accepts 1 ion)
 def integrate_ndpl(ds,
-                    index,
-                    ion,
-                    in_radius,
+                    index, 
+                    ion, 
+                    in_radius, 
                     out_radius,
                     output_filename_head = './'):
     f = h5py.File(output_filename_head+"rays/ray_r%s-%s_%s_%s.h5" % (yt_remove_spaces(in_radius),
         yt_remove_spaces(out_radius),ds,index), "r")
     # print(f,"test 1")
 
-    # ad hoc
+    # ad hoc 
     ion_prefix = ion_p_name(ion)
     if ion_p_name(ion)=="H_p0":
-        ion_prefix = "H"
+        ion_prefix = "H"    
     y = list(f['grid'][ion_prefix+'_number_density'])
     # print(y,'test 2')
     dl_list = list(f['grid']['dl'])
@@ -483,9 +482,9 @@ def integrate_ndpl(ds,
 # creates projection plot along x axis (accepts 1 ion)
 # incomplete
 def create_annotated_proj(ds,
-                            index,
+                            index, 
                             ion,
-                            axis = 0,
+                            axis = 0, 
                             center = [0.5,0.5,0.5],
                             width=(600,'kpc'),
                             output_filename_head = './'):
@@ -500,17 +499,17 @@ def create_annotated_proj(ds,
 
 # combines all three plots into a 3x1 grid; all line-of-sight (los) plots
 def spectrum_los_plot(ds,
-                      num_points,
-                      ion_species,
+                      num_points, 
+                      ion_species, 
                       sightline,
                       center,
-                      in_radius,
+                      in_radius, 
                       out_radius,
                       spec_lambda_min = 1000,
                       spec_lambda_max = 1050,
                       spec_dlambda = 0.1,
                       ndpl_y_lim = (1e-12,1e-6),
-                      ndpl_log = False,
+                      ndpl_log = False, 
                         output_filename_head = './'):
     try:
         os.makedirs(output_filename_head+"los")
@@ -520,12 +519,12 @@ def spectrum_los_plot(ds,
 
     # check that this is correct
     generate_lightrays(ds,
-                       num_points,
+                       num_points, 
                        ion_species,
-                       sightline,
-                       center,
-                       in_radius,
-                       out_radius,
+                       sightline, 
+                       center, 
+                       in_radius, 
+                       out_radius, 
                        output_filename_head)
     for index in np.arange(0,num_points):
         for ion in ion_species:
@@ -534,9 +533,9 @@ def spectrum_los_plot(ds,
             create_annotated_proj(ds,index,ion,0,(600,'kpc'),output_filename_head)
 
             # string everything together in a single image
-            list_im = [output_filename_head+'annotatedplots/annotatedplot_%s_%s_%s.png' % (ion_p_name(ion),ds,index),
+            list_im = [output_filename_head+'annotatedplots/annotatedplot_%s_%s_%s.png' % (ion_p_name(ion),ds,index), 
                        output_filename_head+'spectra/spec_%s_r%s-%s_%s_%s.png' % (ion_p_name(ion),yt_remove_spaces(in_radius),
-                            yt_remove_spaces(out_radius),ds,index),
+                            yt_remove_spaces(out_radius),ds,index), 
                        output_filename_head+'ndpl/ndpl_%s_r%s-%s_%s_%s.png' % (ion_p_name(ion),yt_remove_spaces(in_radius),
                             yt_remove_spaces(out_radius),ds,index)]
             imgs    = [ PIL.Image.open(i) for i in list_im ]
@@ -553,7 +552,7 @@ def spectrum_los_plot(ds,
                 temperino = i.resize((max_shape[0],x), PIL.Image.ANTIALIAS)
                 another_list.append(np.asarray(temperino))
 
-            #print(temp_list,another_list)
+            #print(temp_list,another_list)    
             #[int(max_shape[0]/i.size[0] * s) for s in i.size] ), PIL.Image.ANTIALIAS) for i in imgs ]
             imgs_comb = np.vstack(another_list)
             #print(ims_comb)
@@ -565,7 +564,7 @@ def spectrum_los_plot(ds,
 # creates projection plots along x and z axes
 def create_axes_proj(ds,
                     ion,
-                    axis = 0,
+                    axis = 0, 
                     center = [0.5,0.5,0.5],
                     width=(600,'kpc'),
                     ylim1=1e10,
@@ -579,7 +578,7 @@ def create_axes_proj(ds,
 
     proj_filename = (output_filename_head+'xz_plots/xz_plot_%s_%s_%s.png') % (ion_p_name(ion),ds,axis)
     if not os.path.exists(proj_filename):
-        trident.add_ion_fields(ds, ions=[ion])
+        trident.add_ion_fields(ds, ions=[ion])        
         p = yt.ProjectionPlot(ds, axis, ion_p_name(ion)+'_number_density', center=center, width=width)
         p.set_cmap(ion_p_name(ion)+'_number_density','STD GAMMA-II')
         p.set_zlim(ion_p_name(ion)+'_number_density',ylim1,ylim2)
@@ -589,7 +588,7 @@ def create_axes_proj(ds,
 # combines xz plots into one image, iterate over datadumps
 def combine_xz_plots(filenames,
                     num_procs,
-                    ion_species = None,
+                    ion_species = None, 
                     center = None,
                     ylim1x = None,
                     ylim2x = None,
@@ -606,7 +605,7 @@ def combine_xz_plots(filenames,
             raise
 
     ts = yt.DatasetSeries(filenames, parallel = num_procs)
-
+    
     for ds in ts.piter():
     # for fn in yt.parallel_objects(['/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0008/DD0008', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0006/DD0006', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0007/DD0007', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0010/DD0010', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0001/DD0001', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0005/DD0005', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0004/DD0004', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0011/DD0011', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0002/DD0002', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0000/DD0000', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0012/DD0012', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0009/DD0009', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0013/DD0013', '/mnt/research/galaxies-REU/sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_tunedCGM/DD0003/DD0003'], num_procs):
     #    ds = yt.load(fn)
@@ -630,13 +629,13 @@ def combine_xz_plots(filenames,
                     ylim2 = ylim2x
 
             xz_plot_filename = (output_filename_head+'combined_xz_plots/combined_xz_plot_%s_%s.png') % (ion_p_name(ion),ds)
-            if not os.path.exists(xz_plot_filename):
+            if not os.path.exists(xz_plot_filename):  
                 create_axes_proj(ds,ion,0,center,(600,'kpc'),ylim1,ylim2,output_filename_head)
                 create_axes_proj(ds,ion,2,center,(600,'kpc'),ylim1,ylim2,output_filename_head)
                 # print("%s,%s individual xz plots created\n" % (ion,ds))
 
                 # string everything together in a single image
-                list_im = [output_filename_head+'xz_plots/xz_plot_%s_%s_0.png' % (ion_p_name(ion),ds),
+                list_im = [output_filename_head+'xz_plots/xz_plot_%s_%s_0.png' % (ion_p_name(ion),ds), 
                            output_filename_head+'xz_plots/xz_plot_%s_%s_2.png' % (ion_p_name(ion),ds)]
                 imgs    = [ PIL.Image.open(i) for i in list_im ]
                 max_shape = sorted( [(i.size[0], i.size ) for i in imgs])[1][1]
@@ -652,7 +651,7 @@ def combine_xz_plots(filenames,
                     temperino = i.resize((max_shape[0],x), PIL.Image.ANTIALIAS)
                     another_list.append(np.asarray(temperino))
                 # print("append to list %s,%s\n" % (ion,ds))
-                #print(temp_list,another_list)
+                #print(temp_list,another_list)    
                 #[int(max_shape[0]/i.size[0] * s) for s in i.size] ), PIL.Image.ANTIALIAS) for i in imgs ]
                 imgs_comb = np.vstack(another_list)
                 #print(ims_comb)
@@ -660,7 +659,7 @@ def combine_xz_plots(filenames,
                 # print("did I make it this far %s,%s\n" % (ion,ds))
                 imgs_comb.save(xz_plot_filename)
                 # print("%s,%s xz plots done" % (ion,ds))
-
+            
                 # print("i doubt i made it *this* far %s\n" % (ds))
                 if yt.is_root():
                     print("Written:",ds)
@@ -671,16 +670,16 @@ def combine_xz_plots(filenames,
 # creates a more general version of cdip using uniformly random sightlines
 # 'output_filename_head' can be used to place files inside specific directories (end with a '/')
 # center_num_lines is the number of sightlines created within the central region of radius dr
-def create_cdip_uniform(filenames,
-                        num_procs,
-                        ion_species = None,
-                        center_coord = None,
-                        center_units = None,
-                        radius_length = None,
-                        radius_units = None,
-                        sightline_length = None,
-                        sightline_units = None,
-                        center_num_lines = None,
+def create_cdip_uniform(filenames, 
+                        num_procs, 
+                        ion_species = None, 
+                        center_coord = None, 
+                        center_units = None, 
+                        radius_length = None, 
+                        radius_units = None, 
+                        sightline_length = None, 
+                        sightline_units = None, 
+                        center_num_lines = None, 
                         num_bins = None,
                         y_lim1 = None,
                         output_filename_head = './'):
@@ -698,7 +697,7 @@ def create_cdip_uniform(filenames,
         sightline_length = 600
     if sightline_units is None:
         sightline_units = "kpc"
-    if center_num_lines is None:
+    if center_num_lines is None: 
         center_num_lines = 1
     if num_bins is None:
         num_bins = 10
@@ -706,7 +705,7 @@ def create_cdip_uniform(filenames,
         y_lim1 = [0,0]
     if output_filename_head is None:
         output_filename_head ='./'
-
+        
     # print("----")
     # print(filenames)
     # print(num_procs)
@@ -717,7 +716,7 @@ def create_cdip_uniform(filenames,
     # print(y_lim1,y_lim2,y_lim3)
     # print(output_filename_head)
     # print("----")
-
+    
     # set up logging script parameters
     logging.info('Filenames: %s' % filenames)
     logging.info('Number of processes: %s' % num_procs)
@@ -728,19 +727,19 @@ def create_cdip_uniform(filenames,
     logging.info('Number of radial bins: %s' % num_bins)
     logging.info('Y-limits, if any set: %s' % (y_lim1))
     logging.info('Output filename head: %s' % output_filename_head)
-
+    
     print("pit stop 1")
     #filename_tracker = open(output_filename_head+"filenames_cdip_uniform.fn",'a+')
     #filename_tracker.seek(0)
 
     #filelist = glob.glob(filenames)
     #filelist.sort()
-    #tracked_filelist = [line.rstrip('\n') for line in filename_tracker]
+    #tracked_filelist = [line.rstrip('\n') for line in filename_tracker] 
     #filename_tracker.close()
-
+    
     #untracked_filelist = list(set(filelist)-set(tracked_filelist))
     ts = yt.DatasetSeries(filenames, parallel = num_procs)
-
+    
     for ds in ts.piter():
         trident.add_ion_fields(ds, ions=ion_species)
 
@@ -749,7 +748,6 @@ def create_cdip_uniform(filenames,
         sightline = ds.quan(sightline_length,sightline_units)
         d = radius_length*2.
         bins = np.arange(0,num_bins)
-        impact_parameters=[]
 
         for bin in bins:
             in_radius = bin * dr
@@ -760,25 +758,21 @@ def create_cdip_uniform(filenames,
             if num_lines < 10:
                 num_lines = 10
 
-            impact_param = generate_lightrays(ds,
-                        num_lines,
+            generate_lightrays(ds,
+                        num_lines, 
                         ion_species,
-                        sightline,
-                        center,
-                        in_radius,
-                        out_radius,
+                        sightline, 
+                        center, 
+                        in_radius, 
+                        out_radius, 
                         output_filename_head)
-
-            impact_parameters.append(impact_param)
-
+                        
             print(output_filename_head,ds,"bin",bin,"finished")
-
-        impact_parameters = np.numpy(impact_parameters)
-        np.save("impact_param")
+        
         # iterate over each ion
         for ion in ion_species:
             cdip_filename = (output_filename_head+'cdip_uniform_'+ion_p_name(ion)+'_%s_'+str(int(d))+radius_units+'_box.png') % ds
-            if not os.path.exists(cdip_filename):
+            if not os.path.exists(cdip_filename):    
 
                 r = np.arange(0,num_bins) #* x axis in bins
                 y_med_ion = []
@@ -789,7 +783,7 @@ def create_cdip_uniform(filenames,
                 val_by_r_ion = [[] for _ in r]
 
                 # iterate over each bin
-
+                
                 for bin in bins:
                     in_radius = bin * dr
                     out_radius = (bin + 1) * dr
@@ -801,9 +795,9 @@ def create_cdip_uniform(filenames,
 
                     for index in np.arange(0,num_lines):
                         val_by_r_ion[bin].append(integrate_ndpl(ds,
-                                                                index,
-                                                                ion,
-                                                                in_radius,
+                                                                index, 
+                                                                ion, 
+                                                                in_radius, 
                                                                 out_radius,
                                                                 output_filename_head))
                     print("another point")
@@ -811,7 +805,7 @@ def create_cdip_uniform(filenames,
                     y_med_ion.append(np.median(val_by_r_ion[bin]))
                     y_mean_ion.append(np.mean(val_by_r_ion[bin]))
                     y_std_ion.append(np.std(val_by_r_ion[bin]))
-
+                        
                 ###
                 # FORMAT FINAL IMAGE
                 ###
@@ -848,11 +842,11 @@ def create_cdip_uniform(filenames,
                     file.write(filenames[:-13]+"%s/%s -- %s\n" % (ds,ds,ion))
                     file.close()
 
-
+            
 if __name__ == "__main__":
     # test parameters
     # not sure this one has correct syntax though
-    create_cdip_xz_proj("../../sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_lowres/DD????/DD????",
-                         2, ['O VI', 'H I', 'C IV'], [0.5411343,  0.4509816,  0.5134753], "code_length",
+    create_cdip_xz_proj("../../sims/isolated-galaxies/MW_1638kpcBox_800pcCGM_200pcDisk_lowres/DD????/DD????", 
+                         2, ['O VI', 'H I', 'C IV'], [0.5411343,  0.4509816,  0.5134753], "code_length", 
                          300, "kpc", pix_num = 1000, num_bins = 10, y_lim1 = [0,0], y_lim2 = [0,0], y_lim3 = [0,0],
                          output_filename_head='../img_dir/test_directory/.//')
