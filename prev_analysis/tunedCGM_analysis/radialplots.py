@@ -362,6 +362,7 @@ def generate_lightrays(ds,
                                     out_radius,
                                     True)
 
+    np.save("allpoints",np.array(allpoints))
     #ray_list = []
     index_list = np.arange(0,num_points)
     num_procs = 0
