@@ -384,8 +384,10 @@ def generate_lightrays(ds,
 
             #ray_list.append(ray)
             print("%s,%s,%s,%s ray done" % (in_radius,out_radius,ds,index))
+
         f.close()
 
+    print(len(allpoints[:][2]))
     return allpoints[:][2]
 
 # in and out radius in terms of ds
@@ -787,7 +789,7 @@ def create_cdip_uniform(filenames,
                 y_med_ion = []
                 y_mean_ion = []
                 y_std_ion = []
-                print("am i here yet")
+                #print("am i here yet")
                 #make list of lists by bin
                 val_by_r_ion = [[] for _ in r]
 
@@ -809,7 +811,7 @@ def create_cdip_uniform(filenames,
                                                                 in_radius,
                                                                 out_radius,
                                                                 output_filename_head))
-                    print("another point")
+                    #print("another point")
                     #reduce val_by_r to median
                     y_med_ion.append(np.median(val_by_r_ion[bin]))
                     y_mean_ion.append(np.mean(val_by_r_ion[bin]))
