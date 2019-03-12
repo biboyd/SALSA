@@ -774,7 +774,7 @@ def create_cdip_uniform(filenames,
             print(output_filename_head,ds,"bin",bin,"finished")
 
         impact_parameters = np.array(impact_parameters)
-        np.save("impact_param")
+        np.save("impact_param", impact_parameters)
         # iterate over each ion
         for ion in ion_species:
             cdip_filename = (output_filename_head+'cdip_uniform_'+ion_p_name(ion)+'_%s_'+str(int(d))+radius_units+'_box.png') % ds
