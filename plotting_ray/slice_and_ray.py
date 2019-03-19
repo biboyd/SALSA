@@ -36,6 +36,7 @@ tri_ray = tri.make_simple_ray(ds,
 
 cut.annotate_ray(tri_ray)
 cut.save("attempted_cut.png")
+y_slice.annotate_ray(tri_ray)
 y_slice.save("normal_orientation.png")
 print(ray_start)
 print(ray_end)
