@@ -1,35 +1,42 @@
 import yt
 import trident as tri
+import numpy as np
 
-home="/mnt/home/boydbre1"
+home="/mnt/home/boydbre1/"
 filename=home+"DD0076/DD0076"
 
 #load in dataset
 ds = yt.load(filename)
 
-ray_start= np.array([0, 0, 0])
-ray_end = np.array([1, 1, 1])
+ray_start= np.array([0, 0, 0], dtype=float)
+ray_end = np.array([1, 1, 1], dtype=float)
 
-line_list = [‘H’, ‘Si’, ‘Mg II’, ‘C II 1335’]
+line_list = ['H', 'Si', 'Mg II', 'C II 1335']
 
 #calc norm vec and center
 center = (ray_end + ray_start)/2
 
 #find ray and normalize it
 ray = ray_end - ray_start
-ray = np.linalg.norm(ray)
+ray = ray/np.linalg.norm(ray)
 
 #find ray perpendicular with z=0
-norm_vec = [ray[0], -ray[1], 0]
+norm_vec = [-1 * ray[0], ray[1], 0]
 
-
+z_slice = yt.SlicePlot(ds, 'z', 'density')
 cut = yt.SlicePlot(ds, norm_vec, 'density', [0, 0, 1])
 
+ray_start =ds.arr(ray_start, "code_length")
+ray_end = ds.arr(ray_end, "code_length")
 tri_ray = tri.make_simple_ray(ds,
                               start_position = ray_start,
                               end_position = ray_end,
                               lines = line_list,
-                              ftype='gas')
+			      ftype = 'gas')
 
-cut.annotate_ray(ray)
+cut.annotate_ray(tri_ray)
 cut.save("attempted_cut.png")
+z_slice.save("normal_orientation.png")
+print(ray_start)
+print(ray_end)
+
