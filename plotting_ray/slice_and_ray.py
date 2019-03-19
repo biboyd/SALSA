@@ -3,7 +3,7 @@ import trident as tri
 import numpy as np
 
 home="/mnt/home/boydbre1/"
-filename=home+"DD0076/DD0076"
+filename=home+"data/DD0076/DD0076"
 
 #load in dataset
 ds = yt.load(filename)
@@ -23,7 +23,7 @@ ray = ray/np.linalg.norm(ray)
 #find ray perpendicular with z=0
 norm_vec = [-1 * ray[0], ray[1], 0]
 
-y_slice = yt.SlicePlot(ds, 'y', 'density')
+y_slice = yt.SlicePlot(ds, 'y', 'density', north_vector = [0, 0, 1])
 cut = yt.SlicePlot(ds, norm_vec, 'density', north_vector = [0, 0, 1])
 
 ray_start =ds.arr(ray_start, "code_length")
