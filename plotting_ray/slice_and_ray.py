@@ -22,7 +22,7 @@ ray = ray_end - ray_start
 ray = ray/np.linalg.norm(ray)
 
 #find ray perpendicular with z=0
-norm_vec = [-1 * ray[0], ray[1], 0]
+norm_vec = [-1 * ray[1], ray[0], 0]
 
 y_slice = yt.SlicePlot(ds, 'y', 'density', center=center)
 cut = yt.SlicePlot(ds, norm_vec, 'density', north_vector = [0, 0, 1], center=center)
