@@ -1,4 +1,4 @@
-erimport yt
+import yt
 import trident as tri
 import numpy as np
 
