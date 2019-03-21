@@ -8,7 +8,7 @@ filename=home+"data/DD0076/DD0076"
 #load in dataset
 ds = yt.load(filename)
 
-ray_start= np.array([0, 0, 0], dtype=float)
+ray_start= np.array([0.5, 0, 0], dtype=float)
 ray_end = np.array([0.5, 1, 1], dtype=float)
 
 line_list = ['H', 'Si', 'Mg II', 'C II 1335']
@@ -24,7 +24,7 @@ ray = ray/np.linalg.norm(ray)
 #find ray perpendicular with z=0
 norm_vec = [-1 * ray[0], ray[1], 0]
 
-y_slice = yt.SlicePlot(ds, 'y', 'density', north_vector = [0, 0, 1], center=center)
+y_slice = yt.SlicePlot(ds, 'y', 'density', center=center)
 cut = yt.SlicePlot(ds, norm_vec, 'density', north_vector = [0, 0, 1], center=center)
 
 ray_start =ds.arr(ray_start, "code_length")
