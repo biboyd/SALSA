@@ -25,7 +25,6 @@ ray = ray/np.linalg.norm(ray)
 #find ray perpendicular with z=0
 norm_vec = [-1*ray[1], ray[0], 0]
 
-y_slice = yt.SlicePlot(ds, 'y', 'density', center=center)
 cut = yt.SlicePlot(ds, norm_vec, 'density', north_vector = [0, 0, 1], center=center)
 
 ray_start =ds.arr(ray_start, "code_length")
@@ -38,7 +37,3 @@ tri_ray = tri.make_simple_ray(ds,
 
 cut.annotate_ray(tri_ray)
 cut.save("attempted_cut.png")
-y_slice.annotate_ray(tri_ray)
-y_slice.save("normal_orientation.png")
-print(ray_start)
-print(ray_end)
