@@ -362,6 +362,7 @@ def generate_lightrays(ds,
                                     out_radius,
                                     True)
 
+    #np.save("allpoints",np.array(allpoints))
     #ray_list = []
     index_list = np.arange(0,num_points)
     num_procs = 0
@@ -384,6 +385,7 @@ def generate_lightrays(ds,
 
             #ray_list.append(ray)
             print("%s,%s,%s,%s ray done" % (in_radius,out_radius,ds,index))
+
         f.close()
 
 
@@ -748,10 +750,11 @@ def create_cdip_uniform(filenames,
         sightline = ds.quan(sightline_length,sightline_units)
         d = radius_length*2.
         bins = np.arange(0,num_bins)
-
+        
         for bin in bins:
             in_radius = bin * dr
             out_radius = (bin + 1) * dr
+            in_out.append([in_radius, out_radius])
             # num_lines = center_num_lines * (3 * bin**2 + 3 * bin + 1)
             num_lines = center_num_lines * ((bin + 1)**2 - bin**2)
 
@@ -768,7 +771,7 @@ def create_cdip_uniform(filenames,
                         output_filename_head)
                         
             print(output_filename_head,ds,"bin",bin,"finished")
-        
+
         # iterate over each ion
         for ion in ion_species:
             cdip_filename = (output_filename_head+'cdip_uniform_'+ion_p_name(ion)+'_%s_'+str(int(d))+radius_units+'_box.png') % ds
@@ -778,7 +781,7 @@ def create_cdip_uniform(filenames,
                 y_med_ion = []
                 y_mean_ion = []
                 y_std_ion = []
-                print("am i here yet")
+                #print("am i here yet")
                 #make list of lists by bin
                 val_by_r_ion = [[] for _ in r]
 
@@ -800,7 +803,7 @@ def create_cdip_uniform(filenames,
                                                                 in_radius, 
                                                                 out_radius,
                                                                 output_filename_head))
-                    print("another point")
+                    #print("another point")
                     #reduce val_by_r to median
                     y_med_ion.append(np.median(val_by_r_ion[bin]))
                     y_mean_ion.append(np.mean(val_by_r_ion[bin]))
