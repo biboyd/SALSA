@@ -5,13 +5,14 @@ from sys import argv
 import h5py
 from os import remove
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import AxesGrid
 
 # =================== #
 #
 #
 # =================== #
 
-def plot_slice(ds, ray, ray_h5file, field='density'):
+def create_slice(ds, ray, ray_h5file, field='density'):
     """
 
     """
@@ -45,15 +46,10 @@ def plot_slice(ds, ray, ray_h5file, field='density'):
     # add ray to slice
     slice.annotate_ray(ray)
 
-    # create frb slice that can be plotted using imshow
-    width = (10, 'kpc')
-    res = [1000, 1000]
-    frb_slice = slice.to_frb(width, res, center = center)
-
-    return frb_slice
+    return slice
 
 
-def plot_spect(ray, ion_name, fname=".temp.h5"):
+def plot_spect(ray, ion_name, ax, fname=".temp.h5"):
     """
 
     """
@@ -76,9 +72,9 @@ def plot_spect(ray, ion_name, fname=".temp.h5"):
     remove(fname)
 
     #plot values
-    plt.plot(wavelength, flux)
+    ax.plot(wavelength, flux)
 
-def plot_num_density(ray_h5file, ion_name):
+def plot_num_density(ray_h5file, ion_name, ax):
     """
 
     """
@@ -93,11 +89,11 @@ def plot_num_density(ray_h5file, ion_name):
 
     #make num density plots
 
-    plt.plot(dl_list, num_density)
+    ax.plot(dl_list, num_density)
 
 
 
-def compute_col_density(ray_h5file, ion_name):
+def compute_col_density(ray_h5file, ion_name, outfname="combined_plot"):
     """
 
     """
@@ -109,6 +105,42 @@ def compute_col_density(ray_h5file, ion_name):
     col_density = np.sum( num_density*dl_array )
 
     return col_density
+
+def plot_all(ds_file_name, ray_file_name, ion_name, outfname, field = 'density'):
+    ds, ray, rayh5 = open_files(data_set_fname, ray_fname)
+
+    fig = plt.figure(figsize=(10, 10))
+
+
+    grid = AxesGrid(fig, (0.075,0.075,0.85,0.85),
+                    nrows_ncols = (1, 1),
+                    axes_pad = 1.0,
+                    label_mode = "L",
+                    share_all = True,
+                    cbar_location="right",
+                    cbar_mode="each",
+                    cbar_size="3%",
+                    cbar_pad="0%")
+
+    slice = create_slice(ds, ray, rayh5, field)
+
+    plot = slice.plots[field]
+    plot.figure = fig
+    plot.axes = grid[0].axes
+    plot.cax = grid.cbar_axes[0]
+
+    slice._setup_plots()
+
+    ax2 = fig.add_subplot(312)
+    plot_num_density(rayh5, ion_name, ax2)
+
+    ax3 = fig.add_subplot(313)
+    plot_spect(ray, ion_name, ax3)
+
+    ax2.set_position([1.2, 0.5, 1, 0.45])
+    ax3.set_position([1.2, 0, 1, 0.45])
+
+    fig.savefig(outfname, bbox_inches='tight')
 
 def ion_p_name(ion_name):
     """
@@ -140,10 +172,12 @@ def open_files(ds_file_name, ray_file_name):
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
-    ds, ray, rayh5 = open_files(data_set_fname, ray_fname)
+    #ds, ray, rayh5 = open_files(data_set_fname, ray_fname)
     ion = 'H I'
 
-    plot_spect(ray, "spectra.txt")
+    """plot_spect(ray, "spectra.txt")
     frb = plot_slice(ds, ray, rayh5)
     plot_num_density(rayh5, ion)
-    print(compute_col_density(rayh5, ion))
+    print(compute_col_density(rayh5, ion))"""
+
+    plot_all(data_set_fname, ray_fname, ion, "combined_plot.png")
