@@ -46,6 +46,9 @@ def create_slice(ds, ray, ray_h5file, field='density'):
     # add ray to slice
     slice.annotate_ray(ray)
 
+    # set y label to Z
+    slice.set_ylabel("Z (Mpc)")
+
     return slice
 
 
@@ -73,6 +76,9 @@ def plot_spect(ray, ion_name, ax, fname=".temp.h5"):
 
     #plot values
     ax.plot(wavelength, flux)
+    ax.set_title("Spectra {} ".format(ion_name))
+    ax.set_xlabel("Wavelength (Angstrom)")
+    ax.set_ylabel("Flux")
 
 def plot_num_density(ray_h5file, ion_name, ax):
     """
@@ -90,6 +96,9 @@ def plot_num_density(ray_h5file, ion_name, ax):
     #make num density plots
 
     ax.plot(dl_list, num_density)
+    ax.set_title("Number Density of {} Along Ray".format(ion_name))
+    ax.set_xlabel("Length From Start of Ray $(cm)$")
+    ax.set_ylabel("$Number Density (cm^{-3})$")
 
 
 
@@ -137,8 +146,8 @@ def plot_all(ds_file_name, ray_file_name, ion_name, outfname, field = 'density')
     ax3 = fig.add_subplot(313)
     plot_spect(ray, ion_name, ax3)
 
-    ax2.set_position([1.2, 0.5, 1, 0.45])
-    ax3.set_position([1.2, 0, 1, 0.45])
+    ax2.set_position([1.1, 0.52, 1, 0.42])
+    ax3.set_position([1.1, 0, 1, 0.42])
 
     fig.savefig(outfname, bbox_inches='tight')
 
