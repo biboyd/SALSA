@@ -754,7 +754,7 @@ def create_cdip_uniform(filenames,
         for bin in bins:
             in_radius = bin * dr
             out_radius = (bin + 1) * dr
-            in_out.append([in_radius, out_radius])
+
             # num_lines = center_num_lines * (3 * bin**2 + 3 * bin + 1)
             num_lines = center_num_lines * ((bin + 1)**2 - bin**2)
 
