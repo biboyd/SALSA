@@ -6,6 +6,10 @@ import h5py
 from os import remove
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
+from numpy.linalg import norm
+
+from scipy.constants import centi, kilo, parsec
+
 
 # =================== #
 #
@@ -42,13 +46,17 @@ def create_slice(ds, ray, ray_h5file, field='density'):
                       norm_vector,
                       field,
                       north_vector = [0, 0, 1],
-                      center = center)
+                      center = center,
+                      width=(norm(ray_vec), "cm"),
+                      axes_unit="kpc")
     # add ray to slice
     slice.annotate_ray(ray)
 
     # set y label to Z
-    slice.set_ylabel("Z (Mpc)")
+    slice.set_ylabel("Z (kpc)")
 
+    # set color map
+    slice.set_cmap('density', 'dusk')
     return slice
 
 
@@ -85,21 +93,24 @@ def plot_num_density(ray_h5file, ion_name, ax):
 
     """
     #get list of num density and corresponding lengths
-    num_density = list(ray_h5file['grid'][ion_p_name(ion_name)+'_number_density'])
-    dl_list = list(ray_h5file['grid']['dl'])
+    num_density = np.array(ray_h5file['grid'][ion_p_name(ion_name)+'_number_density'])
+    dl_list = np.array(ray_h5file['grid']['dl'])
 
     #convert list of dl's to list of lengths from begin of ray
     num_dls = len(dl_list)
     for i in range(1, num_dls):
         dl_list[i] += dl_list[i-1]
 
-    #make num density plots
+    # convert to kpc
+    dl_list = dl_list/centi *kilo * parsec
 
+    #make y log
+    #make num density plots
     ax.plot(dl_list, num_density)
     ax.set_title("Number Density of {} Along Ray".format(ion_name))
     ax.set_xlabel("Length From Start of Ray $(cm)$")
-    ax.set_ylabel("$Number Density (cm^{-3})$")
-
+    ax.set_ylabel("Number Density $(cm^{-3})$")
+    ax.set_yscale('log')
 
 
 def compute_col_density(ray_h5file, ion_name, outfname="combined_plot"):
