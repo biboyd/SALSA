@@ -18,7 +18,7 @@ from scipy.constants import centi, kilo, parsec
 
 def create_slice(ds, ray, ray_h5file, field='density'):
     """
-
+    Create a slice along path of ray. Orient it so that the Z direction is maintained
     """
 
     # get beginning and end of ray
