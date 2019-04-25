@@ -102,13 +102,15 @@ def plot_num_density(ray_h5file, ion_name, ax):
         dl_list[i] += dl_list[i-1]
 
     # convert to kpc
-    dl_list = dl_list/centi *kilo * parsec
+    dl_list = dl_list*centi/(parsec * kilo)
 
+    #shift to set center at zero
+    dl_list -= dl_list[-1]/2
     #make y log
     #make num density plots
     ax.plot(dl_list, num_density)
     ax.set_title("Number Density of {} Along Ray".format(ion_name))
-    ax.set_xlabel("Length From Start of Ray $(cm)$")
+    ax.set_xlabel("Length From Start of Ray $(kpc)$")
     ax.set_ylabel("Number Density $(cm^{-3})$")
     ax.set_yscale('log')
 
