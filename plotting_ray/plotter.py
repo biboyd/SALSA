@@ -10,7 +10,7 @@ from numpy.linalg import norm
 
 from scipy.constants import centi, kilo, parsec
 
-class full_ray_plotter():
+class multi_plot():
     """
     Plots three images side by side for easy analysis. The images are:
     A slice of dataset along lightray's path.
@@ -20,7 +20,7 @@ class full_ray_plotter():
     #define conversion factor
     cm_to_kpc = centi/(parsec * kilo)
 
-    def __init__(self, ds_filename, ray_filename, ion='H I', open=True):
+    def __init__(self, ds_filename, ray_filename, figure='None', ion='H I', open=True):
         """
         init file names and ion name
 
@@ -34,10 +34,13 @@ class full_ray_plotter():
         self.ray_filename = ray_filename
         self.ion_name = ion
 
+        self.slice = 'None'
+        if (figure == 'None'):
+            self.fig = plt.figure(figsize=(10, 10))
         if (open):
-            self.ds, self.ray, self.ray_h5 = open_files()
+            self.ds, self.ray, self.ray_h5 = self.open_files()
 
-    def open_files():
+    def open_files(self):
         """
         Opens dataset and ray files int yt and h5py
 
@@ -55,7 +58,7 @@ class full_ray_plotter():
 
         return ds, ray, ray_h5file
 
-    def ion_p_name(ion_name):
+    def ion_p_name(self):
         """
         convert ion species name from trident style to one that
         can be used with h5 files
@@ -66,8 +69,9 @@ class full_ray_plotter():
 
         ######### Deprecated, no longer needed #########3
         # 'H I' is an exception just return H
-        #if ion_name == 'H I':
-        #    return 'H'
+
+        if self.ion_name == 'H I':
+            return 'H'
 
         #split up the words in ion species name
         ion_split = self.ion_name.split()
@@ -76,17 +80,17 @@ class full_ray_plotter():
         num = tri.from_roman(ion_split[1])-1
 
         #combine all the names
-        outname = ion_split[0] + '_p' + num
+        outname = ion_split[0] + '_p' + str(num)
         return outname
 
-    def create_slice(field='density'):
+    def create_slice(self, cmap="BLUE", field='density'):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
 
         Parameters:
         field='density' : The yt field to plot for the slice
-        cmap='dusk' : the colormap to use for the slice
+        cmap='BLUE' : the colormap to use for the slice
 
         Returns:
         slice : yt SlicePlot with ray annotated
@@ -127,10 +131,13 @@ class full_ray_plotter():
         slice.set_ylabel("Z (kpc)")
 
         # set color map
-        slice.set_cmap(field, cmap)
+        slice.set_cmap(field=field, cmap = "BLUE")
+
+        #assign slice
+        self.slice = slice
         return slice
 
-    def plot_spect(ax, fname=".temp.h5"):
+    def plot_spect(self, ax, fname=".temp.h5"):
         """
         Use trident to plot the absorption spectrum of the ray.
         currently defaults to using COS wavelength binning and range.
@@ -160,17 +167,22 @@ class full_ray_plotter():
 
         #plot values
         ax.plot(wavelength, flux)
-        ax.set_title("Spectra {} ".format(ion_name))
+        ax.set_title("Spectra {} ".format(self.ion_name))
         ax.set_xlabel("Wavelength (Angstrom)")
         ax.set_ylabel("Flux")
 
-    def plot_num_density(ray_h5file, ion_name, ax):
+    def plot_num_density(self, ax):
         """
+        Plots the number density at different lengths along the ray
 
+        Parameters:
+            ax : a matplotlib axis in which to draw the plot
+        Returns:
+            none
         """
         #get list of num density and corresponding lengths
-        num_density = np.array(ray_h5file['grid'][ion_p_name(ion_name)+'_number_density'])
-        dl_list = np.array(ray_h5file['grid']['dl'])
+        num_density = np.array(self.ray_h5['grid'][self.ion_p_name()+'_number_density'])
+        dl_list = np.array(self.ray_h5['grid']['dl'])
 
         #convert list of dl's to list of lengths from begin of ray
         num_dls = len(dl_list)
@@ -178,19 +190,55 @@ class full_ray_plotter():
             dl_list[i] += dl_list[i-1]
 
         # convert to kpc
-        dl_list = dl_list*cm_to_kpc
+        dl_list = dl_list*self.cm_to_kpc
 
         #shift to set center at zero
         dl_list -= dl_list[-1]/2
-        #make y log
+
         #make num density plots
         ax.plot(dl_list, num_density)
-        ax.set_title("Number Density of {} Along Ray".format(ion_name))
+        ax.set_title("Number Density of {} Along Ray".format(self.ion_name))
         ax.set_xlabel("Length From Start of Ray $(kpc)$")
         ax.set_ylabel("Number Density $(cm^{-3})$")
         ax.set_yscale('log')
 
-    def zoom(factor):
+    def create_multiplot(self, outfname='None', cmap="BLUE",field='density'):
+
+        if (self.slice == 'None'):
+            #create the slicePlot
+            self.create_slice(field)
+
+        grid = AxesGrid(self.fig, (0.075,0.075,0.85,0.85),
+                        nrows_ncols = (1, 1),
+                        axes_pad = 1.0,
+                        label_mode = "L",
+                        share_all = True,
+                        cbar_location="right",
+                        cbar_mode="each",
+                        cbar_size="3%",
+                        cbar_pad="0%")
+
+
+        plot = self.slice.plots['density']
+        plot.figure = self.fig
+        plot.axes = grid[0].axes
+        plot.cax = grid.cbar_axes[0]
+
+        self.slice._setup_plots()
+
+        ax2 = self.fig.add_subplot(312)
+        self.plot_num_density(ax2)
+
+        ax3 = self.fig.add_subplot(313)
+        self.plot_spect(ax3)
+
+        ax2.set_position([1.1, 0.52, 1, 0.42])
+        ax3.set_position([1.1, 0, 1, 0.42])
+
+        if (outfname != 'None'):
+            self.fig.savefig(outfname, bbox_inches='tight')
+
+    def zoom(self, factor):
         """
         Zoom into the slice by specified factor
 
@@ -202,3 +250,11 @@ class full_ray_plotter():
         """
 
         self.slice.zoom(factor)
+
+    def close(self):
+        """
+        close all opened files
+        """
+
+        self.ds.close()
+        self.ray_h5.close()

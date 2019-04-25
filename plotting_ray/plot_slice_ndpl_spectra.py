@@ -16,7 +16,7 @@ from scipy.constants import centi, kilo, parsec
 #
 # =================== #
 
-def create_slice(ds, ray, ray_h5file, field='density'):
+def create_slice(ds, ray, ray_h5file, cmap = 'dusk', field='density'):
     """
     Create a slice along path of ray. Orient it so that the Z direction is maintained
     """
@@ -56,7 +56,7 @@ def create_slice(ds, ray, ray_h5file, field='density'):
     slice.set_ylabel("Z (kpc)")
 
     # set color map
-    slice.set_cmap('density', 'dusk')
+    slice.set_cmap('density', cmap)
     return slice
 
 
