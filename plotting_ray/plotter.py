@@ -17,8 +17,9 @@ class full_ray_plotter():
     The number density of the given ion along that path.
     The artificial absorption spectra that would be observed.
     """
-
+    #define conversion factor
     cm_to_kpc = centi/(parsec * kilo)
+
     def __init__(self, ds_filename, ray_filename, ion='H I', open=True):
         """
         init file names and ion name
@@ -129,15 +130,20 @@ class full_ray_plotter():
         slice.set_cmap(field, cmap)
         return slice
 
-
-    def plot_spect(ray, ion_name, ax, fname=".temp.h5"):
+    def plot_spect(ax, fname=".temp.h5"):
         """
-
+        Use trident to plot the absorption spectrum of the ray.
+        currently defaults to using COS wavelength binning and range.
+        Parameters:
+            ax : a matplotlib axis in which to draw the plot
+            fname=".temp.h5" : filename to temporary record spectrum data
+        Returns:
+            none
         """
-        line_list = [ion_name]
+        line_list = [self.ion_name]
         #generate spectrum defined by inputs
         spect_gen = tri.SpectrumGenerator('COS')
-        spect_gen.make_spectrum(ray, lines=line_list, output_file = fname)
+        spect_gen.make_spectrum(self.ray, lines=line_list, output_file = fname)
 
         #save the spectrum to hdf5
         spect_gen.save_spectrum(fname)
