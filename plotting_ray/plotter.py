@@ -18,7 +18,8 @@ class full_ray_plotter():
     The artificial absorption spectra that would be observed.
     """
 
-    def __init__(self, ds_filename, ray_filename, ion='H I'):
+    cm_to_kpc = centi/(parsec * kilo)
+    def __init__(self, ds_filename, ray_filename, ion='H I', open=True):
         """
         init file names and ion name
 
@@ -32,11 +33,15 @@ class full_ray_plotter():
         self.ray_filename = ray_filename
         self.ion_name = ion
 
-        self.ds, self.ray, self.ray_h5 = open_files()
+        if (open):
+            self.ds, self.ray, self.ray_h5 = open_files()
 
     def open_files():
         """
         Opens dataset and ray files int yt and h5py
+
+        Parameters:
+            none
 
         Returns:
         ds : dataset object loaded into yt
@@ -167,12 +172,27 @@ class full_ray_plotter():
             dl_list[i] += dl_list[i-1]
 
         # convert to kpc
-        dl_list = dl_list/centi *kilo * parsec
+        dl_list = dl_list*cm_to_kpc
 
+        #shift to set center at zero
+        dl_list -= dl_list[-1]/2
         #make y log
         #make num density plots
         ax.plot(dl_list, num_density)
         ax.set_title("Number Density of {} Along Ray".format(ion_name))
-        ax.set_xlabel("Length From Start of Ray $(cm)$")
+        ax.set_xlabel("Length From Start of Ray $(kpc)$")
         ax.set_ylabel("Number Density $(cm^{-3})$")
         ax.set_yscale('log')
+
+    def zoom(factor):
+        """
+        Zoom into the slice by specified factor
+
+        Parameters:
+            factor : factor by which to zoom in using yt's zoom mehtod
+
+        Returns:
+            none
+        """
+
+        self.slice.zoom(factor)
