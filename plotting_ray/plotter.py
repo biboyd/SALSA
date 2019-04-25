@@ -258,3 +258,12 @@ class multi_plot():
 
         self.ds.close()
         self.ray_h5.close()
+
+if __name__ == '__main__':
+    data_set_fname = argv[1]
+    ray_fname = argv[2]
+    ion = 'H I'
+    mp = multi_plot(data_set_fname, ray_fname)
+
+    outfile = "class_combined_" + ion[0] +".png"
+    mp.create_multiplot(outfile)
