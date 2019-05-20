@@ -39,6 +39,10 @@ class multi_plot():
             self.fig = plt.figure(figsize=(10, 10))
         if (open):
             self.ds, self.ray, self.ray_h5 = self.open_files()
+        else:
+            self.ds = 'None'
+            self.ray = 'None'
+            self.ray_h5 = 'None'
 
     def open_files(self):
         """
@@ -83,7 +87,7 @@ class multi_plot():
         outname = ion_split[0] + '_p' + str(num)
         return outname
 
-    def create_slice(self, cmap="BLUE", field='density'):
+    def create_slice(self, field='density', cmap="BLUE"):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
@@ -131,7 +135,7 @@ class multi_plot():
         slice.set_ylabel("Z (kpc)")
 
         # set color map
-        slice.set_cmap(field=field, cmap = "BLUE")
+        slice.set_cmap(field=field, cmap = cmap)
 
         #assign slice
         self.slice = slice
@@ -206,7 +210,7 @@ class multi_plot():
 
         if (self.slice == 'None'):
             #create the slicePlot
-            self.create_slice(field)
+            self.create_slice(field = field, cmap = cmap)
 
         grid = AxesGrid(self.fig, (0.075,0.075,0.85,0.85),
                         nrows_ncols = (1, 1),
@@ -219,7 +223,7 @@ class multi_plot():
                         cbar_pad="0%")
 
 
-        plot = self.slice.plots['density']
+        plot = self.slice.plots[field]
         plot.figure = self.fig
         plot.axes = grid[0].axes
         plot.cax = grid.cbar_axes[0]
@@ -258,6 +262,26 @@ class multi_plot():
 
         self.ds.close()
         self.ray_h5.close()
+
+    def compute_col_density(self):
+        """
+        computes the column density along the given ray for a given ion species. This is done
+        by summing the product of the number density for a given length by that length.
+
+        Parameters:
+
+        """
+        if (self.ray_h5 == 'None'):
+            self.ds, self.ray, self.ray_h5 = self.open_files()
+
+        #get list of num density and corresponding length
+        num_density = np.array(self.ray_h5['grid'][self.ion_p_name()+'_number_density'])
+        dl_array = np.array(self.ray_h5['grid']['dl'])
+
+        #multiply num density by its dl and sum up to get column density
+        col_density = np.sum( num_density*dl_array )
+
+        return col_density
 
 if __name__ == '__main__':
     data_set_fname = argv[1]
