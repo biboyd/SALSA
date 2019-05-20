@@ -7,10 +7,10 @@ filename=home+"data/DD0076/DD0076"
 
 #load in dataset
 ds = yt.load(filename)
-center_ds = (ds.domain_right_edge + ds.domain_left_edge)/2
+center_ds = ds.domain_center 
 
-ray_start= np.array([0.5, 0, 0], dtype=float)
-ray_end = np.array([0.5, 1, 1], dtype=float)
+ray_start= np.array([0, 0, 0], dtype=float)
+ray_end = np.array([0, 1, 1], dtype=float)
 
 line_list = ['H', 'Si', 'Mg II', 'C II 1335']
 

@@ -251,9 +251,6 @@ class multi_plot():
         # convert to kpc
         dl_list = dl_list*self.cm_to_kpc
 
-        #shift to set center at zero
-        dl_list -= dl_list[-1]/2
-
         #make num density plots
         ax.plot(dl_list, num_density)
         ax.set_title("Number Density of {} Along Ray".format(self.ion_name))
@@ -353,8 +350,10 @@ class multi_plot():
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
-    ion = 'H I'
-    mp = multi_plot(data_set_fname, ray_fname)
+    ion = 'C IV'
+    absorbers = ['H I', 'O VI']
 
-    outfile = "class_combined_" + ion[0] +".png"
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
+
+    outfile = "multiplot_" + ion[0] +".png"
     mp.create_multiplot(outfile)
