@@ -1,5 +1,5 @@
 import yt
-import trident as tri
+import trident
 import numpy as np
 from sys import argv
 import h5py
@@ -20,19 +20,25 @@ class multi_plot():
     #define conversion factor
     cm_to_kpc = centi/(parsec * kilo)
 
-    def __init__(self, ds_filename, ray_filename, figure='None', ion='H I', open=True):
+    def __init__(self, ds_filename, ray_filename, figure='None', main_ion='H I', ion_list=[], open=True):
         """
         init file names and ion name
 
         Parameters:
         ds_filename : Path/name of the enzo dataset to be loaded
         ray_filename : Path/name of the hdf5 ray file to be loaded
-        ion : Name of the ion in notaion
+        main_ion : Name of the ion to focus plots on
+        other_ion : Additional ions to include in plots/Spectra, enter as list
+
+        ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
         """
         self.ds_filename = ds_filename
         self.ray_filename = ray_filename
-        self.ion_name = ion
+        self.ion_name = main_ion
+
+        ion_list.append(main_ion)
+        self.ion_list = ion_list
 
         self.slice = 'None'
         if (figure == 'None'):
@@ -74,31 +80,34 @@ class multi_plot():
         ######### Deprecated, no longer needed #########3
         # 'H I' is an exception just return H
 
-        if self.ion_name == 'H I':
-            return 'H'
+        #if self.ion_name == 'H I':
+        #    return 'H'
 
         #split up the words in ion species name
         ion_split = self.ion_name.split()
 
         #convert num from roman numeral. subtract run b/c h5
-        num = tri.from_roman(ion_split[1])-1
+        num = trident.from_roman(ion_split[1])-1
 
         #combine all the names
         outname = ion_split[0] + '_p' + str(num)
         return outname
 
-    def create_slice(self, field='density', cmap="BLUE"):
+    def create_slice(self, field, cmap="BLUE"):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
 
         Parameters:
-        field='density' : The yt field to plot for the slice
+        field: The yt field to plot for the slice
         cmap='BLUE' : the colormap to use for the slice
 
         Returns:
         slice : yt SlicePlot with ray annotated
         """
+
+        #add ion fields to dataset if not already there
+        trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
 
         # get beginning and end of ray
         x = self.ray_h5['grid']['x']
@@ -129,7 +138,7 @@ class multi_plot():
                           width=(norm(ray_vec), "cm"),
                           axes_unit="kpc")
         # add ray to slice
-        slice.annotate_ray(self.ray)
+        slice.annotate_ray(self.ray, arrow=True)
 
         # set y label to Z
         slice.set_ylabel("Z (kpc)")
@@ -153,7 +162,7 @@ class multi_plot():
         """
         line_list = [self.ion_name]
         #generate spectrum defined by inputs
-        spect_gen = tri.SpectrumGenerator('COS')
+        spect_gen = trident.SpectrumGenerator('COS')
         spect_gen.make_spectrum(self.ray, lines=line_list, output_file = fname)
 
         #save the spectrum to hdf5
@@ -206,11 +215,24 @@ class multi_plot():
         ax.set_ylabel("Number Density $(cm^{-3})$")
         ax.set_yscale('log')
 
-    def create_multiplot(self, outfname='None', cmap="BLUE",field='density'):
+    def create_multiplot(self, outfname='None', cmap="BLUE"):
+        """
+        combines the slice plot, number density plot, and spectrum plot into
+        one image.
 
+        Parameters:
+            outfname='None' : the file name/path in which to save the file defaults
+                              to being unsaved
+
+            cmap='BLUE' :     the color map to use for the slice plot
+
+        Returns:
+            none
+        """
         if (self.slice == 'None'):
-            #create the slicePlot
-            self.create_slice(field = field, cmap = cmap)
+            #create the slicePlot using the field of the ion density
+            field_name = self.ion_p_name() + "_number_density"
+            self.create_slice(field=field_name, cmap = cmap)
 
         grid = AxesGrid(self.fig, (0.075,0.075,0.85,0.85),
                         nrows_ncols = (1, 1),
@@ -223,7 +245,7 @@ class multi_plot():
                         cbar_pad="0%")
 
 
-        plot = self.slice.plots[field]
+        plot = self.slice.plots[field_name]
         plot.figure = self.fig
         plot.axes = grid[0].axes
         plot.cax = grid.cbar_axes[0]
