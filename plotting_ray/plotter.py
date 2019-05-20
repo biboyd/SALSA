@@ -20,35 +20,80 @@ class multi_plot():
     #define conversion factor
     cm_to_kpc = centi/(parsec * kilo)
 
-    def __init__(self, ds_filename, ray_filename, figure='None', main_ion='H I', ion_list=[], open=True):
+    def __init__(self,
+                ds_filename,
+                ray_filename,
+                ion_name='H I',
+                slice_field='None',
+                absorber_fields=[],
+                wavelength_center='None',
+                wavelength_width = 300,
+                resolution = 0.1,
+                open=True,
+                figure='None'):
         """
         init file names and ion name
 
         Parameters:
         ds_filename : Path/name of the enzo dataset to be loaded
         ray_filename : Path/name of the hdf5 ray file to be loaded
-        main_ion : Name of the ion to focus plots on
-        other_ion : Additional ions to include in plots/Spectra, enter as list
 
+        ion_name : Name of the ion to plot in number density plot
+        slice_field : Field to plot in slice plot. defaults to ion_name's number density
+        absorber_fields : Additional ions to include in plots/Spectra, enter as list
+        wavelength_center : Wavelength to center spectrum plot on. defaults to
+                            a known spectral line of ion_name. in units of Angstrom
+        wavelength_width : sets the wavelenth range of the spectrum plot. defaults
+                            to 300 Angstroms
+        resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        figure : matplotlib figure where the multiplot will be plotted. creates one if
+                none is specified.
+        open : option on whether to immediately open dataset and ray files. defaults to True.
         ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
         """
+        #set file names and ion name
         self.ds_filename = ds_filename
         self.ray_filename = ray_filename
-        self.ion_name = main_ion
+        self.ion_name = ion_name
 
-        ion_list.append(main_ion)
-        self.ion_list = ion_list
+        #add ion name to list of all ions to be plotted
+        absorber_fields.append(ion_name)
+        self.ion_list = absorber_fields
 
+        #set a value for slice
         self.slice = 'None'
+
+        #set slice field to ion name if no field is specified
+        if (slice_field == 'None'):
+            self.slice_field = self.ion_p_name() + "_number_density"
+        else:
+            self.slice_field = slice_field
+
+        self.wavelength_width = wavelength_width
+        self.resolution = resolution
+        #default set the wavelenth center to one of the known spectral lines
+        #for ion name. Use tridents line database to search for correct wavelenth
+        if (wavelength_center == "None"):
+            #open up tridents default line database
+            lbd = trident.LineDatabase("lines.txt")
+            #find all lines that match ion
+            lines = lbd.parse_subset(subsets= [self.ion_name])
+            #take first one and return its wavelenth
+            self.wavelenth_center = lines[0].wavelength
+
+        #open up a figure if none specified
         if (figure == 'None'):
             self.fig = plt.figure(figsize=(10, 10))
+
+        #open up the dataset and ray files or set their values to None
         if (open):
             self.ds, self.ray, self.ray_h5 = self.open_files()
         else:
             self.ds = 'None'
             self.ray = 'None'
             self.ray_h5 = 'None'
+
 
     def open_files(self):
         """
@@ -70,11 +115,10 @@ class multi_plot():
 
     def ion_p_name(self):
         """
-        convert ion species name from trident style to one that
-        can be used with h5 files
-
+        convert ion species name to yt style field convention
+        ('H I' -> 'H_p0')
         Returns:
-        outname : Name of the ion in the form found in hdf5 files
+        outname : Name of the ion in the yt form
         """
 
         ######### Deprecated, no longer needed #########3
@@ -86,14 +130,14 @@ class multi_plot():
         #split up the words in ion species name
         ion_split = self.ion_name.split()
 
-        #convert num from roman numeral. subtract run b/c h5
+        #convert num from roman numeral. subtract one to follow convention
         num = trident.from_roman(ion_split[1])-1
 
         #combine all the names
         outname = ion_split[0] + '_p' + str(num)
         return outname
 
-    def create_slice(self, field, cmap="BLUE"):
+    def create_slice(self, cmap="BLUE"):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
@@ -132,7 +176,7 @@ class multi_plot():
         #Create slice along ray. keep slice pointed in z-direction
         slice = yt.SlicePlot(self.ds,
                           norm_vector,
-                          field,
+                          self.slice_field,
                           north_vector = [0, 0, 1],
                           center = center,
                           width=(norm(ray_vec), "cm"),
@@ -144,7 +188,7 @@ class multi_plot():
         slice.set_ylabel("Z (kpc)")
 
         # set color map
-        slice.set_cmap(field=field, cmap = cmap)
+        slice.set_cmap(field=self.slice_field, cmap = cmap)
 
         #assign slice
         self.slice = slice
@@ -160,10 +204,12 @@ class multi_plot():
         Returns:
             none
         """
-        line_list = [self.ion_name]
+        #set max and min wavelength and resolution
+        wave_min = self.wavelenth_center - self.wavelength_width/2
+        wave_max = self.wavelenth_center + self.wavelength_width/2
         #generate spectrum defined by inputs
-        spect_gen = trident.SpectrumGenerator('COS')
-        spect_gen.make_spectrum(self.ray, lines=line_list, output_file = fname)
+        spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
+        spect_gen.make_spectrum(self.ray, lines=self.ion_list, output_file = fname)
 
         #save the spectrum to hdf5
         spect_gen.save_spectrum(fname)
@@ -180,7 +226,7 @@ class multi_plot():
 
         #plot values
         ax.plot(wavelength, flux)
-        ax.set_title("Spectra {} ".format(self.ion_name))
+        ax.set_title("Spectrum".format(self.ion_name))
         ax.set_xlabel("Wavelength (Angstrom)")
         ax.set_ylabel("Flux")
 
@@ -231,8 +277,7 @@ class multi_plot():
         """
         if (self.slice == 'None'):
             #create the slicePlot using the field of the ion density
-            field_name = self.ion_p_name() + "_number_density"
-            self.create_slice(field=field_name, cmap = cmap)
+            self.create_slice(cmap = cmap)
 
         grid = AxesGrid(self.fig, (0.075,0.075,0.85,0.85),
                         nrows_ncols = (1, 1),
@@ -245,7 +290,7 @@ class multi_plot():
                         cbar_pad="0%")
 
 
-        plot = self.slice.plots[field_name]
+        plot = self.slice.plots[self.slice_field]
         plot.figure = self.fig
         plot.axes = grid[0].axes
         plot.cax = grid.cbar_axes[0]
