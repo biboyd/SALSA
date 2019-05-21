@@ -514,6 +514,8 @@ def construct_rays( dataset,
     """
 
     ds = yt.load(dataset)
+    #add ion fields to dataset if not already there
+    trident.add_ion_fields(ds, ions=line_list, ftype='gas')
 
     #create directory if doesn't exist
     try:
