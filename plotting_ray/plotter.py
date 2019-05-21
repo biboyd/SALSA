@@ -201,7 +201,7 @@ class multi_plot():
         if (norm_vector[0] != 0):
             # set y label to Z
             slice.set_ylabel("Z (kpc)")
-            
+
         # add ray to slice
         slice.annotate_ray(self.ray, arrow=True)
 
@@ -427,12 +427,29 @@ class movie_multi_plot(multi_plot):
             self.wavelenth_center = lines[0].wavelength
 
         #calculate the proper yscale for number density plot
-        tot_median=0
-        for rfile in self.ray_files:
-            pass
+        tot_median=0.
+        #for rfile in self.ray_files:
+        #    #open ray file and get number density
+        #    ray_h5 = h5py.File("{}/{}".format(self.ray_dir, rfile))
+        #    num_density = np.array(ray_h5['grid'][self.ion_p_name()+'_number_density'])
+        #
+        #    #add median num_density to sum
+        #    tot_median += np.median(num_density)
+        #
+        #    #close ray file
+        #    ray_h5.close()
 
-        self.num_dense_min = 'None'#0.1*avg_med
-        self.num_dense_max = 'None'#100*avg_med
+        #get middle ray to represent scale
+        middle_ray = self.ray_files[ int(len(self.ray_files)/2) ]
+        ray_h5 = h5py.File("{}/{}".format(self.ray_dir, middle_ray))
+
+        #get median num density
+        num_density = np.array(ray_h5['grid'][self.ion_p_name()+'_number_density'])
+        med = np.median(num_density)
+
+        #estimate min max values to plot
+        self.num_dense_min = 0.01*med
+        self.num_dense_max = 1000*med
 
         self.out_dir = out_dir
 
