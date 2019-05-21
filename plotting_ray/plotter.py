@@ -194,11 +194,18 @@ class multi_plot():
                           center = center,
                           width=(norm(ray_vec), "cm"),
                           axes_unit="kpc")
+
+        #handle case where it is a slice on y-axis
+        #yt will ignore north_vector and place z-axis on horizontal
+        # currently can't change it so just won't set the y label
+        if (norm_vector[0] != 0):
+            # set y label to Z
+            slice.set_ylabel("Z (kpc)")
+            
         # add ray to slice
         slice.annotate_ray(self.ray, arrow=True)
 
-        # set y label to Z
-        slice.set_ylabel("Z (kpc)")
+
 
         # set color map
         slice.set_cmap(field=self.slice_field, cmap = cmap)
@@ -381,8 +388,16 @@ class movie_multi_plot(multi_plot):
             out_dir="./images"):
 
         self.ds_filename = ds_filename
+
+        #create directory if doesn't exist
+        try:
+            makedirs(out_dir)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
         #find all ray files in ray_dir. set first one to ray_filename
-        self.ray_files = listdir(ray_dir)
+        self.ray_files = sorted(listdir(ray_dir))
         self.ray_dir = ray_dir
 
         self.ion_name = ion_name
@@ -451,8 +466,10 @@ class movie_multi_plot(multi_plot):
             #create multiplot using slice and current ray plots
             self.create_multiplot(outfname = "{}/mp{:04d}".format(self.out_dir, i))
 
-            #close ray files
+            #close ray files and clear figure
             self.ray_h5.close()
+
+            self.fig.clear()
 
 def construct_rays( dataset,
                     line_list,
@@ -494,7 +511,6 @@ def construct_rays( dataset,
     angle = np.deg2rad(angle)
 
     #get right indexing for direction
-    print(direction)
     if (direction == 'x'):
         dir_index=0
         coord1_index=1
@@ -509,7 +525,7 @@ def construct_rays( dataset,
         coord2_index=1
     else:
         raise RuntimeError("direction must be 'x', 'y', or 'z'")
-    print(dir_index)
+
     #calculate the changing coordinate
     begin = ds.domain_center[dir_index] + dist_from_center
     end = ds.domain_center[dir_index] - dist_from_center
@@ -523,8 +539,8 @@ def construct_rays( dataset,
     coord1_begin = ds.domain_center[coord1_index] - len_coord1
     coord1_end = ds.domain_center[coord1_index] + len_coord1
 
-    coord2_begin = ds.domain_center[coord2_index] #- len_coord2
-    coord2_end = ds.domain_center[coord2_index] #+ len_coord2
+    coord2_begin = ds.domain_center[coord2_index] - len_coord2
+    coord2_end = ds.domain_center[coord2_index] + len_coord2
 
     #empty ray coordinates to be filled
     ray_begin = ds.arr(np.zeros(3), "code_length")
