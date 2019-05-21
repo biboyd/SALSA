@@ -3,7 +3,8 @@ import trident
 import numpy as np
 from sys import argv
 import h5py
-from os import remove
+from os import remove, listdir, makedirs
+import errno
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
@@ -94,22 +95,34 @@ class multi_plot():
             self.ray = 'None'
             self.ray_h5 = 'None'
 
+        #optionally set min/max value for number density plot
+        self.num_dense_min = 'None'
+        self.num_dense_max = 'None'
 
-    def open_files(self):
+
+    def open_files(self, open_ds=True, open_ray=True):
         """
         Opens dataset and ray files int yt and h5py
 
         Parameters:
-            none
+            open_ds : bool operator. whether or not the dataset should be opened
+            open_ray :bool operator. whether or not the ray should be opened
 
         Returns:
-        ds : dataset object loaded into yt
-        ray : ray object loaded into yt
-        ray_h5file : ray object loaded into h5py
+        ds : dataset object loaded into yt or None if open_ds = False
+        ray : ray object loaded into yt or None if open_ray = False
+        ray_h5file : ray object loaded into h5py or None if open_ray = False
         """
-        ds = yt.load(self.ds_filename)
-        ray = yt.load(self.ray_filename)
-        ray_h5file = h5py.File(self.ray_filename)
+        #open ds if open_ds = True
+        ds = yt.load(self.ds_filename) if open_ds else 'None'
+
+        #open ray file in its two forms if open_ray = True
+        if (open_ray):
+            ray = yt.load(self.ray_filename)
+            ray_h5file = h5py.File(self.ray_filename)
+        else:
+            ray = 'None'
+            ray_h5file = 'None'
 
         return ds, ray, ray_h5file
 
@@ -137,14 +150,14 @@ class multi_plot():
         outname = ion_split[0] + '_p' + str(num)
         return outname
 
-    def create_slice(self, cmap="BLUE"):
+    def create_slice(self, cmap="magma"):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
 
         Parameters:
         field: The yt field to plot for the slice
-        cmap='BLUE' : the colormap to use for the slice
+        cmap='magma' : the colormap to use for the slice
 
         Returns:
         slice : yt SlicePlot with ray annotated
@@ -226,6 +239,7 @@ class multi_plot():
 
         #plot values
         ax.plot(wavelength, flux)
+        ax.set_ylim(0, 1.05)
         ax.set_title("Spectrum".format(self.ion_name))
         ax.set_xlabel("Wavelength (Angstrom)")
         ax.set_ylabel("Flux")
@@ -258,7 +272,13 @@ class multi_plot():
         ax.set_ylabel("Number Density $(cm^{-3})$")
         ax.set_yscale('log')
 
-    def create_multiplot(self, outfname='None', cmap="BLUE"):
+        #chech if min/max num dense was called
+        if (self.num_dense_min == 'None' and self.num_dense_max == 'None'):
+            pass
+        else:
+            ax.set_ylim(self.num_dense_min, self.num_dense_max)
+
+    def create_multiplot(self, outfname='None', cmap="magma"):
         """
         combines the slice plot, number density plot, and spectrum plot into
         one image.
@@ -267,7 +287,7 @@ class multi_plot():
             outfname='None' : the file name/path in which to save the file defaults
                               to being unsaved
 
-            cmap='BLUE' :     the color map to use for the slice plot
+            cmap='magma' :     the color map to use for the slice plot
 
         Returns:
             none
@@ -347,6 +367,186 @@ class multi_plot():
 
         return col_density
 
+class movie_multi_plot(multi_plot):
+
+    def __init__(self,
+            ds_filename,
+            ray_dir,
+            ion_name='H I',
+            slice_field='None',
+            absorber_fields=[],
+            wavelength_center='None',
+            wavelength_width = 300,
+            resolution = 0.1,
+            out_dir="./images"):
+
+        self.ds_filename = ds_filename
+        #find all ray files in ray_dir. set first one to ray_filename
+        self.ray_files = listdir(ray_dir)
+        self.ray_dir = ray_dir
+
+        self.ion_name = ion_name
+        #add ion name to list of all ions to be plotted
+        absorber_fields.append(ion_name)
+        self.ion_list = absorber_fields
+
+        #set a value for slice
+        self.slice = 'None'
+
+        #set slice field to ion name if no field is specified
+        if (slice_field == 'None'):
+            self.slice_field = self.ion_p_name() + "_number_density"
+        else:
+            self.slice_field = slice_field
+
+        self.wavelength_width = wavelength_width
+        self.resolution = resolution
+        #default set the wavelenth center to one of the known spectral lines
+        #for ion name. Use tridents line database to search for correct wavelenth
+        if (wavelength_center == "None"):
+            #open up tridents default line database
+            lbd = trident.LineDatabase("lines.txt")
+            #find all lines that match ion
+            lines = lbd.parse_subset(subsets= [self.ion_name])
+            #take first one and return its wavelenth
+            self.wavelenth_center = lines[0].wavelength
+
+        #calculate the proper yscale for number density plot
+        tot_median=0
+        for rfile in self.ray_files:
+            pass
+
+        self.num_dense_min = 'None'#0.1*avg_med
+        self.num_dense_max = 'None'#100*avg_med
+
+        self.out_dir = out_dir
+
+    def create_movie(self, cmap="magma"):
+        """
+        creates a movie by combining all the plots made from the ray in ray_dir
+
+        Parameters:
+            cmap="magma" : the colormap with which to use for the slice plot
+        """
+        #open up dataset
+        self.ds = yt.load(self.ds_filename)
+        #create fig to plot on
+        self.fig = plt.figure(figsize=(10, 10))
+
+        num_rays = len(self.ray_files)
+        for i in range(num_rays):
+            #assign the current ray filename
+            self.ray_filename = "{}/{}".format(self.ray_dir,self.ray_files[i])
+            #open the current ray file
+            junk_var, self.ray, self.ray_h5 = self.open_files(open_ds=False)
+
+            if (i == 0):
+                #construct the initial slice
+                self.create_slice(cmap=cmap)
+            else:
+                #annotate slice
+                self.slice.annotate_clear()
+                self.slice.annotate_ray(self.ray, arrow=True)
+
+            #create multiplot using slice and current ray plots
+            self.create_multiplot(outfname = "{}/mp{:04d}".format(self.out_dir, i))
+
+            #close ray files
+            self.ray_h5.close()
+
+def construct_rays( dataset,
+                    line_list,
+                    length=200,
+                    n_rays=100,
+                    direction='z',
+                    angle=0,
+                    dist_from_center=200,
+                    out_dir='./rays'):
+    """
+    Constructs a number of light rays to "scan" a galactic data set using trident
+
+    Parameters:
+        dataset: enzo dataset on which to construct the rays
+        line_list: list of ions to include in rays
+        length: the length of the rays in kpc
+        n_rays: the number of rays to construct
+        direction: the coordinate direction in which to "scan" the galaxy
+        angle: The azimuthal angle around the direction. in degrees
+        dist_from_center: range to construct rays. in kpc from center of galaxy
+        out_dir: directory in which to save the rays
+
+    Returns:
+        none
+    """
+
+    ds = yt.load(dataset)
+
+    #create directory if doesn't exist
+    try:
+        makedirs(out_dir)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
+    #convert lengths to code_length and angle to radians
+    length = ds.quan(length, 'kpc').in_units('code_length')
+    dist_from_center = ds.quan(dist_from_center, 'kpc').in_units('code_length')
+    angle = np.deg2rad(angle)
+
+    #get right indexing for direction
+    print(direction)
+    if (direction == 'x'):
+        dir_index=0
+        coord1_index=1
+        coord2_index=2
+    elif (direction == 'y'):
+        dir_index=1
+        coord1_index=2
+        coord2_index=0
+    elif (direction == 'z'):
+        dir_index=2
+        coord1_index=0
+        coord2_index=1
+    else:
+        raise RuntimeError("direction must be 'x', 'y', or 'z'")
+    print(dir_index)
+    #calculate the changing coordinate
+    begin = ds.domain_center[dir_index] + dist_from_center
+    end = ds.domain_center[dir_index] - dist_from_center
+    direct_coord = np.linspace(begin, end, n_rays)
+
+    #compute ray length in the coordinate directions
+    len_coord1 = length* np.cos(angle)
+    len_coord2 = length* np.sin(angle)
+
+    #calc beginning and ending of ray for constant coordinates
+    coord1_begin = ds.domain_center[coord1_index] - len_coord1
+    coord1_end = ds.domain_center[coord1_index] + len_coord1
+
+    coord2_begin = ds.domain_center[coord2_index] #- len_coord2
+    coord2_end = ds.domain_center[coord2_index] #+ len_coord2
+
+    #empty ray coordinates to be filled
+    ray_begin = ds.arr(np.zeros(3), "code_length")
+    ray_end = ds.arr(np.zeros(3), "code_length")
+    for i in range(n_rays):
+        #set beginning ray
+        ray_begin[dir_index] = direct_coord[i]
+        ray_begin[coord1_index] = coord1_begin
+        ray_begin[coord2_index] = coord2_begin
+
+        #set ending ray
+        ray_end[dir_index] = direct_coord[i]
+        ray_end[coord1_index] = coord1_end
+        ray_end[coord2_index] = coord2_end
+
+        #construct ray
+        trident.make_simple_ray(ds,
+                                ray_begin,
+                                ray_end,
+                                lines=line_list,
+                                data_filename="{:s}/{:04d}ray.h5".format(out_dir, i))
+
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
@@ -356,4 +556,4 @@ if __name__ == '__main__':
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
 
     outfile = "multiplot_" + ion[0] +".png"
-    mp.create_multiplot(outfile)
+    mp.create_multiplot(outfname=outfile)
