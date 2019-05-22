@@ -1,2 +1,0 @@
-use manual plotting interface for yt
-get trident to just give me wave length and flux so i can plot it myself
