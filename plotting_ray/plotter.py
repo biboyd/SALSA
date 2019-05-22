@@ -190,12 +190,12 @@ class multi_plot():
         #yt will ignore north_vector and place z-axis on horizontal axis
         if (norm_vector[0] == 0):
             # change yt coordinates so that z-axis is vertical
-            ds.coordinates.x_axis[1] = 0
-            ds.coordinates.x_axis['y'] = 0
+            self.ds.coordinates.x_axis[1] = 0
+            self.ds.coordinates.x_axis['y'] = 0
 
-            ds.coordinates.y_axis[1] = 2
-            ds.coordinates.y_axis['y'] = 2
-            
+            self.ds.coordinates.y_axis[1] = 2
+            self.ds.coordinates.y_axis['y'] = 2
+
         #Create slice along ray. keep slice pointed in z-direction
         slice = yt.SlicePlot(self.ds,
                           norm_vector,
