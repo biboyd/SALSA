@@ -186,6 +186,16 @@ class multi_plot():
         ray_center = (ray_begin + ray_end)/2
         ray_center[2] = center[2]
 
+        #handle case where it is an on axis slice in the y plane
+        #yt will ignore north_vector and place z-axis on horizontal axis
+        if (norm_vector[0] == 0):
+            # change yt coordinates so that z-axis is vertical
+            ds.coordinates.x_axis[1] = 0
+            ds.coordinates.x_axis['y'] = 0
+
+            ds.coordinates.y_axis[1] = 2
+            ds.coordinates.y_axis['y'] = 2
+            
         #Create slice along ray. keep slice pointed in z-direction
         slice = yt.SlicePlot(self.ds,
                           norm_vector,
@@ -195,17 +205,12 @@ class multi_plot():
                           width=(norm(ray_vec), "cm"),
                           axes_unit="kpc")
 
-        #handle case where it is a slice on y-axis
-        #yt will ignore north_vector and place z-axis on horizontal
-        # currently can't change it so just won't set the y label
-        if (norm_vector[0] != 0):
-            # set y label to Z
-            slice.set_ylabel("Z (kpc)")
 
         # add ray to slice
         slice.annotate_ray(self.ray, arrow=True)
 
-
+        # set y label to Z
+        slice.set_ylabel("Z (kpc)")
 
         # set color map
         slice.set_cmap(field=self.slice_field, cmap = cmap)
