@@ -401,6 +401,8 @@ class movie_multi_plot(multi_plot):
             if e.errno != errno.EEXIST:
                 raise
 
+        #collect only ray files
+
         #find all ray files in ray_dir. set first one to ray_filename
         self.ray_files = sorted(listdir(ray_dir))
         self.ray_dir = ray_dir
@@ -474,6 +476,10 @@ class movie_multi_plot(multi_plot):
 
         num_rays = len(self.ray_files)
         for i in range(num_rays):
+            #check that its an .h5 file
+            if (self.ray_files[i][-3:] != ".h5"):
+                continue
+            
             #assign the current ray filename
             self.ray_filename = "{}/{}".format(self.ray_dir,self.ray_files[i])
             #open the current ray file
