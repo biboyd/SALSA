@@ -25,13 +25,13 @@ class multi_plot():
                 ds_filename,
                 ray_filename,
                 ion_name='H I',
-                slice_field='None',
+                slice_field=None,
                 absorber_fields=[],
-                wavelength_center='None',
+                wavelength_center=None,
                 wavelength_width = 300,
                 resolution = 0.1,
                 open=True,
-                figure='None'):
+                figure=None):
         """
         init file names and ion name
 
@@ -63,10 +63,10 @@ class multi_plot():
         self.ion_list = absorber_fields
 
         #set a value for slice
-        self.slice = 'None'
+        self.slice = None
 
         #set slice field to ion name if no field is specified
-        if (slice_field == 'None'):
+        if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"
         else:
             self.slice_field = slice_field
@@ -75,7 +75,7 @@ class multi_plot():
         self.resolution = resolution
         #default set the wavelenth center to one of the known spectral lines
         #for ion name. Use tridents line database to search for correct wavelenth
-        if (wavelength_center == "None"):
+        if (wavelength_center == None):
             #open up tridents default line database
             lbd = trident.LineDatabase("lines.txt")
             #find all lines that match ion
@@ -84,20 +84,20 @@ class multi_plot():
             self.wavelenth_center = lines[0].wavelength
 
         #open up a figure if none specified
-        if (figure == 'None'):
+        if (figure == None):
             self.fig = plt.figure(figsize=(10, 10))
 
         #open up the dataset and ray files or set their values to None
         if (open):
             self.ds, self.ray, self.ray_h5 = self.open_files()
         else:
-            self.ds = 'None'
-            self.ray = 'None'
-            self.ray_h5 = 'None'
+            self.ds = None
+            self.ray = None
+            self.ray_h5 = None
 
         #optionally set min/max value for number density plot
-        self.num_dense_min = 'None'
-        self.num_dense_max = 'None'
+        self.num_dense_min = None
+        self.num_dense_max = None
 
 
     def open_files(self, open_ds=True, open_ray=True):
@@ -114,15 +114,15 @@ class multi_plot():
         ray_h5file : ray object loaded into h5py or None if open_ray = False
         """
         #open ds if open_ds = True
-        ds = yt.load(self.ds_filename) if open_ds else 'None'
+        ds = yt.load(self.ds_filename) if open_ds else None
 
         #open ray file in its two forms if open_ray = True
         if (open_ray):
             ray = yt.load(self.ray_filename)
             ray_h5file = h5py.File(self.ray_filename)
         else:
-            ray = 'None'
-            ray_h5file = 'None'
+            ray = None
+            ray_h5file = None
 
         return ds, ray, ray_h5file
 
@@ -285,18 +285,18 @@ class multi_plot():
         ax.set_yscale('log')
 
         #chech if min/max num dense was called
-        if (self.num_dense_min == 'None' and self.num_dense_max == 'None'):
+        if (self.num_dense_min == None and self.num_dense_max == None):
             pass
         else:
             ax.set_ylim(self.num_dense_min, self.num_dense_max)
 
-    def create_multiplot(self, outfname='None', cmap="magma"):
+    def create_multiplot(self, outfname=None, cmap="magma"):
         """
         combines the slice plot, number density plot, and spectrum plot into
         one image.
 
         Parameters:
-            outfname='None' : the file name/path in which to save the file defaults
+            outfname=None : the file name/path in which to save the file defaults
                               to being unsaved
 
             cmap='magma' :     the color map to use for the slice plot
@@ -304,7 +304,7 @@ class multi_plot():
         Returns:
             none
         """
-        if (self.slice == 'None'):
+        if (self.slice == None):
             #create the slicePlot using the field of the ion density
             self.create_slice(cmap = cmap)
 
@@ -335,7 +335,7 @@ class multi_plot():
         ax2.set_position([1.1, 0.52, 1, 0.42])
         ax3.set_position([1.1, 0, 1, 0.42])
 
-        if (outfname != 'None'):
+        if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
 
     def zoom(self, factor):
@@ -367,7 +367,7 @@ class multi_plot():
         Parameters:
 
         """
-        if (self.ray_h5 == 'None'):
+        if (self.ray_h5 == None):
             self.ds, self.ray, self.ray_h5 = self.open_files()
 
         #get list of num density and corresponding length
@@ -425,7 +425,7 @@ class movie_multi_plot(multi_plot):
         self.resolution = resolution
         #default set the wavelenth center to one of the known spectral lines
         #for ion name. Use tridents line database to search for correct wavelenth
-        if (wavelength_center == "None"):
+        if (wavelength_center == None):
             #open up tridents default line database
             lbd = trident.LineDatabase("lines.txt")
             #find all lines that match ion
