@@ -468,7 +468,9 @@ class movie_multi_plot(multi_plot):
         #open up dataset
         self.ds = yt.load(self.ds_filename)
         #create fig to plot on
+        print("loaded yt. tryinn fig??")
         self.fig = plt.figure(figsize=(10, 10))
+        print("well fig worked")
 
         num_rays = len(self.ray_files)
         for i in range(num_rays):
@@ -500,7 +502,8 @@ def construct_rays( dataset,
                     direction='z',
                     angle=0,
                     dist_from_center=200,
-                    out_dir='./rays'):
+                    out_dir='./rays',
+                    DEBUG=False):
     """
     Constructs a number of light rays to "scan" a galactic data set using trident
 
@@ -517,7 +520,8 @@ def construct_rays( dataset,
     Returns:
         none
     """
-
+    if DEBUG:
+        print(trident.__version__)
     ds = yt.load(dataset)
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=line_list, ftype='gas')
@@ -585,7 +589,7 @@ def construct_rays( dataset,
                                 ray_begin,
                                 ray_end,
                                 lines=line_list,
-                                data_filename="{:s}/{:04d}ray.h5".format(out_dir, i))
+                                data_filename="{:s}/ray{:04d}.h5".format(out_dir, i))
 
 if __name__ == '__main__':
     data_set_fname = argv[1]
