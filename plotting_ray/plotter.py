@@ -385,9 +385,9 @@ class movie_multi_plot(multi_plot):
             ds_filename,
             ray_dir,
             ion_name='H I',
-            slice_field='None',
+            slice_field=None,
             absorber_fields=[],
-            wavelength_center='None',
+            wavelength_center=None,
             wavelength_width = 300,
             resolution = 0.1,
             out_dir="./images"):
@@ -413,10 +413,10 @@ class movie_multi_plot(multi_plot):
         self.ion_list = absorber_fields
 
         #set a value for slice
-        self.slice = 'None'
+        self.slice =None
 
         #set slice field to ion name if no field is specified
-        if (slice_field == 'None'):
+        if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"
         else:
             self.slice_field = slice_field
@@ -425,7 +425,7 @@ class movie_multi_plot(multi_plot):
         self.resolution = resolution
         #default set the wavelenth center to one of the known spectral lines
         #for ion name. Use tridents line database to search for correct wavelenth
-        if (wavelength_center == "None"):
+        if (wavelength_center == None):
             #open up tridents default line database
             lbd = trident.LineDatabase("lines.txt")
             #find all lines that match ion
@@ -485,9 +485,10 @@ class movie_multi_plot(multi_plot):
             #open the current ray file
             junk_var, self.ray, self.ray_h5 = self.open_files(open_ds=False)
 
-            #annotate slice
-            self.slice.annotate_clear()
-            self.slice.annotate_ray(self.ray, arrow=True)
+            if self.slice != None:
+                #annotate slice
+                self.slice.annotate_clear()
+                self.slice.annotate_ray(self.ray, arrow=True)
 
             #create multiplot using slice and current ray plots
             self.create_multiplot(outfname = "{}/mp{:04d}".format(self.out_dir, i), cmap=cmap)
