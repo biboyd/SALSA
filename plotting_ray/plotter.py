@@ -479,22 +479,18 @@ class movie_multi_plot(multi_plot):
             #check that its an .h5 file
             if (self.ray_files[i][-3:] != ".h5"):
                 continue
-            
+
             #assign the current ray filename
             self.ray_filename = "{}/{}".format(self.ray_dir,self.ray_files[i])
             #open the current ray file
             junk_var, self.ray, self.ray_h5 = self.open_files(open_ds=False)
 
-            if (i == 0):
-                #construct the initial slice
-                self.create_slice(cmap=cmap)
-            else:
-                #annotate slice
-                self.slice.annotate_clear()
-                self.slice.annotate_ray(self.ray, arrow=True)
+            #annotate slice
+            self.slice.annotate_clear()
+            self.slice.annotate_ray(self.ray, arrow=True)
 
             #create multiplot using slice and current ray plots
-            self.create_multiplot(outfname = "{}/mp{:04d}".format(self.out_dir, i))
+            self.create_multiplot(outfname = "{}/mp{:04d}".format(self.out_dir, i), cmap=cmap)
 
             #close ray files and clear figure
             self.ray_h5.close()
