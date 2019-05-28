@@ -219,13 +219,13 @@ class multi_plot():
         self.slice = slice
         return slice
 
-    def plot_spect(self, ax, fname=".temp.h5"):
+    def plot_spect(self, ax, fname=None):
         """
         Use trident to plot the absorption spectrum of the ray.
         currently defaults to using COS wavelength binning and range.
         Parameters:
             ax : a matplotlib axis in which to draw the plot
-            fname=".temp.h5" : filename to temporary record spectrum data
+            fname=None : filename to save spectrum data
         Returns:
             none
         """
@@ -236,18 +236,13 @@ class multi_plot():
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
         spect_gen.make_spectrum(self.ray, lines=self.ion_list, output_file = fname)
 
-        #save the spectrum to hdf5
-        spect_gen.save_spectrum(fname)
+        if fname != None:
+            #save the spectrum to hdf5
+            spect_gen.save_spectrum(fname)
 
-        #open saved file to get wavelength and flux
-        spect_h5 = h5py.File(fname)
-
-        wavelength = np.array(spect_h5['wavelength'])
-        flux = np.array(spect_h5['flux'])
-
-        #close and delete temp file
-        spect_h5.close()
-        remove(fname)
+        #get wavelength and flux in order to plot
+        wavelength = spect_gen.lambda_field
+        flux = spect_gen.flux_field
 
         #plot values
         ax.plot(wavelength, flux)
