@@ -470,9 +470,7 @@ class movie_multi_plot(multi_plot):
         #open up dataset
         self.ds = yt.load(self.ds_filename)
         #create fig to plot on
-        print("loaded yt. tryinn fig??")
         self.fig = plt.figure(figsize=(10, 10))
-        print("well fig worked")
 
         num_rays = len(self.ray_files)
         for i in range(num_rays):
