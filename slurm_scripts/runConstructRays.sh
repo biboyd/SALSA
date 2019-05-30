@@ -4,13 +4,14 @@
 #SBATCH -t 12:00:00
 #SBATCH -n1
 
-inFile="/mnt/home/boydbre1/data/DD0076/DD0076"
+scratch="/mnt/gs18/scratch/users/boydbre1"
+inFile="$scratch/isolated_galaxy/DD0076/DD0076"
 nRays=$1
-outDir="/mnt/home/boydbre1/data/Closer_rays"
+outDir="$scratch/multiplot_movie/200kpc_movie/rays"
 
 if ! [ -d $outDir ]
 then
-	mkdir $outDir
+	mkdir -p $outDir
 else
 	rm -f $outDir/*
 fi
