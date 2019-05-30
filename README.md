@@ -1,4 +1,4 @@
-# Code Related to analyzing the CGM
+# Code Related to analyzing the CGM by creating Synthetic Spectra
 ## using enzo, yt, and trident projects
 
 # Directory layout
@@ -10,4 +10,13 @@ some code is borrowed/modified
 Holds code related to verifying that the impact parameter for sightlines are being sampled in an appropriate manner that mirrors observations.
 
 ## plotting_ray
-Holds code for a multiplot class that uses yt and trident. It's purpose is to construct a multiplot that shows a light ray traveling through a galactic simulation, it's corresponding number density along its length (for a given ion), and the resulting spectra an observer would see.
+Holds code for a multiplot class that uses yt and trident. It's purpose is to construct a multiplot that shows a light ray traveling through a galactic simulation, it's corresponding number density along its length (for a given ion), and the resulting spectra an observer would see.  
+main file is plotter.py (holds relavent classes). construct_rays.py and capture_movie_frames.py hold scripts for running jobs. 
+
+## misty_fog_spectacle
+Holds (currently deprecated) wrapper for extracting information from trident data including converting from 
+wavelength space to velocity space. 
+Additionally there is code for experimenting with Spectacle (spectra fitting software)
+
+## slurm_scripts
+scripts for submitting jobs related to making a movie out of the multiplot
