@@ -19,6 +19,7 @@ fi
 
 srun 									\
 	-o ${outDir}/cap_movie.out 					\
+	-J $ionLabel							\
 	--x11=all							\
 	python ~/Repo/CGM/plotting_ray/test_movie_class.py 		\
 		$dataFile $inDir "$ionName" $outDir

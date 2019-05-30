@@ -5,7 +5,7 @@
 #SBATCH -n1
 
 inFile="/mnt/home/boydbre1/data/DD0076/DD0076"
-nRays=1000
+nRays=500
 outDir="/mnt/home/boydbre1/data/rays"
 
 if ! [ -d $outDir ]
