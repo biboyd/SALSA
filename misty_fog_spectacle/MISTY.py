@@ -10,7 +10,7 @@ from astropy.io import fits
 import astropy.units as u
 
 import trident
-import h5py
+
 os.sys.path.insert(0, '/Users/molly/Dropbox/misty/MISTY-pipeline/spectacle')
 #from spectacle.analysis.statistics import delta_v_90, equivalent_width
 #from spectacle.analysis import Resample
@@ -21,16 +21,14 @@ ldb = trident.LineDatabase('lines.txt')
 def write_header(ray, start_pos=None, end_pos=None, lines=None, **kwargs):
     #find start/end pos if not given
     if (start_pos==None or end_pos==None):
-        rayh5 = h5py.File(ray.parameter_filename)
-        start_pos = [rayh5['grid']['x'][0],
-                    rayh5['grid']['y'][0],
-                    rayh5['grid']['z'][0]]
+        start_pos = [ray.all_data()['x'][0],
+                    ray.all_data()['y'][0],
+                    ray.all_data()['grid']['z'][0]]
 
-        end_pos = [rayh5['grid']['x'][-1],
-                    rayh5['grid']['y'][-1],
-                    rayh5['grid']['z'][-1]]
+        end_pos = [ray.all_data()['x'][-1],
+                    ray.all_data()['y'][-1],
+                    ray.all_data()['z'][-1]]
 
-        rayh5.close()
 
     # begin making fits header
     prihdr = fits.Header()
