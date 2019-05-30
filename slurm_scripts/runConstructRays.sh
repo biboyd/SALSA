@@ -5,8 +5,8 @@
 #SBATCH -n1
 
 inFile="/mnt/home/boydbre1/data/DD0076/DD0076"
-nRays=500
-outDir="/mnt/home/boydbre1/data/rays"
+nRays=$1
+outDir="/mnt/home/boydbre1/data/Closer_rays"
 
 if ! [ -d $outDir ]
 then
@@ -17,5 +17,5 @@ fi
 
 srun 								\
 	-o ${outDir}/construct_rays.out 			\
-	python ~/Repo/CGM/plotting_ray/test_ray_construct.py 	\
+	python ~/Repo/CGM/plotting_ray/construct_rays.py	\
 		$inFile $nRays $outDir
