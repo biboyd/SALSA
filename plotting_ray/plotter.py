@@ -88,7 +88,8 @@ class multi_plot():
 
         #open up the dataset and ray files or set their values to None
         if (open_start):
-            self.ds, self.ray = self.open_files()
+            self.ds = yt.load(self.ds_filename)
+            self.ray = yt.load(self.ray_filename)
         else:
             self.ds = None
             self.ray = None
@@ -147,7 +148,7 @@ class multi_plot():
         outname = ion_split[0] + '_p' + str(num)
         return outname
 
-    def create_slice(self, cmap="magma"):
+    def create_slice(self, cmap="magma", height=None, width=None):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
@@ -198,11 +199,22 @@ class multi_plot():
                           norm_vector,
                           self.slice_field,
                           north_vector = [0, 0, 1],
-                          center = center,
-                          width=(norm(ray_vec), "cm"),
-                          axes_unit="kpc")
+                          center = center)
 
+        #set width/height
+        if width ==None and height==None:
+            #default to length of ray
+            slice.set_width(norm(ray_vec), 'cm')
+        elif width ==None and height != None:
+            #width still defaults to length of ray
+            slice.set_width( (norm(ray_vec), 'cm'), (height, 'kpc') )
+        elif width != None and height ==None:
+            slice.set_width( (width, 'kpc'), (norm(ray_vec), 'cm') )
+        else:
+            slice.set_width( (width, 'kpc'), (height, 'kpc') )
 
+        #set axes to kpc
+        slice.set_axes_unit('kpc')
         # add ray to slice
         slice.annotate_ray(self.ray, arrow=True)
 
@@ -360,7 +372,7 @@ class multi_plot():
 
         """
         if (self.ray == None):
-            self.ds, self.ray = self.open_files()
+            self.ray = yt.load(self.ray_filename)
 
         #get list of num density and corresponding length
         num_density = np.array(self.ray.all_data()[self.ion_p_name()+'_number_density'])
@@ -382,7 +394,25 @@ class movie_multi_plot(multi_plot):
             wavelength_center=None,
             wavelength_width = 300,
             resolution = 0.1,
-            out_dir="./images"):
+            out_dir="./frames"):
+        """
+        Parameters:
+        ds_filename : Path/name of the enzo dataset to be loaded
+        ray_dir : Path/name of the directory of numbered hdf5 ray files
+
+        ion_name : Name of the ion to plot in number density plot
+        slice_field : Field to plot in slice plot. defaults to ion_name's number density
+        absorber_fields : Additional ions to include in plots/Spectra, enter as list
+        wavelength_center : Wavelength to center spectrum plot on. defaults to
+                            a known spectral line of ion_name. in units of Angstrom
+        wavelength_width : sets the wavelenth range of the spectrum plot. defaults
+                            to 300 Angstroms
+        resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        ###NOTE### ion names should be in notaion:
+              Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
+
+        out_dir : Directory in which to store the movie frames
+        """
 
         self.ds_filename = ds_filename
 
@@ -393,10 +423,14 @@ class movie_multi_plot(multi_plot):
             if e.errno != errno.EEXIST:
                 raise
 
-        #collect only ray files
+        #collect only ray files in ray_dir
+        ray_files=[]
+        for f in listdir(ray_dir):
+            if (f[-3:] == ".h5"):
+                ray_files.append(f)
 
-        #find all ray files in ray_dir. set first one to ray_filename
-        self.ray_files = sorted(listdir(ray_dir))
+        #sort the rays and assign
+        self.ray_files = sorted(ray_files)
         self.ray_dir = ray_dir
 
         self.ion_name = ion_name
@@ -425,30 +459,16 @@ class movie_multi_plot(multi_plot):
             #take first one and return its wavelenth
             self.wavelenth_center = lines[0].wavelength
 
-        #calculate the proper yscale for number density plot
-        tot_median=0.
-
-        #get middle ray to represent scale
-        middle_ray_file = self.ray_files[ int(len(self.ray_files)/2) ]
-        mid_ray= yt.load("{}/{}".format(self.ray_dir, middle_ray_file))
-
-        #get median num density
-        num_density = np.array(mid_ray.all_data()[self.ion_p_name()+'_number_density'])
-        med = np.median(num_density)
-
-        #close ray
-        mid_ray.close()
-        #estimate min max values to plot
-        self.num_dense_min = 0.01*med
-        self.num_dense_max = 1000*med
 
         self.out_dir = out_dir
 
-    def create_movie(self, cmap="magma"):
+    def create_movie(self, slice_height=None, slice_width=None, cmap="magma"):
         """
         creates a movie by combining all the plots made from the ray in ray_dir
 
         Parameters:
+            slice_height : The vertical height of the slice plot in kpc. Defaults to lenght of ray
+            slice_width : The vertical height of the slice plot in kpc. Defaults to length of ray
             cmap="magma" : the colormap with which to use for the slice plot
         """
         #open up dataset
@@ -456,21 +476,38 @@ class movie_multi_plot(multi_plot):
         #create fig to plot on
         self.fig = plt.figure(figsize=(10, 10))
 
+        #calculate the proper yscale for number density plot
+        tot_median=0.
+
+        #get middle ray to represent scale
         num_rays = len(self.ray_files)
+        middle_ray_file = self.ray_files[ int(num_rays/2) ]
+        mid_ray= yt.load("{}/{}".format(self.ray_dir, middle_ray_file))
+
+        #get median num density
+        num_density = np.array(mid_ray.all_data()[self.ion_p_name()+'_number_density'])
+        med = np.median(num_density)
+
+
+        #construct the first/template slice using middle ray
+        self.ray = mid_ray
+        self.create_slice(width=slice_width, height=slice_height)
+        mid_ray.close()
+
+        #estimate min max values to plot
+        self.num_dense_min = 0.01*med
+        self.num_dense_max = 1000*med
+
         for i in range(num_rays):
-            #check that its an .h5 file
-            if (self.ray_files[i][-3:] != ".h5"):
-                continue
 
             #assign the current ray filename
-            self.ray_filename = "{}/{}".format(self.ray_dir,self.ray_files[i])
+            ray_filename = "{}/{}".format(self.ray_dir, self.ray_files[i])
             #open the current ray file
-            junk_var, self.ray = self.open_files(open_ds=False)
+            self.ray = yt.load(ray_filename)
 
-            if self.slice != None:
-                #annotate slice
-                self.slice.annotate_clear()
-                self.slice.annotate_ray(self.ray, arrow=True)
+            #annotate slice
+            self.slice.annotate_clear()
+            self.slice.annotate_ray(self.ray, arrow=True)
 
             #create multiplot using slice and current ray plots
             self.create_multiplot(outfname = "{}/mp{:04d}".format(self.out_dir, i), cmap=cmap)
