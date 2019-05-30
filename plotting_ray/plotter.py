@@ -256,7 +256,7 @@ class multi_plot():
         #plot values
         ax.plot(wavelength, flux)
         ax.set_ylim(0, 1.05)
-        ax.set_title("Spectrum".format(self.ion_name))
+        ax.set_title(f"Spectrum {self.ion_name}")
         ax.set_xlabel("Wavelength (Angstrom)")
         ax.set_ylabel("Flux")
 
@@ -283,7 +283,7 @@ class multi_plot():
 
         #make num density plots
         ax.plot(dl_list, num_density)
-        ax.set_title("Number Density of {} Along Ray".format(self.ion_name))
+        ax.set_title(f"Number Density of {self.ion_name} Along Ray")
         ax.set_xlabel("Length From Start of Ray $(kpc)$")
         ax.set_ylabel("Number Density $(cm^{-3})$")
         ax.set_yscale('log')
@@ -482,10 +482,10 @@ class movie_multi_plot(multi_plot):
         #get middle ray to represent scale
         num_rays = len(self.ray_files)
         middle_ray_file = self.ray_files[ int(num_rays/2) ]
-        mid_ray= yt.load("{}/{}".format(self.ray_dir, middle_ray_file))
+        mid_ray= yt.load( f"{self.ray_dir}/{middle_ray_file}" )
 
         #get median num density
-        num_density = np.array(mid_ray.all_data()[self.ion_p_name()+'_number_density'])
+        num_density = np.array(mid_ray.all_data()[ f"{self.ion_p_name()}_number_density" ])
         med = np.median(num_density)
 
 
@@ -498,10 +498,13 @@ class movie_multi_plot(multi_plot):
         self.num_dense_min = 0.01*med
         self.num_dense_max = 1000*med
 
+        #set padding for filenames
+        pad = np.floor( np.log10(num_rays) )
+        pad = int(pad) + 2
         for i in range(num_rays):
 
             #assign the current ray filename
-            ray_filename = "{}/{}".format(self.ray_dir, self.ray_files[i])
+            ray_filename = f"{self.ray_dir}/{self.ray_files[i]}"
             #open the current ray file
             self.ray = yt.load(ray_filename)
 
@@ -510,7 +513,7 @@ class movie_multi_plot(multi_plot):
             self.slice.annotate_ray(self.ray, arrow=True)
 
             #create multiplot using slice and current ray plots
-            self.create_multiplot(outfname = "{}/mp{:04d}".format(self.out_dir, i), cmap=cmap)
+            self.create_multiplot(outfname = f"{self.out_dir}/mp{i:0{pad}d}", cmap=cmap)
 
             #close ray files and clear figure
             self.ray.close()
@@ -595,6 +598,11 @@ def construct_rays( dataset,
     #empty ray coordinates to be filled
     ray_begin = ds.arr(np.zeros(3), "code_length")
     ray_end = ds.arr(np.zeros(3), "code_length")
+
+    #set padding for filenames
+    pad = np.floor( np.log10(n_rays) )
+    pad = int(pad) + 2
+
     for i in range(n_rays):
         #set beginning ray
         ray_begin[dir_index] = direct_coord[i]
@@ -611,7 +619,7 @@ def construct_rays( dataset,
                                 ray_begin,
                                 ray_end,
                                 lines=line_list,
-                                data_filename="{:s}/ray{:04d}.h5".format(out_dir, i))
+                                data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
 
 if __name__ == '__main__':
     data_set_fname = argv[1]
