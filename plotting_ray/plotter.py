@@ -2,7 +2,6 @@ import yt
 import trident
 import numpy as np
 from sys import argv
-import h5py
 from os import remove, listdir, makedirs
 import errno
 import matplotlib.pyplot as plt
@@ -30,7 +29,7 @@ class multi_plot():
                 wavelength_center=None,
                 wavelength_width = 300,
                 resolution = 0.1,
-                open=True,
+                open_start=True,
                 figure=None):
         """
         init file names and ion name
@@ -49,7 +48,7 @@ class multi_plot():
         resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
         figure : matplotlib figure where the multiplot will be plotted. creates one if
                 none is specified.
-        open : option on whether to immediately open dataset and ray files. defaults to True.
+        open_start : option on whether to immediately open dataset and ray files. defaults to True.
         ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
         """
@@ -88,12 +87,11 @@ class multi_plot():
             self.fig = plt.figure(figsize=(10, 10))
 
         #open up the dataset and ray files or set their values to None
-        if (open):
-            self.ds, self.ray, self.ray_h5 = self.open_files()
+        if (open_start):
+            self.ds, self.ray = self.open_files()
         else:
             self.ds = None
             self.ray = None
-            self.ray_h5 = None
 
         #optionally set min/max value for number density plot
         self.num_dense_min = None
@@ -102,7 +100,7 @@ class multi_plot():
 
     def open_files(self, open_ds=True, open_ray=True):
         """
-        Opens dataset and ray files int yt and h5py
+        Opens dataset and ray files with yt
 
         Parameters:
             open_ds : bool operator. whether or not the dataset should be opened
@@ -111,7 +109,6 @@ class multi_plot():
         Returns:
         ds : dataset object loaded into yt or None if open_ds = False
         ray : ray object loaded into yt or None if open_ray = False
-        ray_h5file : ray object loaded into h5py or None if open_ray = False
         """
         #open ds if open_ds = True
         ds = yt.load(self.ds_filename) if open_ds else None
@@ -119,12 +116,12 @@ class multi_plot():
         #open ray file in its two forms if open_ray = True
         if (open_ray):
             ray = yt.load(self.ray_filename)
-            ray_h5file = h5py.File(self.ray_filename)
+
         else:
             ray = None
-            ray_h5file = None
 
-        return ds, ray, ray_h5file
+
+        return ds, ray
 
     def ion_p_name(self):
         """
@@ -167,9 +164,9 @@ class multi_plot():
         trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
 
         # get beginning and end of ray
-        x = self.ray_h5['grid']['x']
-        y = self.ray_h5['grid']['y']
-        z = self.ray_h5['grid']['z']
+        x = self.ray.all_data()['x']
+        y = self.ray.all_data()['y']
+        z = self.ray.all_data()['z']
 
         ray_begin = np.array([ x[0], y[0], z[0] ])
         ray_end = np.array([ x[-1], y[-1], z[-1] ])
@@ -261,8 +258,8 @@ class multi_plot():
             none
         """
         #get list of num density and corresponding lengths
-        num_density = np.array(self.ray_h5['grid'][self.ion_p_name()+'_number_density'])
-        dl_list = np.array(self.ray_h5['grid']['dl'])
+        num_density = np.array(self.ray.all_data()[self.ion_p_name()+'_number_density'])
+        dl_list = np.array(self.ray.all_data()['dl'])
 
         #convert list of dl's to list of lengths from begin of ray
         num_dls = len(dl_list)
@@ -352,7 +349,7 @@ class multi_plot():
         """
 
         self.ds.close()
-        self.ray_h5.close()
+        self.ray.close()
 
     def compute_col_density(self):
         """
@@ -362,12 +359,12 @@ class multi_plot():
         Parameters:
 
         """
-        if (self.ray_h5 == None):
-            self.ds, self.ray, self.ray_h5 = self.open_files()
+        if (self.ray == None):
+            self.ds, self.ray = self.open_files()
 
         #get list of num density and corresponding length
-        num_density = np.array(self.ray_h5['grid'][self.ion_p_name()+'_number_density'])
-        dl_array = np.array(self.ray_h5['grid']['dl'])
+        num_density = np.array(self.ray.all_data()[self.ion_p_name()+'_number_density'])
+        dl_array = np.array(self.ray.all_data()['dl'])
 
         #multiply num density by its dl and sum up to get column density
         col_density = np.sum( num_density*dl_array )
@@ -430,25 +427,17 @@ class movie_multi_plot(multi_plot):
 
         #calculate the proper yscale for number density plot
         tot_median=0.
-        #for rfile in self.ray_files:
-        #    #open ray file and get number density
-        #    ray_h5 = h5py.File("{}/{}".format(self.ray_dir, rfile))
-        #    num_density = np.array(ray_h5['grid'][self.ion_p_name()+'_number_density'])
-        #
-        #    #add median num_density to sum
-        #    tot_median += np.median(num_density)
-        #
-        #    #close ray file
-        #    ray_h5.close()
 
         #get middle ray to represent scale
-        middle_ray = self.ray_files[ int(len(self.ray_files)/2) ]
-        ray_h5 = h5py.File("{}/{}".format(self.ray_dir, middle_ray))
+        middle_ray_file = self.ray_files[ int(len(self.ray_files)/2) ]
+        mid_ray= yt.load("{}/{}".format(self.ray_dir, middle_ray_file))
 
         #get median num density
-        num_density = np.array(ray_h5['grid'][self.ion_p_name()+'_number_density'])
+        num_density = np.array(mid_ray.all_data()[self.ion_p_name()+'_number_density'])
         med = np.median(num_density)
 
+        #close ray
+        mid_ray.close()
         #estimate min max values to plot
         self.num_dense_min = 0.01*med
         self.num_dense_max = 1000*med
@@ -476,7 +465,7 @@ class movie_multi_plot(multi_plot):
             #assign the current ray filename
             self.ray_filename = "{}/{}".format(self.ray_dir,self.ray_files[i])
             #open the current ray file
-            junk_var, self.ray, self.ray_h5 = self.open_files(open_ds=False)
+            junk_var, self.ray = self.open_files(open_ds=False)
 
             if self.slice != None:
                 #annotate slice
@@ -487,7 +476,7 @@ class movie_multi_plot(multi_plot):
             self.create_multiplot(outfname = "{}/mp{:04d}".format(self.out_dir, i), cmap=cmap)
 
             #close ray files and clear figure
-            self.ray_h5.close()
+            self.ray.close()
 
             self.fig.clear()
 
