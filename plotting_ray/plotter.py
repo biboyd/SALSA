@@ -556,8 +556,8 @@ def construct_rays( dataset,
     direct_coord = np.linspace(begin, end, n_rays)
 
     #compute ray length in the coordinate directions
-    len_coord1 = length* np.cos(angle)
-    len_coord2 = length* np.sin(angle)
+    len_coord1 = length/2* np.cos(angle)
+    len_coord2 = length/2* np.sin(angle)
 
     #calc beginning and ending of ray for constant coordinates
     coord1_begin = ds.domain_center[coord1_index] - len_coord1
