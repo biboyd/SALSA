@@ -46,7 +46,7 @@ class multi_plot():
         wavelength_width : sets the wavelenth range of the spectrum plot. defaults
                             to 300 Angstroms
         resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
-        figure : matplotlib figure where the multiplot will be plotted. creates one if
+        figure : matplotlib figure where the multi_plot will be plotted. creates one if
                 none is specified.
         open_start : option on whether to immediately open dataset and ray files. defaults to True.
         ###NOTE### ion names should be in notaion:
@@ -224,6 +224,9 @@ class multi_plot():
         # set color map
         slice.set_cmap(field=self.slice_field, cmap = cmap)
 
+        # set background to bottom of color map 
+        slice.set_background_color(self.slice_field)
+
         #assign slice
         self.slice = slice
         return slice
@@ -294,7 +297,7 @@ class multi_plot():
         else:
             ax.set_ylim(self.num_dense_min, self.num_dense_max)
 
-    def create_multiplot(self, outfname=None, cmap="magma"):
+    def create_multi_plot(self, outfname=None, cmap="magma"):
         """
         combines the slice plot, number density plot, and spectrum plot into
         one image.
@@ -512,8 +515,8 @@ class movie_multi_plot(multi_plot):
             self.slice.annotate_clear()
             self.slice.annotate_ray(self.ray, arrow=True)
 
-            #create multiplot using slice and current ray plots
-            self.create_multiplot(outfname = f"{self.out_dir}/mp{i:0{pad}d}", cmap=cmap)
+            #create multi_plot using slice and current ray plots
+            self.create_multi_plot(outfname = f"{self.out_dir}/mp{i:0{pad}d}", cmap=cmap)
 
             #close ray files and clear figure
             self.ray.close()
@@ -624,10 +627,10 @@ def construct_rays( dataset,
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
-    ion = 'C IV'
-    absorbers = ['H I', 'O VI']
+    ion = argv[3]
+    absorbers = [ion] #['H I', 'O VI']
 
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
 
-    outfile = "multiplot_" + ion[0] +".png"
-    mp.create_multiplot(outfname=outfile)
+    outfile = "multi_plot_" + ion[0] +".png"
+    mp.create_multi_plot(outfname=outfile)
