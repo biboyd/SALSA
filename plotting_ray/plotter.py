@@ -511,9 +511,10 @@ class movie_multi_plot(multi_plot):
             #open the current ray file
             self.ray = yt.load(ray_filename)
 
-            #annotate slice
+            #annotate slice with ray and title
             self.slice.annotate_clear()
             self.slice.annotate_ray(self.ray, arrow=True)
+            self.slice.annotate_title(f"ray {i:0{pad}d}")
 
             #create multi_plot using slice and current ray plots
             self.create_multi_plot(outfname = f"{self.out_dir}/mp{i:0{pad}d}", cmap=cmap)
