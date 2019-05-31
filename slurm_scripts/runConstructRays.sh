@@ -7,7 +7,7 @@
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/isolated_galaxy/DD0076/DD0076"
 nRays=$1
-outDir="$scratch/multiplot_movie/200kpc_movie/rays"
+outDir="$scratch/multiplot_movie/movie_200kpc/rays"
 
 if ! [ -d $outDir ]
 then

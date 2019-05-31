@@ -11,7 +11,7 @@ rayDir="$mainDir/rays"
 ionName=$1
 #label outdir but split ion into element and number
 ionLabel=${ionName% *}_${ionName#* }
-outDir="$mainDir/movie_${ionLabel}_images"
+outDir="$mainDir/movie_${ionLabel}_frames"
 
 if ! [ -d $outDir ];
 then

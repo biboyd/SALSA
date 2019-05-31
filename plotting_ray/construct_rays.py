@@ -10,5 +10,10 @@ n_rays=int(argv[2])
 out_dir = argv[3] 
 
 #now actual test
-plotter.construct_rays(filename, line_list, n_rays=n_rays, length=100, out_dir=out_dir)
+plotter.construct_rays(filename, line_list, 
+			n_rays=n_rays, 
+			length=200, 
+			dist_from_center=200/2,
+			out_dir=out_dir)
+
 print("finished")
