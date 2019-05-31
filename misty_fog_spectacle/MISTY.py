@@ -23,7 +23,7 @@ def write_header(ray, start_pos=None, end_pos=None, lines=None, **kwargs):
     if (start_pos==None or end_pos==None):
         start_pos = [ray.all_data()['x'][0],
                     ray.all_data()['y'][0],
-                    ray.all_data()['grid']['z'][0]]
+                    ray.all_data()['z'][0]]
 
         end_pos = [ray.all_data()['x'][-1],
                     ray.all_data()['y'][-1],
