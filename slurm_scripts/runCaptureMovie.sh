@@ -11,7 +11,7 @@ rayDir="$mainDir/rays"
 ionName=$1
 #label outdir but split ion into element and number
 ionLabel=${ionName% *}_${ionName#* }
-outDir="$mainDir/movie_${ionLabel}_frames"
+outDir="$mainDir/frames/movie_${ionLabel}_frames"
 
 if ! [ -d $outDir ];
 then
@@ -21,7 +21,7 @@ else
 fi
 
 srun 									\
-	-o ${outDir}/cap_movie.out 					\
+	-o ${outDir}/logs.out 						\
 	-J $ionLabel							\
 	python ~/Repo/CGM/plotting_ray/capture_movie_frames.py		\
 		$dataFile $rayDir "$ionName" $outDir
