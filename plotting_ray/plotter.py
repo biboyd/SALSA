@@ -30,6 +30,7 @@ class multi_plot():
                 wavelength_width = 300,
                 resolution = 0.1,
                 open_start=True,
+                markers=True,
                 figure=None):
         """
         init file names and ion name
@@ -46,6 +47,7 @@ class multi_plot():
         wavelength_width : sets the wavelenth range of the spectrum plot. defaults
                             to 300 Angstroms
         resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        markers : whether to include markers on light ray and number density plot
         figure : matplotlib figure where the multi_plot will be plotted. creates one if
                 none is specified.
         open_start : option on whether to immediately open dataset and ray files. defaults to True.
@@ -94,6 +96,7 @@ class multi_plot():
             self.ds = None
             self.ray = None
 
+        self.markers = markers
         #optionally set min/max value for number density plot
         self.num_dense_min = None
         self.num_dense_max = None
@@ -169,12 +172,15 @@ class multi_plot():
         y = self.ray.all_data()['y']
         z = self.ray.all_data()['z']
 
-        ray_begin = np.array([ x[0], y[0], z[0] ])
-        ray_end = np.array([ x[-1], y[-1], z[-1] ])
+        ray_begin = self.ds.arr([ x[0], y[0], z[0] ], 'cm')
+        ray_end = self.ds.arr([ x[-1], y[-1], z[-1] ], 'cm')
+
+        ray_begin = ray_begin.in_units('kpc')
+        ray_end = ray_end.in_units('kpc')
 
         #construct vector pointing in ray's direction
         ray_vec = ray_end - ray_begin
-
+        ray_length = self.ds.quan(norm(ray_vec.value), 'kpc')
         #construct vec orthogonal to ray
         norm_vector = [ray_vec[1], -1*ray_vec[0], 0]
 
@@ -204,19 +210,45 @@ class multi_plot():
         #set width/height
         if width ==None and height==None:
             #default to length of ray
-            slice.set_width(norm(ray_vec), 'cm')
+            slice.set_width(ray_length)
         elif width ==None and height != None:
             #width still defaults to length of ray
-            slice.set_width( (norm(ray_vec), 'cm'), (height, 'kpc') )
+            slice.set_width(ray_length, (height, 'kpc') )
         elif width != None and height ==None:
-            slice.set_width( (width, 'kpc'), (norm(ray_vec), 'cm') )
+            slice.set_width( (width, 'kpc'), ray_length )
         else:
             slice.set_width( (width, 'kpc'), (height, 'kpc') )
 
         #set axes to kpc
         slice.set_axes_unit('kpc')
+
         # add ray to slice
         slice.annotate_ray(self.ray, arrow=True)
+
+        if self.markers:
+            #make marker every x kpc. skip start
+            mark_dist = 25 #kpc
+            mark_dist_arr = np.arange(mark_dist, ray_length.value, mark_dist)
+            self.mark_dist_arr = self.ds.arr(mark_dist_arr, 'kpc')
+
+            #define colormap and scale
+            mrk_cmap = plt.cm.get_cmap('viridis')
+            self.colorscale = np.linspace(0, 1, mark_dist_arr.size)
+
+            #construct unit vec from ray
+            ray_direction = ray_vec/ray_length
+            for i in range(mark_dist_arr.size):
+                #calculate the position
+                mrk_pos = ray_begin + ray_direction * self.mark_dist_arr[i]
+
+                #choose corrct color from cmap
+                mrk_kwargs = {'color': mrk_cmap(self.colorscale[i]),
+                             'alpha' : 0.45,
+                             's' : 100,
+                             'edgecolors' : 'black',
+                             'linewidth' : 3}
+
+                slice.annotate_marker(mrk_pos, marker='s', plot_args=mrk_kwargs)
 
         # set y label to Z
         slice.set_ylabel("Z (kpc)")
@@ -224,7 +256,7 @@ class multi_plot():
         # set color map
         slice.set_cmap(field=self.slice_field, cmap = cmap)
 
-        # set background to bottom of color map 
+        # set background to bottom of color map
         slice.set_background_color(self.slice_field)
 
         #assign slice
@@ -297,7 +329,13 @@ class multi_plot():
         else:
             ax.set_ylim(self.num_dense_min, self.num_dense_max)
 
-    def create_multi_plot(self, outfname=None, cmap="magma"):
+        #add appropriate markers to the plot
+        if self.markers:
+            ys = np.zeros_like(self.mark_dist_arr)
+            ys += num_density.min()
+            ax.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker='s', cmap='viridis')
+
+    def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
         combines the slice plot, number density plot, and spectrum plot into
         one image.
@@ -305,6 +343,9 @@ class multi_plot():
         Parameters:
             outfname=None : the file name/path in which to save the file defaults
                               to being unsaved
+
+            markers=True : boolean. adds markers to slice plot and number density
+                            to aid analysis between those plots.
 
             cmap='magma' :     the color map to use for the slice plot
 
@@ -342,8 +383,10 @@ class multi_plot():
         ax2.set_position([1.1, 0.52, 1, 0.42])
         ax3.set_position([1.1, 0, 1, 0.42])
 
+
         if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
+
 
     def zoom(self, factor):
         """
