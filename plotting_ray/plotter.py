@@ -31,6 +31,7 @@ class multi_plot():
                 resolution = 0.1,
                 open_start=True,
                 markers=True,
+                mark_plot_args=None,
                 figure=None):
         """
         init file names and ion name
@@ -51,6 +52,13 @@ class multi_plot():
         figure : matplotlib figure where the multi_plot will be plotted. creates one if
                 none is specified.
         open_start : option on whether to immediately open dataset and ray files. defaults to True.
+
+        mark_plot_args : dict : set the property of markers if they are to be plotted.
+                        optional settings are:
+                        marker_spacing : determines how far apart markers are in kpc
+                        marker_shape : shape of marker see matplotlib for notation
+                        marker_cmap : colormap used to differentiate markers
+                        any other property that can be passer to matplotlib scatter 
         ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
         """
@@ -96,7 +104,24 @@ class multi_plot():
             self.ds = None
             self.ray = None
 
+        #set marker plot properties
         self.markers = markers
+        if markers:
+            self.mark_kwargs = {'alpha' : 0.45,
+                                's' : 100,
+                                'edgecolors' : 'black',
+                                'linewidth' : 3,
+                                'spacing' :50,
+                                'marker_cmap' : 'viridis',
+                                'marker_shape' :'s'}
+            if mark_plot_args != None:
+                self.mark_kwargs.update(mark_plot_args)
+
+            self.marker_spacing = self.mark_kwargs.pop('spacing')
+            self.marker_cmap = self.mark_kwargs.pop('marker_cmap')
+            self.marker_shape = self.mark_kwargs.pop('marker_shape')
+
+
         #optionally set min/max value for number density plot
         self.num_dense_min = None
         self.num_dense_max = None
@@ -227,12 +252,12 @@ class multi_plot():
 
         if self.markers:
             #make marker every x kpc. skip start
-            mark_dist = 25 #kpc
+            mark_dist = self.marker_spacing #kpc
             mark_dist_arr = np.arange(mark_dist, ray_length.value, mark_dist)
             self.mark_dist_arr = self.ds.arr(mark_dist_arr, 'kpc')
 
             #define colormap and scale
-            mrk_cmap = plt.cm.get_cmap('viridis')
+            mrk_cmap = plt.cm.get_cmap(self.marker_cmap)
             self.colorscale = np.linspace(0, 1, mark_dist_arr.size)
 
             #construct unit vec from ray
@@ -241,14 +266,11 @@ class multi_plot():
                 #calculate the position
                 mrk_pos = ray_begin + ray_direction * self.mark_dist_arr[i]
 
-                #choose corrct color from cmap
-                mrk_kwargs = {'color': mrk_cmap(self.colorscale[i]),
-                             'alpha' : 0.45,
-                             's' : 100,
-                             'edgecolors' : 'black',
-                             'linewidth' : 3}
+                #choose correct color from cmap
+                mrk_kwargs = self.mark_kwargs.copy()
+                mrk_kwargs['color'] = mrk_cmap(self.colorscale[i])
 
-                slice.annotate_marker(mrk_pos, marker='s', plot_args=mrk_kwargs)
+                slice.annotate_marker(mrk_pos, marker=self.marker_shape, plot_args=mrk_kwargs)
 
         # set y label to Z
         slice.set_ylabel("Z (kpc)")
@@ -333,7 +355,7 @@ class multi_plot():
         if self.markers:
             ys = np.zeros_like(self.mark_dist_arr)
             ys += num_density.min()
-            ax.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker='s', cmap='viridis')
+            ax.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
 
     def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
