@@ -27,6 +27,7 @@ class multi_plot():
                 wavelength_center=None,
                 wavelength_width = 300,
                 resolution = 0.1,
+                redshift = 0,
                 open_start=True,
                 markers=True,
                 mark_plot_args=None,
@@ -46,6 +47,7 @@ class multi_plot():
         wavelength_width : sets the wavelenth range of the spectrum plot. defaults
                             to 300 Angstroms
         resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        redshift : redshift of galaxy's motion. adjusts velocity plot calculation.
         markers : whether to include markers on light ray and number density plot
         figure : matplotlib figure where the multi_plot will be plotted. creates one if
                 none is specified.
@@ -298,9 +300,8 @@ class multi_plot():
         wavelength = spect_gen.lambda_field
         flux = spect_gen.flux_field
 
-
-        doppler_equiv = u.equivalencies.doppler_relativistic( wavelenth_center*(1+self.redshift) )
-        vel_array = wavelenth.to('km/s', equivalencies=doppler_equiv)
+        doppler_equiv = u.equivalencies.doppler_relativistic( self.wavelenth_center*(1+self.redshift) )
+        velocity = wavelenth.to('km/s', equivalencies=doppler_equiv)
 
         #plot values for spectra
         ax_spec.plot(wavelength, flux)
@@ -308,6 +309,13 @@ class multi_plot():
         ax_spec.set_title(f"Spectrum {self.ion_name}")
         ax_spec.set_xlabel("Wavelength (Angstrom)")
         ax_spec.set_ylabel("Flux")
+
+        #plot values for velocity plot
+        ax_vel.plot(velocity, flux)
+        ax_vel.set_ylim(0, 1.05)
+        ax_vel.set_title(f"LOS Velocity. rest is at {self.wavelenth_center} angstrom")
+        ax_vel.set_xlabel("Line of Sight Velocity (km/s)")
+        ax_vel.set_ylabel("Flux")
 
     def plot_num_density(self, ax):
         """
