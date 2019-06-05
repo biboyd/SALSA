@@ -14,6 +14,6 @@ out_dir= argv[4]
 print(filename, in_dir, i_name, out_dir)
 #now actual test
 movie =plotter.movie_multi_plot(filename,in_dir, ion_name=i_name ,absorber_fields=line_list, out_dir=out_dir)
-movie.create_movie(slice_height=400)
+movie.create_movie()
 print("--------------finished----------------")
 
