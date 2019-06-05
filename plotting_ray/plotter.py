@@ -254,11 +254,11 @@ class multi_plot():
             self.slice.set_width(ray_length)
         elif width ==None and height != None:
             #width still defaults to length of ray
-            self.slice.set_width(ray_length, (height, 'kpc') )
+            self.slice.set_width(((ray_length.to_value(), 'kpc'), (height, 'kpc')) )
         elif width != None and height ==None:
-            self.slice.set_width( (width, 'kpc'), ray_length )
+            self.slice.set_width( ((width, 'kpc'), (ray_length.to_value(), 'kpc')) )
         else:
-            self.slice.set_width( (width, 'kpc'), (height, 'kpc') )
+            self.slice.set_width( ((width, 'kpc'), (height, 'kpc')) )
 
         #set axes to kpc
         self.slice.set_axes_unit('kpc')
@@ -454,6 +454,8 @@ class movie_multi_plot(multi_plot):
             wavelength_center=None,
             wavelength_width = 300,
             resolution = 0.1,
+            markers=True,
+            mark_plot_args=None,
             out_dir="./frames"):
         """
         Parameters:
@@ -468,6 +470,14 @@ class movie_multi_plot(multi_plot):
         wavelength_width : sets the wavelenth range of the spectrum plot. defaults
                             to 300 Angstroms
         resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        markers : whether to include markers on light ray and number density plot
+        mark_plot_args : dict : set the property of markers if they are to be plotted.
+                        optional settings are:
+                        marker_spacing : determines how far apart markers are in kpc
+                        marker_shape : shape of marker see matplotlib for notation
+                        marker_cmap : colormap used to differentiate markers
+                        any other property that can be passer to matplotlib scatter
+
         ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
 
@@ -520,6 +530,23 @@ class movie_multi_plot(multi_plot):
             self.wavelenth_center = lines[0].wavelength
 
 
+        #set marker plot properties
+        self.markers = markers
+        if markers:
+            self.mark_kwargs = {'alpha' : 0.45,
+                                's' : 100,
+                                'edgecolors' : 'black',
+                                'linewidth' : 3,
+                                'spacing' :50,
+                                'marker_cmap' : 'viridis',
+                                'marker_shape' :'s'}
+            if mark_plot_args != None:
+                self.mark_kwargs.update(mark_plot_args)
+
+            self.marker_spacing = self.mark_kwargs.pop('spacing')
+            self.marker_cmap = self.mark_kwargs.pop('marker_cmap')
+            self.marker_shape = self.mark_kwargs.pop('marker_shape')
+
         self.out_dir = out_dir
 
     def create_movie(self, slice_height=None, slice_width=None, cmap="magma"):
@@ -568,9 +595,9 @@ class movie_multi_plot(multi_plot):
             #open the current ray file
             self.ray = yt.load(ray_filename)
 
-            #annotate slice with ray and title
+            #annotate slice with ray (and markers) and title
             self.slice.annotate_clear()
-            self.slice.annotate_ray(self.ray, arrow=True)
+            self.add_annotations()
             self.slice.annotate_title(f"ray {i:0{pad}d}")
 
             #create multi_plot using slice and current ray plots
