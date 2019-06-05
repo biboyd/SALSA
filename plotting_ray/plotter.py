@@ -44,9 +44,9 @@ class multi_plot():
         absorber_fields : Additional ions to include in plots/Spectra, enter as list
         wavelength_center : Wavelength to center spectrum plot on. defaults to
                             a known spectral line of ion_name. in units of Angstrom
-        wavelength_width : sets the wavelenth range of the spectrum plot. defaults
+        wavelength_width : sets the wavelength range of the spectrum plot. defaults
                             to 300 Angstroms
-        resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        resolution : width of wavelength bins in spectrum plot. default 0.1 Angstrom
         redshift : redshift of galaxy's motion. adjusts velocity plot calculation.
         markers : whether to include markers on light ray and number density plot
         figure : matplotlib figure where the multi_plot will be plotted. creates one if
@@ -80,17 +80,18 @@ class multi_plot():
         else:
             self.slice_field = slice_field
 
+        self.redshift = redshift
         self.wavelength_width = wavelength_width
         self.resolution = resolution
-        #default set the wavelenth center to one of the known spectral lines
-        #for ion name. Use tridents line database to search for correct wavelenth
+        #default set the wavelength center to one of the known spectral lines
+        #for ion name. Use tridents line database to search for correct wavelength
         if (wavelength_center == None):
             #open up tridents default line database
             lbd = trident.LineDatabase("lines.txt")
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
-            #take first one and return its wavelenth
-            self.wavelenth_center = lines[0].wavelength
+            #take first one and return its wavelength
+            self.wavelength_center = lines[0].wavelength
 
         #open up a figure if none specified
         if (figure == None):
@@ -281,7 +282,7 @@ class multi_plot():
         """
         Use trident to plot the absorption spectrum of the ray. Then
         convert wavelength to line of sight velocity and plot versus flux.
-        Uses wavelenth_center to calculate the velocity.
+        Uses wavelength_center to calculate the velocity.
 
         Parameters:
             ax_spec : a matplotlib axis in which to draw the spectra plot
@@ -290,30 +291,32 @@ class multi_plot():
             none
         """
         #set max and min wavelength and resolution
-        wave_min = self.wavelenth_center - self.wavelength_width/2
-        wave_max = self.wavelenth_center + self.wavelength_width/2
+        wave_min = self.wavelength_center - self.wavelength_width/2
+        wave_max = self.wavelength_center + self.wavelength_width/2
         #generate spectrum defined by inputs
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
-        spect_gen.make_spectrum(self.ray, lines=self.ion_list, output_file = fname)
+        spect_gen.make_spectrum(self.ray, lines=self.ion_list)
 
         #get wavelength and flux in order to plot and calc velocity
-        wavelength = spect_gen.lambda_field
+        wavelength = spect_gen.lambda_field * u.Unit('angstrom')
         flux = spect_gen.flux_field
 
-        doppler_equiv = u.equivalencies.doppler_relativistic( self.wavelenth_center*(1+self.redshift) )
-        velocity = wavelenth.to('km/s', equivalencies=doppler_equiv)
+        #calc velocity using relativistic doppler equation
+        rest_wavelength = u.Unit('angstrom')*self.wavelength_center*(1+self.redshift)
+        doppler_equiv = u.equivalencies.doppler_relativistic(rest_wavelength)
+        velocity = wavelength.to('km/s', equivalencies=doppler_equiv)
 
         #plot values for spectra
         ax_spec.plot(wavelength, flux)
         ax_spec.set_ylim(0, 1.05)
-        ax_spec.set_title(f"Spectrum {self.ion_name}")
-        ax_spec.set_xlabel("Wavelength (Angstrom)")
+        ax_spec.set_title(f"Spectrum {self.ion_name}", loc='right')
+        ax_spec.set_xlabel("Wavelength $\AA$")
         ax_spec.set_ylabel("Flux")
 
         #plot values for velocity plot
         ax_vel.plot(velocity, flux)
         ax_vel.set_ylim(0, 1.05)
-        ax_vel.set_title(f"LOS Velocity. rest is at {self.wavelenth_center} angstrom")
+        ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
         ax_vel.set_xlabel("Line of Sight Velocity (km/s)")
         ax_vel.set_ylabel("Flux")
 
@@ -339,7 +342,7 @@ class multi_plot():
 
         #make num density plots
         ax.plot(dl_list, num_density)
-        ax.set_title(f"Number Density of {self.ion_name} Along Ray")
+        ax.set_title(f"Number Density of {self.ion_name} Along Ray", loc='right')
         ax.set_xlabel("Length From Start of Ray $(kpc)$")
         ax.set_ylabel("Number Density $(cm^{-3})$")
         ax.set_yscale('log')
@@ -377,17 +380,17 @@ class multi_plot():
             #create the slicePlot using the field of the ion density
             self.create_slice(cmap = cmap)
 
-        grid = AxesGrid(self.fig, (0.075,0.075,0.85,0.85),
+        grid = AxesGrid(self.fig, (0.,0.,0.5,0.5),
                         nrows_ncols = (1, 1),
-                        axes_pad = 1.0,
+                        axes_pad = 0.5,
                         label_mode = "L",
-                        share_all = True,
+                        share_all = False,
                         cbar_location="right",
                         cbar_mode="each",
                         cbar_size="3%",
                         cbar_pad="0%")
 
-
+        #redraw slice plot onto figure
         plot = self.slice.plots[self.slice_field]
         plot.figure = self.fig
         plot.axes = grid[0].axes
@@ -395,15 +398,17 @@ class multi_plot():
 
         self.slice._setup_plots()
 
+        #set up axes and draw other plots to them
+        ax1 = self.fig.add_subplot(311)
         ax2 = self.fig.add_subplot(312)
-        self.plot_num_density(ax2)
-
         ax3 = self.fig.add_subplot(313)
-        self.plot_spect(ax3)
+        self.plot_num_density(ax1)
+        self.plot_spect_vel(ax2, ax3)
 
-        ax2.set_position([1.1, 0.52, 1, 0.42])
-        ax3.set_position([1.1, 0, 1, 0.42])
-
+        #setup positioning for the plots underneath
+        ax1.set_position([0.0, -0.25, 0.5, 0.15])
+        ax2.set_position([0.0, -0.475, 0.5, 0.15])
+        ax3.set_position([0.0, -0.7, 0.5, 0.15])
 
         if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
@@ -474,9 +479,9 @@ class movie_multi_plot(multi_plot):
         absorber_fields : Additional ions to include in plots/Spectra, enter as list
         wavelength_center : Wavelength to center spectrum plot on. defaults to
                             a known spectral line of ion_name. in units of Angstrom
-        wavelength_width : sets the wavelenth range of the spectrum plot. defaults
+        wavelength_width : sets the wavelength range of the spectrum plot. defaults
                             to 300 Angstroms
-        resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        resolution : width of wavelength bins in spectrum plot. default 0.1 Angstrom
         markers : whether to include markers on light ray and number density plot
         mark_plot_args : dict : set the property of markers if they are to be plotted.
                         optional settings are:
@@ -526,15 +531,15 @@ class movie_multi_plot(multi_plot):
 
         self.wavelength_width = wavelength_width
         self.resolution = resolution
-        #default set the wavelenth center to one of the known spectral lines
-        #for ion name. Use tridents line database to search for correct wavelenth
+        #default set the wavelength center to one of the known spectral lines
+        #for ion name. Use tridents line database to search for correct wavelength
         if (wavelength_center == None):
             #open up tridents default line database
             lbd = trident.LineDatabase("lines.txt")
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
-            #take first one and return its wavelenth
-            self.wavelenth_center = lines[0].wavelength
+            #take first one and return its wavelength
+            self.wavelength_center = lines[0].wavelength
 
 
         #set marker plot properties
