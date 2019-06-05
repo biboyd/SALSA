@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 
-from scipy.constants import centi, kilo, parsec
+import astropy.units  as u
 
 class multi_plot():
     """
@@ -17,8 +17,6 @@ class multi_plot():
     The number density of the given ion along that path.
     The artificial absorption spectra that would be observed.
     """
-    #define conversion factor
-    cm_to_kpc = centi/(parsec * kilo)
 
     def __init__(self,
                 ds_filename,
@@ -277,13 +275,15 @@ class multi_plot():
 
         return self.slice
 
-    def plot_spect(self, ax, fname=None):
+    def plot_spect_vel(self, ax_spec, ax_vel):
         """
-        Use trident to plot the absorption spectrum of the ray.
-        currently defaults to using COS wavelength binning and range.
+        Use trident to plot the absorption spectrum of the ray. Then
+        convert wavelength to line of sight velocity and plot versus flux.
+        Uses wavelenth_center to calculate the velocity.
+
         Parameters:
-            ax : a matplotlib axis in which to draw the plot
-            fname=None : filename to save spectrum data
+            ax_spec : a matplotlib axis in which to draw the spectra plot
+            ax_vel : a matplotlib axis in which to draw the velocity plot
         Returns:
             none
         """
@@ -294,20 +294,20 @@ class multi_plot():
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
         spect_gen.make_spectrum(self.ray, lines=self.ion_list, output_file = fname)
 
-        if fname != None:
-            #save the spectrum to hdf5
-            spect_gen.save_spectrum(fname)
-
-        #get wavelength and flux in order to plot
+        #get wavelength and flux in order to plot and calc velocity
         wavelength = spect_gen.lambda_field
         flux = spect_gen.flux_field
 
-        #plot values
-        ax.plot(wavelength, flux)
-        ax.set_ylim(0, 1.05)
-        ax.set_title(f"Spectrum {self.ion_name}")
-        ax.set_xlabel("Wavelength (Angstrom)")
-        ax.set_ylabel("Flux")
+
+        doppler_equiv = u.equivalencies.doppler_relativistic( wavelenth_center*(1+self.redshift) )
+        vel_array = wavelenth.to('km/s', equivalencies=doppler_equiv)
+
+        #plot values for spectra
+        ax_spec.plot(wavelength, flux)
+        ax_spec.set_ylim(0, 1.05)
+        ax_spec.set_title(f"Spectrum {self.ion_name}")
+        ax_spec.set_xlabel("Wavelength (Angstrom)")
+        ax_spec.set_ylabel("Flux")
 
     def plot_num_density(self, ax):
         """
@@ -319,16 +319,15 @@ class multi_plot():
             none
         """
         #get list of num density and corresponding lengths
-        num_density = np.array(self.ray.all_data()[self.ion_p_name()+'_number_density'])
-        dl_list = np.array(self.ray.all_data()['dl'])
+        num_density = self.ray.data[self.ion_p_name()+'_number_density']
+        dl_list = self.ray.data['dl']
+        dl_list = dl_list.in_units('kpc')
 
-        #convert list of dl's to list of lengths from begin of ray
-        num_dls = len(dl_list)
+        #convert dl's to array of lengths from begin of ray
+        num_dls = dl_list.size
         for i in range(1, num_dls):
             dl_list[i] += dl_list[i-1]
 
-        # convert to kpc
-        dl_list = dl_list*self.cm_to_kpc
 
         #make num density plots
         ax.plot(dl_list, num_density)
