@@ -30,6 +30,8 @@ class multi_plot():
                 wavelength_width = 300,
                 resolution = 0.1,
                 open_start=True,
+                markers=True,
+                mark_plot_args=None,
                 figure=None):
         """
         init file names and ion name
@@ -46,9 +48,17 @@ class multi_plot():
         wavelength_width : sets the wavelenth range of the spectrum plot. defaults
                             to 300 Angstroms
         resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        markers : whether to include markers on light ray and number density plot
         figure : matplotlib figure where the multi_plot will be plotted. creates one if
                 none is specified.
         open_start : option on whether to immediately open dataset and ray files. defaults to True.
+
+        mark_plot_args : dict : set the property of markers if they are to be plotted.
+                        optional settings are:
+                        marker_spacing : determines how far apart markers are in kpc
+                        marker_shape : shape of marker see matplotlib for notation
+                        marker_cmap : colormap used to differentiate markers
+                        any other property that can be passer to matplotlib scatter
         ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
         """
@@ -94,35 +104,87 @@ class multi_plot():
             self.ds = None
             self.ray = None
 
+        #set marker plot properties
+        self.markers = markers
+        if markers:
+            self.mark_kwargs = {'alpha' : 0.45,
+                                's' : 100,
+                                'edgecolors' : 'black',
+                                'linewidth' : 3,
+                                'spacing' :50,
+                                'marker_cmap' : 'viridis',
+                                'marker_shape' :'s'}
+            if mark_plot_args != None:
+                self.mark_kwargs.update(mark_plot_args)
+
+            self.marker_spacing = self.mark_kwargs.pop('spacing')
+            self.marker_cmap = self.mark_kwargs.pop('marker_cmap')
+            self.marker_shape = self.mark_kwargs.pop('marker_shape')
+
+
         #optionally set min/max value for number density plot
         self.num_dense_min = None
         self.num_dense_max = None
 
 
-    def open_files(self, open_ds=True, open_ray=True):
+    def add_annotations(self):
         """
-        Opens dataset and ray files with yt
+        Adds ray annotation and marker annotations to slice plot
+        """
+
+        #annotate ray
+        self.slice.annotate_ray(self.ray, arrow=True, plot_args={'alpha':0.5, 'color':'white', 'linewidth':2})
+
+        if self.markers:
+            #get ray positional properties
+            ray_begin, ray_end, ray_length, ray_direction = self.ray_position_prop(units='kpc')
+            #make marker every x kpc. skip start
+            mark_dist = self.marker_spacing #kpc
+            mark_dist_arr = np.arange(mark_dist, ray_length.value, mark_dist)
+            self.mark_dist_arr = self.ds.arr(mark_dist_arr, 'kpc')
+
+            #define colormap and scale
+            mrk_cmap = plt.cm.get_cmap(self.marker_cmap)
+            self.colorscale = np.linspace(0, 1, mark_dist_arr.size)
+
+            #construct unit vec from ray
+            for i in range(mark_dist_arr.size):
+                #calculate the position
+                mrk_pos = ray_begin + ray_direction * self.mark_dist_arr[i]
+
+                #choose correct color from cmap
+                mrk_kwargs = self.mark_kwargs.copy()
+                mrk_kwargs['color'] = mrk_cmap(self.colorscale[i])
+
+                self.slice.annotate_marker(mrk_pos, marker=self.marker_shape, plot_args=mrk_kwargs)
+
+    def ray_position_prop(self, units='code_length'):
+        """
+        returns positional/directional properties of the ray so that it can be used like a vector
 
         Parameters:
-            open_ds : bool operator. whether or not the dataset should be opened
-            open_ray :bool operator. whether or not the ray should be opened
-
+            units : YT defined units to return arrays in. defaults to 'code length'
         Returns:
-        ds : dataset object loaded into yt or None if open_ds = False
-        ray : ray object loaded into yt or None if open_ray = False
+            ray_begin : the starting coordinates of ray (YT arr)
+            ray_end : the ending coordinates of the ray (YT arr)
+            ray_length : the length of the ray (YT quan)
+            ray_unit : unit vector showing direction of the ray (YT arr)
         """
-        #open ds if open_ds = True
-        ds = yt.load(self.ds_filename) if open_ds else None
+        #get start and end points of ray. convert to defined units
+        ray_begin = self.ray.light_ray_solution[0]['start']
+        ray_end = self.ray.light_ray_solution[0]['end']
 
-        #open ray file in its two forms if open_ray = True
-        if (open_ray):
-            ray = yt.load(self.ray_filename)
+        ray_begin = ray_begin.in_units(units)
+        ray_end = ray_end.in_units(units)
 
-        else:
-            ray = None
+        #construct vector pointing in ray's direction
+        ray_vec = ray_end - ray_begin
+        ray_length = self.ds.quan(norm(ray_vec.value), units)
 
+        #normalize vector to unit length
+        ray_unit = ray_vec/ray_length
 
-        return ds, ray
+        return ray_begin, ray_end, ray_length, ray_unit
 
     def ion_p_name(self):
         """
@@ -164,25 +226,11 @@ class multi_plot():
         #add ion fields to dataset if not already there
         trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
 
-        # get beginning and end of ray
-        x = self.ray.all_data()['x']
-        y = self.ray.all_data()['y']
-        z = self.ray.all_data()['z']
 
-        ray_begin = np.array([ x[0], y[0], z[0] ])
-        ray_end = np.array([ x[-1], y[-1], z[-1] ])
-
-        #construct vector pointing in ray's direction
-        ray_vec = ray_end - ray_begin
-
+        ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
         #construct vec orthogonal to ray
-        norm_vector = [ray_vec[1], -1*ray_vec[0], 0]
+        norm_vector = [ray_unit[1], -1*ray_unit[0], 0]
 
-        #get center of ray keep z at center
-        center = self.ds.domain_center
-
-        ray_center = (ray_begin + ray_end)/2
-        ray_center[2] = center[2]
 
         #handle case where it is an on axis slice in the y plane
         #yt will ignore north_vector and place z-axis on horizontal axis
@@ -195,41 +243,39 @@ class multi_plot():
             self.ds.coordinates.y_axis['y'] = 2
 
         #Create slice along ray. keep slice pointed in z-direction
-        slice = yt.SlicePlot(self.ds,
+        self.slice = yt.SlicePlot(self.ds,
                           norm_vector,
                           self.slice_field,
-                          north_vector = [0, 0, 1],
-                          center = center)
+                          north_vector = [0, 0, 1])
 
         #set width/height
         if width ==None and height==None:
             #default to length of ray
-            slice.set_width(norm(ray_vec), 'cm')
+            self.slice.set_width(ray_length)
         elif width ==None and height != None:
             #width still defaults to length of ray
-            slice.set_width( (norm(ray_vec), 'cm'), (height, 'kpc') )
+            self.slice.set_width(((ray_length.to_value(), 'kpc'), (height, 'kpc')) )
         elif width != None and height ==None:
-            slice.set_width( (width, 'kpc'), (norm(ray_vec), 'cm') )
+            self.slice.set_width( ((width, 'kpc'), (ray_length.to_value(), 'kpc')) )
         else:
-            slice.set_width( (width, 'kpc'), (height, 'kpc') )
+            self.slice.set_width( ((width, 'kpc'), (height, 'kpc')) )
 
         #set axes to kpc
-        slice.set_axes_unit('kpc')
-        # add ray to slice
-        slice.annotate_ray(self.ray, arrow=True)
+        self.slice.set_axes_unit('kpc')
+
+        #annotate plot
+        self.add_annotations()
 
         # set y label to Z
-        slice.set_ylabel("Z (kpc)")
+        self.slice.set_ylabel("Z (kpc)")
 
         # set color map
-        slice.set_cmap(field=self.slice_field, cmap = cmap)
+        self.slice.set_cmap(field=self.slice_field, cmap = cmap)
 
-        # set background to bottom of color map 
-        slice.set_background_color(self.slice_field)
+        # set background to bottom of color map
+        self.slice.set_background_color(self.slice_field)
 
-        #assign slice
-        self.slice = slice
-        return slice
+        return self.slice
 
     def plot_spect(self, ax, fname=None):
         """
@@ -297,7 +343,13 @@ class multi_plot():
         else:
             ax.set_ylim(self.num_dense_min, self.num_dense_max)
 
-    def create_multi_plot(self, outfname=None, cmap="magma"):
+        #add appropriate markers to the plot
+        if self.markers:
+            ys = np.zeros_like(self.mark_dist_arr)
+            ys += num_density.min()
+            ax.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
+
+    def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
         combines the slice plot, number density plot, and spectrum plot into
         one image.
@@ -305,6 +357,9 @@ class multi_plot():
         Parameters:
             outfname=None : the file name/path in which to save the file defaults
                               to being unsaved
+
+            markers=True : boolean. adds markers to slice plot and number density
+                            to aid analysis between those plots.
 
             cmap='magma' :     the color map to use for the slice plot
 
@@ -342,8 +397,10 @@ class multi_plot():
         ax2.set_position([1.1, 0.52, 1, 0.42])
         ax3.set_position([1.1, 0, 1, 0.42])
 
+
         if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
+
 
     def zoom(self, factor):
         """
@@ -397,6 +454,8 @@ class movie_multi_plot(multi_plot):
             wavelength_center=None,
             wavelength_width = 300,
             resolution = 0.1,
+            markers=True,
+            mark_plot_args=None,
             out_dir="./frames"):
         """
         Parameters:
@@ -411,6 +470,14 @@ class movie_multi_plot(multi_plot):
         wavelength_width : sets the wavelenth range of the spectrum plot. defaults
                             to 300 Angstroms
         resolution : width of wavelenth bins in spectrum plot. default 0.1 Angstrom
+        markers : whether to include markers on light ray and number density plot
+        mark_plot_args : dict : set the property of markers if they are to be plotted.
+                        optional settings are:
+                        marker_spacing : determines how far apart markers are in kpc
+                        marker_shape : shape of marker see matplotlib for notation
+                        marker_cmap : colormap used to differentiate markers
+                        any other property that can be passer to matplotlib scatter
+
         ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
 
@@ -463,6 +530,23 @@ class movie_multi_plot(multi_plot):
             self.wavelenth_center = lines[0].wavelength
 
 
+        #set marker plot properties
+        self.markers = markers
+        if markers:
+            self.mark_kwargs = {'alpha' : 0.45,
+                                's' : 100,
+                                'edgecolors' : 'black',
+                                'linewidth' : 3,
+                                'spacing' :50,
+                                'marker_cmap' : 'viridis',
+                                'marker_shape' :'s'}
+            if mark_plot_args != None:
+                self.mark_kwargs.update(mark_plot_args)
+
+            self.marker_spacing = self.mark_kwargs.pop('spacing')
+            self.marker_cmap = self.mark_kwargs.pop('marker_cmap')
+            self.marker_shape = self.mark_kwargs.pop('marker_shape')
+
         self.out_dir = out_dir
 
     def create_movie(self, slice_height=None, slice_width=None, cmap="magma"):
@@ -511,9 +595,9 @@ class movie_multi_plot(multi_plot):
             #open the current ray file
             self.ray = yt.load(ray_filename)
 
-            #annotate slice with ray and title
+            #annotate slice with ray (and markers) and title
             self.slice.annotate_clear()
-            self.slice.annotate_ray(self.ray, arrow=True)
+            self.add_annotations()
             self.slice.annotate_title(f"ray {i:0{pad}d}")
 
             #create multi_plot using slice and current ray plots
