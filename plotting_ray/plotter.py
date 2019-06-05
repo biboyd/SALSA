@@ -466,6 +466,7 @@ class movie_multi_plot(multi_plot):
             wavelength_center=None,
             wavelength_width = 300,
             resolution = 0.1,
+            redshift = 0,
             markers=True,
             mark_plot_args=None,
             out_dir="./frames"):
@@ -482,6 +483,8 @@ class movie_multi_plot(multi_plot):
         wavelength_width : sets the wavelength range of the spectrum plot. defaults
                             to 300 Angstroms
         resolution : width of wavelength bins in spectrum plot. default 0.1 Angstrom
+        redshift : redshift due to the galaxies motion. used in velocity calculation
+                   to properly adjust redshift
         markers : whether to include markers on light ray and number density plot
         mark_plot_args : dict : set the property of markers if they are to be plotted.
                         optional settings are:
@@ -529,6 +532,7 @@ class movie_multi_plot(multi_plot):
         else:
             self.slice_field = slice_field
 
+        self.redshift = redshift
         self.wavelength_width = wavelength_width
         self.resolution = resolution
         #default set the wavelength center to one of the known spectral lines
