@@ -58,7 +58,7 @@ class multi_plot():
                         marker_spacing : determines how far apart markers are in kpc
                         marker_shape : shape of marker see matplotlib for notation
                         marker_cmap : colormap used to differentiate markers
-                        any other property that can be passer to matplotlib scatter 
+                        any other property that can be passer to matplotlib scatter
         ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
         """
@@ -127,30 +127,64 @@ class multi_plot():
         self.num_dense_max = None
 
 
-    def open_files(self, open_ds=True, open_ray=True):
+    def add_annotations(self):
         """
-        Opens dataset and ray files with yt
+        Adds ray annotation and marker annotations to slice plot
+        """
+
+        #annotate ray
+        self.slice.annotate_ray(self.ray, arrow=True, plot_args={'alpha':0.5, 'color':'white', 'linewidth':2})
+
+        if self.markers:
+            #get ray positional properties
+            ray_begin, ray_end, ray_length, ray_direction = self.ray_position_prop(units='kpc')
+            #make marker every x kpc. skip start
+            mark_dist = self.marker_spacing #kpc
+            mark_dist_arr = np.arange(mark_dist, ray_length.value, mark_dist)
+            self.mark_dist_arr = self.ds.arr(mark_dist_arr, 'kpc')
+
+            #define colormap and scale
+            mrk_cmap = plt.cm.get_cmap(self.marker_cmap)
+            self.colorscale = np.linspace(0, 1, mark_dist_arr.size)
+
+            #construct unit vec from ray
+            for i in range(mark_dist_arr.size):
+                #calculate the position
+                mrk_pos = ray_begin + ray_direction * self.mark_dist_arr[i]
+
+                #choose correct color from cmap
+                mrk_kwargs = self.mark_kwargs.copy()
+                mrk_kwargs['color'] = mrk_cmap(self.colorscale[i])
+
+                self.slice.annotate_marker(mrk_pos, marker=self.marker_shape, plot_args=mrk_kwargs)
+
+    def ray_position_prop(self, units='code_length'):
+        """
+        returns positional/directional properties of the ray so that it can be used like a vector
 
         Parameters:
-            open_ds : bool operator. whether or not the dataset should be opened
-            open_ray :bool operator. whether or not the ray should be opened
-
+            units : YT defined units to return arrays in. defaults to 'code length'
         Returns:
-        ds : dataset object loaded into yt or None if open_ds = False
-        ray : ray object loaded into yt or None if open_ray = False
+            ray_begin : the starting coordinates of ray (YT arr)
+            ray_end : the ending coordinates of the ray (YT arr)
+            ray_length : the length of the ray (YT quan)
+            ray_unit : unit vector showing direction of the ray (YT arr)
         """
-        #open ds if open_ds = True
-        ds = yt.load(self.ds_filename) if open_ds else None
+        #get start and end points of ray. convert to defined units
+        ray_begin = self.ray.light_ray_solution[0]['start']
+        ray_end = self.ray.light_ray_solution[0]['end']
 
-        #open ray file in its two forms if open_ray = True
-        if (open_ray):
-            ray = yt.load(self.ray_filename)
+        ray_begin = ray_begin.in_units(units)
+        ray_end = ray_end.in_units(units)
 
-        else:
-            ray = None
+        #construct vector pointing in ray's direction
+        ray_vec = ray_end - ray_begin
+        ray_length = self.ds.quan(norm(ray_vec.value), units)
 
+        #normalize vector to unit length
+        ray_unit = ray_vec/ray_length
 
-        return ds, ray
+        return ray_begin, ray_end, ray_length, ray_unit
 
     def ion_p_name(self):
         """
@@ -192,28 +226,11 @@ class multi_plot():
         #add ion fields to dataset if not already there
         trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
 
-        # get beginning and end of ray
-        x = self.ray.all_data()['x']
-        y = self.ray.all_data()['y']
-        z = self.ray.all_data()['z']
 
-        ray_begin = self.ds.arr([ x[0], y[0], z[0] ], 'cm')
-        ray_end = self.ds.arr([ x[-1], y[-1], z[-1] ], 'cm')
-
-        ray_begin = ray_begin.in_units('kpc')
-        ray_end = ray_end.in_units('kpc')
-
-        #construct vector pointing in ray's direction
-        ray_vec = ray_end - ray_begin
-        ray_length = self.ds.quan(norm(ray_vec.value), 'kpc')
+        ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
         #construct vec orthogonal to ray
-        norm_vector = [ray_vec[1], -1*ray_vec[0], 0]
+        norm_vector = [ray_unit[1], -1*ray_unit[0], 0]
 
-        #get center of ray keep z at center
-        center = self.ds.domain_center
-
-        ray_center = (ray_begin + ray_end)/2
-        ray_center[2] = center[2]
 
         #handle case where it is an on axis slice in the y plane
         #yt will ignore north_vector and place z-axis on horizontal axis
@@ -226,64 +243,39 @@ class multi_plot():
             self.ds.coordinates.y_axis['y'] = 2
 
         #Create slice along ray. keep slice pointed in z-direction
-        slice = yt.SlicePlot(self.ds,
+        self.slice = yt.SlicePlot(self.ds,
                           norm_vector,
                           self.slice_field,
-                          north_vector = [0, 0, 1],
-                          center = center)
+                          north_vector = [0, 0, 1])
 
         #set width/height
         if width ==None and height==None:
             #default to length of ray
-            slice.set_width(ray_length)
+            self.slice.set_width(ray_length)
         elif width ==None and height != None:
             #width still defaults to length of ray
-            slice.set_width(ray_length, (height, 'kpc') )
+            self.slice.set_width(ray_length, (height, 'kpc') )
         elif width != None and height ==None:
-            slice.set_width( (width, 'kpc'), ray_length )
+            self.slice.set_width( (width, 'kpc'), ray_length )
         else:
-            slice.set_width( (width, 'kpc'), (height, 'kpc') )
+            self.slice.set_width( (width, 'kpc'), (height, 'kpc') )
 
         #set axes to kpc
-        slice.set_axes_unit('kpc')
+        self.slice.set_axes_unit('kpc')
 
-        # add ray to slice
-        slice.annotate_ray(self.ray, arrow=True)
-
-        if self.markers:
-            #make marker every x kpc. skip start
-            mark_dist = self.marker_spacing #kpc
-            mark_dist_arr = np.arange(mark_dist, ray_length.value, mark_dist)
-            self.mark_dist_arr = self.ds.arr(mark_dist_arr, 'kpc')
-
-            #define colormap and scale
-            mrk_cmap = plt.cm.get_cmap(self.marker_cmap)
-            self.colorscale = np.linspace(0, 1, mark_dist_arr.size)
-
-            #construct unit vec from ray
-            ray_direction = ray_vec/ray_length
-            for i in range(mark_dist_arr.size):
-                #calculate the position
-                mrk_pos = ray_begin + ray_direction * self.mark_dist_arr[i]
-
-                #choose correct color from cmap
-                mrk_kwargs = self.mark_kwargs.copy()
-                mrk_kwargs['color'] = mrk_cmap(self.colorscale[i])
-
-                slice.annotate_marker(mrk_pos, marker=self.marker_shape, plot_args=mrk_kwargs)
+        #annotate plot
+        self.add_annotations()
 
         # set y label to Z
-        slice.set_ylabel("Z (kpc)")
+        self.slice.set_ylabel("Z (kpc)")
 
         # set color map
-        slice.set_cmap(field=self.slice_field, cmap = cmap)
+        self.slice.set_cmap(field=self.slice_field, cmap = cmap)
 
         # set background to bottom of color map
-        slice.set_background_color(self.slice_field)
+        self.slice.set_background_color(self.slice_field)
 
-        #assign slice
-        self.slice = slice
-        return slice
+        return self.slice
 
     def plot_spect(self, ax, fname=None):
         """
