@@ -1,5 +1,6 @@
+from sys import argv, path
+path.append("/mnt/home/boydbre1/Repo/CGM/plotting_ray/")
 import plotter
-from sys import argv
 
 #setup conditions
 line_list = ['H I', 'O VI', 'C IV']
