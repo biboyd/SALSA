@@ -5,11 +5,12 @@
 #SBATCH -n1
 #SBATCH --x11=all
 
+rayDist=$1
 s="/mnt/gs18/scratch/users/boydbre1"
 dataFile="$s/isolated_galaxy/DD0076/DD0076"
-mainDir="$s/multiplot_movie/movie_100kpc"
+mainDir="$s/multiplot_movie/movie_${rayDist}kpc"
 rayDir="$mainDir/rays"
-ionName=$1
+ionName=$2
 #label outdir but split ion into element and number
 ionLabel=${ionName% *}_${ionName#* }
 outDir="$mainDir/frames/movie_${ionLabel}_frames"
