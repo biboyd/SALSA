@@ -19,5 +19,5 @@ fi
 
 srun 								\
 	-o ${outDir}/construct_rays.out 			\
-	python ~/Repo/CGM/plotting_ray/construct_rays.py	\
+	python ~/Repo/CGM/job_scripts/construct_rays.py	\
 		$inFile $nRays $rayDist $outDir
