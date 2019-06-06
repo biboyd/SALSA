@@ -127,6 +127,8 @@ class multi_plot():
         self.num_dense_min = None
         self.num_dense_max = None
 
+        #optionally set position of markers on number density plot
+        self.markers_nd_pos = None
 
     def add_annotations(self):
         """
@@ -356,7 +358,11 @@ class multi_plot():
         #add appropriate markers to the plot
         if self.markers:
             ys = np.zeros_like(self.mark_dist_arr)
-            ys += num_density.min()
+            if self.markers_nd_pos == None:
+                ys += num_density.min()
+            else:
+                ys += self.markers_nd_pos
+
             ax.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
 
     def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
@@ -597,9 +603,10 @@ class movie_multi_plot(multi_plot):
         self.create_slice(width=slice_width, height=slice_height)
         mid_ray.close()
 
-        #estimate min max values to plot
+        #estimate min max values to number dense plot. and markers positioning
         self.num_dense_min = 0.01*med
         self.num_dense_max = 1000*med
+        self.markers_nd_pos = 0.05*med
 
         #set padding for filenames
         pad = np.floor( np.log10(num_rays) )
