@@ -321,7 +321,7 @@ class multi_plot():
         ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
         ax_vel.set_xlabel("Line of Sight Velocity (km/s)")
         ax_vel.set_ylabel("Flux")
-
+        ax_vel.set_xlim(-1500, 1500)
     def plot_num_density(self, ax):
         """
         Plots the number density at different lengths along the ray

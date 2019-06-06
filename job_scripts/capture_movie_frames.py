@@ -19,6 +19,6 @@ movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
 				absorber_fields=line_list, 
 				out_dir=out_dir,
 				wavelength_width=100,
-				resolution=0.1)
+				resolution=0.01)
 movie.create_movie()
 print("--------------finished----------------")
