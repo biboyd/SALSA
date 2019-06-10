@@ -1,10 +1,12 @@
 #!/bin/bash
 
-#SBATCH --ntasks=64
+#SBATCH --ntasks=16
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=1G
 #SBATCH -t 00:10:00
 #SBATCH --x11=all
+#SBATCH --mail-user=boydbre1@msu.edu
+#SBATCH --mail-type=ALL
 
 ionName=$1
 rayDist=$2
@@ -23,8 +25,7 @@ else
 	rm -rf $outDir/*
 fi
 
-mpirun -np 64 								\
+mpirun -np 16 								\
 	python ~/Repo/CGM/plotting_ray/capture_movie_frames.py		\
 		$dataFile $rayDir "$ionName" $outDir
-#combine images to make movie
-~/Repo/CGM/movie.sh movie_${ionLabel}.mp4 5 $outDir/*.png
+scontrol show job $SLURM_JOB_ID
