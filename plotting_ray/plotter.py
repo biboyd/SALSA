@@ -324,7 +324,8 @@ class multi_plot():
             ax_vel.set_xlabel("Delta_v (km/s)")
             ax_vel.set_ylabel("Flux")
             ax_vel.set_xlim(-1500, 1500)
-    def plot_num_density(self, ax):
+
+    def plot_num_dense_los_vel(self, ax_num_dense=None, ax_los_velocity=None):
         """
         Plots the number density at different lengths along the ray
 
@@ -333,8 +334,10 @@ class multi_plot():
         Returns:
             none
         """
-        #get list of num density and corresponding lengths
+        #get list of num density  los velocity and corresponding lengths
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
+        los_vel = self.ray.data['velocity_los']
+        los_vel = los_vel.in_units('km/s')
         dl_list = self.ray.data['dl']
         dl_list = dl_list.in_units('kpc')
 
@@ -344,18 +347,28 @@ class multi_plot():
             dl_list[i] += dl_list[i-1]
 
 
-        #make num density plots
-        ax.plot(dl_list, num_density)
-        ax.set_title(f"Number Density of {self.ion_name} Along Ray", loc='right')
-        ax.set_xlabel("Length From Start of Ray $(kpc)$")
-        ax.set_ylabel("Number Density $(cm^{-3})$")
-        ax.set_yscale('log')
+        if ax_num_dense is not None:
+            #make num density plots
+            ax_num_dense.plot(dl_list, num_density)
+            ax_num_dense.set_title(f"Number Density of {self.ion_name} Along Ray", loc='right')
+            ax_num_dense.set_xlabel("Length From Start of Ray $(kpc)$")
+            ax_num_dense.set_ylabel("Number Density $(cm^{-3})$")
+            ax_num_dense.set_yscale('log')
 
-        #chech if min/max num dense was called
-        if (self.num_dense_min == None and self.num_dense_max == None):
-            pass
-        else:
-            ax.set_ylim(self.num_dense_min, self.num_dense_max)
+            #chech if min/max num dense was called
+            if (self.num_dense_min == None and self.num_dense_max == None):
+                pass
+            else:
+                ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
+
+        if ax_los_velocity is not None:
+            #make num density plots
+            ax_los_velocity.plot(dl_list, los_vel)
+            ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
+            ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
+            ax_los_velocity.set_ylabel("Line of Sight Velocity $(km/s)$")
+
+            ax_los_velocity.set_ylim(-1000, 1000)
 
         #add appropriate markers to the plot
         if self.markers:
@@ -365,7 +378,10 @@ class multi_plot():
             else:
                 ys += self.markers_nd_pos
 
-            ax.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
+            if ax_num_dense is not None:
+                ax_num_dense.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
+            if ax_los_velocity is not None:
+                ax_los_velocity.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
 
     def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
@@ -410,13 +426,15 @@ class multi_plot():
         ax1 = self.fig.add_subplot(311)
         ax2 = self.fig.add_subplot(312)
         ax3 = self.fig.add_subplot(313)
-        self.plot_num_density(ax1)
-        self.plot_spect_vel(ax_spect=ax2, ax_vel=ax3)
+        self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
+        self.plot_spect_vel(ax_vel=ax3)
 
+        axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
-        ax1.set_position([0.0, -0.25, 0.5, 0.15])
-        ax2.set_position([0.0, -0.475, 0.5, 0.15])
-        ax3.set_position([0.0, -0.7, 0.5, 0.15])
+        strt_pos = -0.25
+        for i in range(len(axes)):
+            axes[i].set_position( [0.0, strt_pos - i*0.225, 0.5, 0.15] )
+
 
         if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
