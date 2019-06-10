@@ -24,8 +24,7 @@ fi
 
 srun 									\
 	-o ${outDir}/logs.out 						\
-	python ~/Repo/CGM/job_scripts/capture_movie_frames.py		\
+	python ~/Repo/CGM/plotting_ray/capture_movie_frames.py		\
 		$dataFile $rayDir "$ionName" $outDir
 #combine images to make movie
 ~/Repo/CGM/movie.sh movie_${ionLabel}.mp4 5 $outDir/*.png
-
