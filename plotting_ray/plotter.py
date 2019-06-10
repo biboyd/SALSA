@@ -213,14 +213,14 @@ class multi_plot():
         outname = ion_split[0] + '_p' + str(num)
         return outname
 
-    def create_slice(self, cmap="plasma", height=None, width=None):
+    def create_slice(self, cmap="magma", height=None, width=None):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
 
         Parameters:
         field: The yt field to plot for the slice
-        cmap='plasma' : the colormap to use for the slice
+        cmap='magma' : the colormap to use for the slice
 
         Returns:
         slice : yt SlicePlot with ray annotated
@@ -367,7 +367,7 @@ class multi_plot():
 
             ax.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
 
-    def create_multi_plot(self, outfname=None, markers=True, cmap="plasma"):
+    def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
         combines the slice plot, number density plot, and spectrum plot into
         one image.
@@ -379,7 +379,7 @@ class multi_plot():
             markers=True : boolean. adds markers to slice plot and number density
                             to aid analysis between those plots.
 
-            cmap='plasma' :     the color map to use for the slice plot
+            cmap='magma' :     the color map to use for the slice plot
 
         Returns:
             none
@@ -573,14 +573,17 @@ class movie_multi_plot(multi_plot):
 
         self.out_dir = out_dir
 
-    def create_movie(self, slice_height=None, slice_width=None, cmap="plasma"):
+    def create_movie(self, num_dense=None,ray_range=None, slice_height=None, slice_width=None, cmap="magma"):
         """
         creates a movie by combining all the plots made from the ray in ray_dir
 
         Parameters:
+            num_dense : An array or array type object that contains min and max num_dense to plot.
+                        otherwise calculates by using the middle ray in the ray list
+            ray_range : a list/array of ray numbers to make frames of
             slice_height : The vertical height of the slice plot in kpc. Defaults to lenght of ray
             slice_width : The vertical height of the slice plot in kpc. Defaults to length of ray
-            cmap="plasma" : the colormap with which to use for the slice plot
+            cmap="magma" : the colormap with which to use for the slice plot
         """
         #open up dataset
         self.ds = yt.load(self.ds_filename)
@@ -595,25 +598,31 @@ class movie_multi_plot(multi_plot):
         middle_ray_file = self.ray_files[ int(num_rays/2) ]
         mid_ray= yt.load( f"{self.ray_dir}/{middle_ray_file}" )
 
-        #get median num density
-        num_density = np.array(mid_ray.all_data()[ f"{self.ion_p_name()}_number_density" ])
-        med = np.median(num_density)
+        if num_dense is None:
+            #get median num density
+            num_density = np.array(mid_ray.all_data()[ f"{self.ion_p_name()}_number_density" ])
+            med = np.median(num_density)
 
+            #estimate min max values to number dense plot. and markers positioning
+            self.num_dense_min = 0.01*med
+            self.num_dense_max = 1000*med
+            self.markers_nd_pos = 0.05*med
+
+        else:
+            self.num_dense_min, self.num_dense_max = num_dense
+            self.markers_nd_pos = 5*self.num_dense_min
 
         #construct the first/template slice using middle ray
         self.ray = mid_ray
         self.create_slice(cmap = cmap, width=slice_width, height=slice_height)
         mid_ray.close()
 
-        #estimate min max values to number dense plot. and markers positioning
-        self.num_dense_min = 0.01*med
-        self.num_dense_max = 1000*med
-        self.markers_nd_pos = 0.05*med
-
         #set padding for filenames
         pad = np.floor( np.log10(num_rays) )
         pad = int(pad) + 2
-        for i in range(num_rays):
+        if ray_range is None:
+            ray_range = np.arange(num_rays)
+        for i in ray_range:
 
             #assign the current ray filename
             ray_filename = f"{self.ray_dir}/{self.ray_files[i]}"
