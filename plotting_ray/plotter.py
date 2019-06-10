@@ -280,14 +280,14 @@ class multi_plot():
 
         return self.slice
 
-    def plot_spect_vel(self, ax_spec, ax_vel):
+    def plot_spect_vel(self, ax_spect=None, ax_vel=None):
         """
         Use trident to plot the absorption spectrum of the ray. Then
         convert wavelength to line of sight velocity and plot versus flux.
         Uses wavelength_center to calculate the velocity.
 
         Parameters:
-            ax_spec : a matplotlib axis in which to draw the spectra plot
+            ax_spect : a matplotlib axis in which to draw the spectra plot
             ax_vel : a matplotlib axis in which to draw the velocity plot
         Returns:
             none
@@ -308,19 +308,21 @@ class multi_plot():
         doppler_equiv = u.equivalencies.doppler_relativistic(rest_wavelength)
         velocity = wavelength.to('km/s', equivalencies=doppler_equiv)
 
-        #plot values for spectra
-        ax_spec.plot(wavelength, flux)
-        ax_spec.set_ylim(0, 1.05)
-        ax_spec.set_title(f"Spectrum {self.ion_name}", loc='right')
-        ax_spec.set_xlabel("Wavelength $\AA$")
-        ax_spec.set_ylabel("Flux")
+        if ax_spect is not None:
+            #plot values for spectra
+            ax_spect.plot(wavelength, flux)
+            ax_spect.set_ylim(0, 1.05)
+            ax_spect.set_title(f"Spectrum {self.ion_name}", loc='right')
+            ax_spect.set_xlabel("Wavelength $\AA$")
+            ax_spect.set_ylabel("Flux")
 
-        #plot values for velocity plot
-        ax_vel.plot(velocity, flux)
-        ax_vel.set_ylim(0, 1.05)
-        ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
-        ax_vel.set_xlabel("Line of Sight Velocity (km/s)")
-        ax_vel.set_ylabel("Flux")
+        if ax_vel is not None:
+            #plot values for velocity plot
+            ax_vel.plot(velocity, flux)
+            ax_vel.set_ylim(0, 1.05)
+            ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
+            ax_vel.set_xlabel("Delta_v (km/s)")
+            ax_vel.set_ylabel("Flux")
 
     def plot_num_density(self, ax):
         """
@@ -409,7 +411,7 @@ class multi_plot():
         ax2 = self.fig.add_subplot(312)
         ax3 = self.fig.add_subplot(313)
         self.plot_num_density(ax1)
-        self.plot_spect_vel(ax2, ax3)
+        self.plot_spect_vel(ax_spect=ax2, ax_vel=ax3)
 
         #setup positioning for the plots underneath
         ax1.set_position([0.0, -0.25, 0.5, 0.15])
