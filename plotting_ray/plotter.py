@@ -596,7 +596,7 @@ class movie_multi_plot(multi_plot):
         middle_ray_file = self.ray_files[ int(num_rays/2) ]
         mid_ray= yt.load( f"{self.ray_dir}/{middle_ray_file}" )
 
-        if num_dense == None:
+        if num_dense is None:
             #get median num density
             num_density = np.array(mid_ray.all_data()[ f"{self.ion_p_name()}_number_density" ])
             med = np.median(num_density)
@@ -618,7 +618,7 @@ class movie_multi_plot(multi_plot):
         #set padding for filenames
         pad = np.floor( np.log10(num_rays) )
         pad = int(pad) + 2
-        if ray_range==None:
+        if ray_range is None:
             ray_range = np.arange(num_rays)
         for i in ray_range:
 

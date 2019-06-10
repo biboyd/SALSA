@@ -2,6 +2,7 @@ import plotter
 from mpi4py import MPI
 import numpy as np
 from sys import argv
+import yt
 
 #init mpi
 comm = MPI.COMM_WORLD
@@ -42,11 +43,10 @@ if comm.rank == 0:
     med = np.median(num_density)
 
     #estimate min max values to number dense plot. and markers positioning
-    self.num_dense_min = 0.01*med
-    self.num_dense_max = 1000*med
+    num_density_range = np.array( [0.01*med, 1000*med] , dtype=np.float64)
 
 else:
-    num_density_range = np.empty(0., dtype=np.float64)
+    num_density_range = np.empty(2, dtype=np.float64)
 
 comm.Barrier()
 #broadcast the number density limits
