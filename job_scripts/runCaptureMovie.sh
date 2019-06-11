@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --ntasks=64
+#SBATCH --ntasks=32
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=1G
 #SBATCH -t 00:10:00
@@ -23,8 +23,6 @@ else
 	rm -rf $outDir/*
 fi
 
-mpirun -np 64 								\
+mpirun -np 32 								\
 	python ~/Repo/CGM/plotting_ray/capture_movie_frames.py		\
 		$dataFile $rayDir "$ionName" $outDir
-#combine images to make movie
-~/Repo/CGM/movie.sh movie_${ionLabel}.mp4 5 $outDir/*.png

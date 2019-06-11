@@ -357,7 +357,8 @@ class multi_plot():
 
             #chech if min/max num dense was called
             if (self.num_dense_min == None and self.num_dense_max == None):
-                pass
+                med = np.median(num_density)
+                ax_num_dense.set_ylim(med*0.01, med*1000)
             else:
                 ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
 
@@ -373,15 +374,16 @@ class multi_plot():
         #add appropriate markers to the plot
         if self.markers:
             ys = np.zeros_like(self.mark_dist_arr)
-            if self.markers_nd_pos == None:
-                ys += num_density.min()
-            else:
-                ys += self.markers_nd_pos
-
             if ax_num_dense is not None:
+                if self.markers_nd_pos == None:
+                    ys += 0.05*med
+                else:
+                    ys += self.markers_nd_pos
+
                 ax_num_dense.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
             if ax_los_velocity is not None:
-                ax_los_velocity.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
+                Vys = np.zeros_like(self.mark_dist_arr) - 500
+                ax_los_velocity.scatter(self.mark_dist_arr.value, Vys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
 
     def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
