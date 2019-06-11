@@ -430,6 +430,9 @@ class multi_plot():
         ax3 = self.fig.add_subplot(313)
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
         self.plot_spect_vel(ax_vel=ax3)
+        #annotate plot with column density
+        log_col_dense = np.log10(self.compute_col_density())
+        ax3.annotate(f'logN={log_col_dense:.2f}', xy=(0.85, 0.85), xycoords='axes fraction')
 
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
@@ -475,8 +478,8 @@ class multi_plot():
             self.ray = yt.load(self.ray_filename)
 
         #get list of num density and corresponding length
-        num_density = np.array(self.ray.all_data()[self.ion_p_name()+'_number_density'])
-        dl_array = np.array(self.ray.all_data()['dl'])
+        num_density = np.array(self.ray.data[self.ion_p_name()+'_number_density'])
+        dl_array = np.array(self.ray.data['dl'])
 
         #multiply num density by its dl and sum up to get column density
         col_density = np.sum( num_density*dl_array )
