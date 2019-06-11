@@ -26,3 +26,4 @@ fi
 mpirun -np 32 								\
 	python ~/Repo/CGM/plotting_ray/capture_movie_frames.py		\
 		$dataFile $rayDir "$ionName" $outDir
+scontrol show job $SLURM_JOB_ID
