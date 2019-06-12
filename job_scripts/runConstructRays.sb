@@ -1,8 +1,9 @@
 #!/bin/bash
 
-#SBATCH --mem-per-cpu=5120mb
-#SBATCH -t 12:00:00
-#SBATCH -n1
+#SBATCH --ntasks=16
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=1G
+#SBATCH -t 00:15:00
 
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/isolated_galaxy/DD0076/DD0076"
@@ -17,7 +18,8 @@ else
 	rm -f $outDir/*
 fi
 
-srun 								\
-	-o ${outDir}/construct_rays.out 			\
+mpirun -np 16							\
 	python ~/Repo/CGM/plotting_ray/construct_rays.py	\
 		$inFile $nRays $rayDist $outDir
+scontrol show job $SLURM_JOB_ID
+

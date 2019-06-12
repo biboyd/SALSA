@@ -126,7 +126,10 @@ def construct_rays( dataset,
                                 ray_end,
                                 lines=line_list,
                                 data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
-
+    if parallel:
+        comm.Barrier()
+        if comm.rank == 0:
+             print("-----all finished------")
 
 #now actual test
 if __name__ == '__main__':
@@ -150,4 +153,3 @@ if __name__ == '__main__':
                     out_dir=out_dir,
                     parallel = True)
 
-    print("--------finished---------")
