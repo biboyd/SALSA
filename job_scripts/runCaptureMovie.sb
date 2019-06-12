@@ -1,6 +1,10 @@
 #!/bin/bash
 
+<<<<<<< HEAD:job_scripts/runCaptureMovie.sb
 #SBATCH --ntasks=32
+=======
+#SBATCH --ntasks=16
+>>>>>>> 2de98aa916412833176cb30c80f7f51730063d89:job_scripts/runCaptureMovie.sh
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=1G
 #SBATCH -t 00:10:00
@@ -25,7 +29,11 @@ else
 	rm -rf $outDir/*
 fi
 
+<<<<<<< HEAD:job_scripts/runCaptureMovie.sb
 mpirun -np 32 								\
+=======
+mpirun -np 16 								\
+>>>>>>> 2de98aa916412833176cb30c80f7f51730063d89:job_scripts/runCaptureMovie.sh
 	python ~/Repo/CGM/plotting_ray/capture_movie_frames.py		\
 		$dataFile $rayDir "$ionName" $outDir
 scontrol show job $SLURM_JOB_ID
