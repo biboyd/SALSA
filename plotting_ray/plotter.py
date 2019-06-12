@@ -642,7 +642,7 @@ class movie_multi_plot(multi_plot):
 
         #set padding for filenames
         pad = np.floor( np.log10(num_rays) )
-        pad = int(pad) + 2
+        pad = int(pad) + 1
         if ray_range is None:
             ray_range = np.arange(num_rays)
         for i in ray_range:
@@ -665,106 +665,6 @@ class movie_multi_plot(multi_plot):
 
             self.fig.clear()
 
-def construct_rays( dataset,
-                    line_list,
-                    length=200,
-                    n_rays=100,
-                    direction='z',
-                    angle=0,
-                    dist_from_center=200,
-                    out_dir='./rays',
-                    DEBUG=False):
-    """
-    Constructs a number of light rays to "scan" a galactic data set using trident
-
-    Parameters:
-        dataset: enzo dataset on which to construct the rays
-        line_list: list of ions to include in rays
-        length: the length of the rays in kpc
-        n_rays: the number of rays to construct
-        direction: the coordinate direction in which to "scan" the galaxy
-        angle: The azimuthal angle around the direction. in degrees
-        dist_from_center: range to construct rays. in kpc from center of galaxy
-        out_dir: directory in which to save the rays
-
-    Returns:
-        none
-    """
-    if DEBUG:
-        print(trident.__version__)
-    ds = yt.load(dataset)
-    #add ion fields to dataset if not already there
-    trident.add_ion_fields(ds, ions=line_list, ftype='gas')
-
-    #create directory if doesn't exist
-    try:
-        makedirs(out_dir)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-
-    #convert lengths to code_length and angle to radians
-    length = ds.quan(length, 'kpc').in_units('code_length')
-    dist_from_center = ds.quan(dist_from_center, 'kpc').in_units('code_length')
-    angle = np.deg2rad(angle)
-
-    #get right indexing for direction
-    if (direction == 'x'):
-        dir_index=0
-        coord1_index=1
-        coord2_index=2
-    elif (direction == 'y'):
-        dir_index=1
-        coord1_index=2
-        coord2_index=0
-    elif (direction == 'z'):
-        dir_index=2
-        coord1_index=0
-        coord2_index=1
-    else:
-        raise RuntimeError("direction must be 'x', 'y', or 'z'")
-
-    #calculate the changing coordinate
-    begin = ds.domain_center[dir_index] + dist_from_center
-    end = ds.domain_center[dir_index] - dist_from_center
-    direct_coord = np.linspace(begin, end, n_rays)
-
-    #compute ray length in the coordinate directions
-    len_coord1 = length/2* np.cos(angle)
-    len_coord2 = length/2* np.sin(angle)
-
-    #calc beginning and ending of ray for constant coordinates
-    coord1_begin = ds.domain_center[coord1_index] - len_coord1
-    coord1_end = ds.domain_center[coord1_index] + len_coord1
-
-    coord2_begin = ds.domain_center[coord2_index] - len_coord2
-    coord2_end = ds.domain_center[coord2_index] + len_coord2
-
-    #empty ray coordinates to be filled
-    ray_begin = ds.arr(np.zeros(3), "code_length")
-    ray_end = ds.arr(np.zeros(3), "code_length")
-
-    #set padding for filenames
-    pad = np.floor( np.log10(n_rays) )
-    pad = int(pad) + 2
-
-    for i in range(n_rays):
-        #set beginning ray
-        ray_begin[dir_index] = direct_coord[i]
-        ray_begin[coord1_index] = coord1_begin
-        ray_begin[coord2_index] = coord2_begin
-
-        #set ending ray
-        ray_end[dir_index] = direct_coord[i]
-        ray_end[coord1_index] = coord1_end
-        ray_end[coord2_index] = coord2_end
-
-        #construct ray
-        trident.make_simple_ray(ds,
-                                ray_begin,
-                                ray_end,
-                                lines=line_list,
-                                data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
 
 if __name__ == '__main__':
     data_set_fname = argv[1]
