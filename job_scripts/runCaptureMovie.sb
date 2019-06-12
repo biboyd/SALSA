@@ -5,6 +5,8 @@
 #SBATCH --mem-per-cpu=1G
 #SBATCH -t 00:10:00
 #SBATCH --x11=all
+#SBATCH --mail-user=boydbre1@msu.edu
+#SBATCH --mail-type=ALL
 
 ionName=$1
 rayDist=$2
