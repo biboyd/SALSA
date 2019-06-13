@@ -496,6 +496,7 @@ class movie_multi_plot(multi_plot):
             ion_name='H I',
             slice_field=None,
             absorber_fields=[],
+            north_vector=[0, 0, 1],
             wavelength_center=None,
             wavelength_width = 150,
             resolution = 0.01,
@@ -558,7 +559,7 @@ class movie_multi_plot(multi_plot):
 
         #set a value for slice
         self.slice =None
-
+        self.north_vector=north_vector
         #set slice field to ion name if no field is specified
         if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"
