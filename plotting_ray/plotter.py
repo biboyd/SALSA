@@ -25,6 +25,7 @@ class multi_plot():
                 slice_field=None,
                 absorber_fields=[],
                 north_vector=[0, 0, 1],
+                center = None,
                 wavelength_center=None,
                 wavelength_width = 300,
                 resolution = 0.1,
@@ -76,6 +77,8 @@ class multi_plot():
         #set a value for slice
         self.slice = None
         self.north_vector = north_vector
+        self.center = center
+
         #set slice field to ion name if no field is specified
         if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"
@@ -247,10 +250,20 @@ class multi_plot():
             self.ds.coordinates.y_axis[1] = 2
             self.ds.coordinates.y_axis['y'] = 2
 
+        if self.center is None:
+            center = ds.domain_center
+        elif self.center = 'max':
+            center = "max"
+        elif self.center = 'ray':
+            center = abs(ray_end - ray_begin)/2
+            center = ray_cent.in_units('code_length')
+        else:
+            center = self.center
         #Create slice along ray. keep slice pointed in z-direction
         self.slice = yt.SlicePlot(self.ds,
                           norm_vector,
                           self.slice_field,
+                          center=center,
                           north_vector = self.north_vector)
 
         #set width/height
@@ -495,6 +508,7 @@ class movie_multi_plot(multi_plot):
             ray_dir,
             ion_name='H I',
             slice_field=None,
+            center = None,
             absorber_fields=[],
             wavelength_center=None,
             wavelength_width = 150,
@@ -558,7 +572,7 @@ class movie_multi_plot(multi_plot):
 
         #set a value for slice
         self.slice =None
-
+        self.center = center 
         #set slice field to ion name if no field is specified
         if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"
