@@ -24,6 +24,7 @@ class multi_plot():
                 ion_name='H I',
                 slice_field=None,
                 absorber_fields=[],
+                north_vector=[0, 0, 1],
                 wavelength_center=None,
                 wavelength_width = 300,
                 resolution = 0.1,
@@ -42,6 +43,7 @@ class multi_plot():
         ion_name : Name of the ion to plot in number density plot
         slice_field : Field to plot in slice plot. defaults to ion_name's number density
         absorber_fields : Additional ions to include in plots/Spectra, enter as list
+        north_vector : vector used to fix the orientation of the slice plot defaults to z-axis
         wavelength_center : Wavelength to center spectrum plot on. defaults to
                             a known spectral line of ion_name. in units of Angstrom
         wavelength_width : sets the wavelength range of the spectrum plot. defaults
@@ -73,7 +75,7 @@ class multi_plot():
 
         #set a value for slice
         self.slice = None
-
+        self.north_vector = north_vector
         #set slice field to ion name if no field is specified
         if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"
@@ -249,7 +251,7 @@ class multi_plot():
         self.slice = yt.SlicePlot(self.ds,
                           norm_vector,
                           self.slice_field,
-                          north_vector = [0, 0, 1])
+                          north_vector = self.north_vector)
 
         #set width/height
         if width ==None and height==None:
