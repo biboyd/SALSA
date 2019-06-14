@@ -46,7 +46,8 @@ def main(ds_fname,
                         center = center,
                         north_vector=north_vector,
                         width = (200, 'kpc'))
-
+    slc.set_cmap(slc_field, cmap='magma')
+    slc.set_background_color(slc_field)
     #plot markers onto slice
     for i in range(n_rays):
         slc.annotate_marker(rs_rel[i]+center, marker='.')
