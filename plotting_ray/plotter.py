@@ -252,9 +252,9 @@ class multi_plot():
 
         if self.center is None:
             center = ds.domain_center
-        elif self.center = 'max':
+        elif self.center == 'max':
             center = "max"
-        elif self.center = 'ray':
+        elif self.center == 'ray':
             center = abs(ray_end - ray_begin)/2
             center = ray_cent.in_units('code_length')
         else:
@@ -690,7 +690,7 @@ if __name__ == '__main__':
     ion = argv[3]
     absorbers = [ion] #['H I', 'O VI']
 
-    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, center='max',wavelength_width = 100)
 
     outfile = "multi_plot_" + ion[0] +".png"
     mp.create_multi_plot(outfname=outfile)
