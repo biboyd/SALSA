@@ -13,7 +13,7 @@ def main(ds_fname,
          north_vector,
          impact_param,
          azimuth_angle=0,
-         n_rays=50,
+         n_rays=10,
          ray_length=200,
          ray_dir = None,
          out_dir="./"):
@@ -41,6 +41,7 @@ def main(ds_fname,
 
     north_vector = ds.arr(north_vector, 'dimensionless')
     center = ds.arr(center, 'code_length').in_units('kpc')
+
     ray_length = ds.quan(ray_length, 'kpc')
     #find axis of rotation
     axis_vector = np.array( [-north_vector[2], 0, north_vector[0]] )
@@ -192,10 +193,10 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
     pad = int(pad) + 1
 
     #define offset from coord
-    offset = axis_vector/np.linalg.norm(axis_vector)*ray_length/2 + center
+    offset = axis_vector/np.linalg.norm(axis_vector)*ray_length/2
     for i in range(n_rays):
-        ray_start = coordinates_rel[i] - offset
-        ray_end = coordinates_rel[i] + offset
+        ray_start = coordinates_rel[i] - offset + center
+        ray_end = coordinates_rel[i] + offset + center
 
         ray = trident.make_simple_ray(ds, ray_start, ray_end,
                                 lines=[ion],
@@ -210,7 +211,7 @@ if __name__ == "__main__":
     try:
         ray_dir = argv[2]
     except IndexError:
-        ray_dir = None 
+        ray_dir = None
 
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
