@@ -115,6 +115,7 @@ def main(ds_fname,
     slc._setup_plots()
 
     phi_array = np.rad2deg(phi_array)
+    col_dense = np.log10(col_dense)
     #plot column density
     ax = fig.add_subplot(111)
     ax.plot(phi_array, col_dense)
@@ -124,7 +125,6 @@ def main(ds_fname,
 
     ax.set_xlim(-3, 93)
     ax.set_position([0, -0.25, 0.5, 0.15])
-    #ax.set_yscale('log')
     ax.set_title(f'{ion} Column density vs Polar Angle')
     ax.set_ylabel('Log N (N in cm^-2)')
     ax.set_xlabel('Polar Angle (degrees)')
@@ -208,12 +208,13 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
 
 if __name__ == "__main__":
     ds = argv[1]
+    n = int(argv[2])
     try:
-        ray_dir = argv[2]
+        ray_dir = argv[3]
     except IndexError:
         ray_dir = None
 
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
 
-    main(ds, center, n_vec, 10, ray_dir=ray_dir)
+    main(ds, center, n_vec, 30, n_rays=n, ray_dir=ray_dir)
