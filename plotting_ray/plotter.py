@@ -550,11 +550,7 @@ class movie_multi_plot(multi_plot):
         self.ds_filename = ds_filename
 
         #create directory if doesn't exist
-        try:
-            makedirs(out_dir)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
+        makedirs(out_dir, exist_ok=True)
 
         #collect only ray files in ray_dir
         ray_files=[]
@@ -574,7 +570,7 @@ class movie_multi_plot(multi_plot):
         #set a value for slice
         self.slice =None
         self.north_vector=north_vector
-        self.center = center 
+        self.center = center
         #set slice field to ion name if no field is specified
         if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"

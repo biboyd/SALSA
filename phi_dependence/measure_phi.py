@@ -40,6 +40,8 @@ def main(ds_fname,
     rs_rel, phi_array = get_coord(north_vector, impact_param, axis_vector, n_rays)
     rs_rel = ds.arr(rs_rel, 'kpc')
     ion="H I"
+
+    
     col_dense = get_col_density(ds, rs_rel, center, axis_vector, ray_length, n_rays, ion, out_dir)
 
     slc = yt.SlicePlot(ds, normal=axis_vector,fields =slc_field,
@@ -72,11 +74,19 @@ def main(ds_fname,
 
     slc._setup_plots()
 
+    phi_array = np.rad2deg(phi_array)
     #plot column density
     ax = fig.add_subplot(111)
     ax.plot(phi_array, col_dense)
-    ax.set_position([0, -0.25, 0.5, 0.15])
+    ax.annotate(f'Impact Parameter: {impact_param:.0f} kpc',
+                xy=(0.85, 1.05),
+                xycoords='axes fraction')
 
+    ax.set_position([0, -0.25, 0.5, 0.15])
+    ax.set_yscale('log')
+    ax.set_title(f'{ion} Column density vs Polar Angle')
+    ax.set_ylabel('Log N (N in cm^-2)')
+    ax.set_xlabel('Polar Angle (degrees)')
     fig.savefig(f"{out_dir}/slice_and_angle.png", bbox_inches='tight')
 
 
@@ -145,7 +155,7 @@ def get_col_density(ds, coordinates_rel, center, axis_vector, ray_length, n_rays
 
         ray = trident.make_simple_ray(ds, ray_start, ray_end,
                                 lines=[ion],
-                                data_filename = f"{out_dir}/ray{i:02d}.h5")
+                                data_filename = f"{out_dir}/rays/ray{i:02d}.h5")
 
         col_dense[i] = np.sum( ray.data["H_p0_number_density"] * ray.data['dl'])
 
