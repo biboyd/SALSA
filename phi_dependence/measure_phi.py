@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 from mpl_toolkits.axes_grid1 import AxesGrid
 from sys import argv
-
+from os import listdir, makedirs
+import errno
 
 def main(ds_fname,
          center,
@@ -14,8 +15,26 @@ def main(ds_fname,
          azimuth_angle=0,
          n_rays=50,
          ray_length=300,
+         ray_dir = None,
          out_dir="./"):
+    """
+    Creates image of slice plot and plot measuring Column Density vs polar angle.
+    Rays can either be provided or constructed depending on status of ray_dir
 
+    Parameters:
+        ds_fname : string/path : path/filename of dataset to load
+        center : array like object : Center of galaxy in code_length
+        impact_param : float : impact parameter of rays in kpc
+        azimuth_angle : float : azimuthal angle to construct rays in radians
+        n_rays : int : number of rays provided or to be constructed
+        ray_length : float : length of rays in kpc
+        ray_dir : string/path : path to directory containing rays. If set to None
+                rays will be constructed using provided information
+        out_dir : string/path : directory where image will be saved and rays constructed
+
+    Returns:
+        none
+    """
 
     ds = yt.load(ds_fname)
     slc_field = 'H_p0_number_density'
@@ -41,8 +60,28 @@ def main(ds_fname,
     rs_rel = ds.arr(rs_rel, 'kpc')
     ion="H I"
 
-    
-    col_dense = get_col_density(ds, rs_rel, center, axis_vector, ray_length, n_rays, ion, out_dir)
+    #construct rays if not already made
+    if ray_dir is None:
+        ray_dir = construct_rays(ds, rs_rel, center, axis_vector, ray_length, n_rays, ion, out_dir)
+
+    ray_files = []
+    for file in listdir(ray_dir):
+        if file[-3:] == ".h5":
+            ray_files.append(file)
+    #check number of rays == number of files
+    if n_rays != len(ray_files):
+        n_files = len(ray_files)
+        raise RuntimeError(f"Number of rays specified ({n_rays}) does not equal number of files found ({n_files})")
+
+    ray_files = sorted(ray_files)
+    #get column density from rays
+    col_dense = np.empty(n_rays)
+    for i in range(n_rays):
+        fname="/".join((ray_dir, ray_files[i]))
+        ray = yt.load(f"{fname}")
+        col_dense[i] = np.sum( ray.data["H_p0_number_density"] * ray.data['dl'])
+        ray.close()
+
 
     slc = yt.SlicePlot(ds, normal=axis_vector,fields =slc_field,
                         center = center,
@@ -129,7 +168,7 @@ def get_coord(vector, b, axis_rotation, n):
 
     return coordinates, angles
 
-def get_col_density(ds, coordinates_rel, center, axis_vector, ray_length, n_rays, ion, out_dir):
+def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays, ion, out_dir):
     """
     Calculates the column density for each coordinate
 
@@ -145,9 +184,13 @@ def get_col_density(ds, coordinates_rel, center, axis_vector, ray_length, n_rays
         col_dense : an array of column densities for each coordinate
     """
 
-    col_dense = np.empty(n_rays)
+    #create ray directory and proper padding
+    ray_dir = f"{out_dir}/rays"
+    makedirs(ray_dir, exist_ok=True)
+    pad = np.floor( np.log10(n_rays) )
+    pad = int(pad) + 1
 
-    #define offset from coord in which to construct ray
+    #define offset from coord
     offset = axis_vector/np.linalg.norm(axis_vector)*ray_length/2 + center
     for i in range(n_rays):
         ray_start = coordinates_rel[i] - offset
@@ -155,11 +198,11 @@ def get_col_density(ds, coordinates_rel, center, axis_vector, ray_length, n_rays
 
         ray = trident.make_simple_ray(ds, ray_start, ray_end,
                                 lines=[ion],
-                                data_filename = f"{out_dir}/rays/ray{i:02d}.h5")
+                                data_filename = f"{ray_dir}/ray{i:0{pad}d}.h5")
 
-        col_dense[i] = np.sum( ray.data["H_p0_number_density"] * ray.data['dl'])
 
-    return col_dense
+
+    return ray_dir
 
 if __name__ == "__main__":
     ds = argv[1]
@@ -167,4 +210,4 @@ if __name__ == "__main__":
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
 
-    main(ds, center, n_vec, 30)
+    main(ds, center, n_vec, 30, ray_dir='./rays')
