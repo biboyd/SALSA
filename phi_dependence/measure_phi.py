@@ -14,7 +14,7 @@ def main(ds_fname,
          impact_param,
          azimuth_angle=0,
          n_rays=50,
-         ray_length=300,
+         ray_length=200,
          ray_dir = None,
          out_dir="./"):
     """
@@ -121,8 +121,9 @@ def main(ds_fname,
                 xy=(0.85, 1.05),
                 xycoords='axes fraction')
 
+    ax.set_xlim(-3, 93)
     ax.set_position([0, -0.25, 0.5, 0.15])
-    ax.set_yscale('log')
+    #ax.set_yscale('log')
     ax.set_title(f'{ion} Column density vs Polar Angle')
     ax.set_ylabel('Log N (N in cm^-2)')
     ax.set_xlabel('Polar Angle (degrees)')
@@ -206,8 +207,12 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
 
 if __name__ == "__main__":
     ds = argv[1]
+    try:
+        ray_dir = argv[2]
+    except IndexError:
+        ray_dir = None 
 
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
 
-    main(ds, center, n_vec, 30, ray_dir='./rays')
+    main(ds, center, n_vec, 10, ray_dir=ray_dir)

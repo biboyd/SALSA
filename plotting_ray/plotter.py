@@ -684,9 +684,10 @@ if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
     ion = argv[3]
+    num=argv[4]
     absorbers = [ion] #['H I', 'O VI']
 
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, center='max',wavelength_width = 100)
 
-    outfile = "multi_plot_" + ion[0] +".png"
+    outfile = "multi_plot_images/multi_plot_" + ion[0] +"_"+ num + ".png"
     mp.create_multi_plot(outfname=outfile)
