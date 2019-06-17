@@ -18,7 +18,7 @@ def main(ds_fname,
          ray_dir = None,
          out_dir="./"):
     """
-    Creates image of slice plot and plot measuring Column Density vs polar angle.
+    Creates image of projection plot and plot measuring Column Density vs polar angle.
     Rays can either be provided or constructed depending on status of ray_dir
 
     Parameters:
@@ -37,7 +37,7 @@ def main(ds_fname,
     """
 
     ds = yt.load(ds_fname)
-    slc_field = 'H_p0_number_density'
+    prj_field = 'H_p0_number_density'
 
     north_vector = ds.arr(north_vector, 'dimensionless')
     center = ds.arr(center, 'code_length').in_units('kpc')
@@ -84,17 +84,17 @@ def main(ds_fname,
         ray.close()
 
 
-    slc = yt.SlicePlot(ds, normal=axis_vector,fields =slc_field,
+    prj = yt.ProjectionPlot(ds, normal=axis_vector,fields =prj_field,
                         center = center,
                         north_vector=north_vector,
                         width = (200, 'kpc'))
-    slc.set_cmap(slc_field, cmap='magma')
-    slc.set_background_color(slc_field)
-    #plot markers onto slice
+    prj.set_cmap(prj_field, cmap='magma')
+    prj.set_background_color(prj_field)
+    #plot markers onto projection
     for i in range(n_rays):
-        slc.annotate_marker(rs_rel[i]+center, marker='.')
+        prj.annotate_marker(rs_rel[i]+center, marker='.')
 
-    #redraw slice onto figure
+    #redraw projection onto figure
     fig = plt.figure(figsize=(10, 10))
     grid = AxesGrid(fig, (0.,0.,0.5,0.5),
                     nrows_ncols = (1, 1),
@@ -106,16 +106,15 @@ def main(ds_fname,
                     cbar_size="3%",
                     cbar_pad="0%")
 
-    #redraw slice plot onto figure
-    plot = slc.plots[slc_field]
+    #redraw projection plot onto figure
+    plot = prj.plots[prj_field]
     plot.figure = fig
     plot.axes = grid[0].axes
     plot.cax = grid.cbar_axes[0]
 
-    slc._setup_plots()
+    prj._setup_plots()
 
     phi_array = np.rad2deg(phi_array)
-    col_dense = np.log10(col_dense)
     #plot column density
     ax = fig.add_subplot(111)
     ax.plot(phi_array, col_dense)
@@ -125,10 +124,11 @@ def main(ds_fname,
 
     ax.set_xlim(-3, 93)
     ax.set_position([0, -0.25, 0.5, 0.15])
+    #ax.set_yscale('log')
     ax.set_title(f'{ion} Column density vs Polar Angle')
     ax.set_ylabel('Log N (N in cm^-2)')
     ax.set_xlabel('Polar Angle (degrees)')
-    fig.savefig(f"{out_dir}/slice_and_angle.png", bbox_inches='tight')
+    fig.savefig(f"{out_dir}/projection_and_angle.png", bbox_inches='tight')
 
 
 def get_coord(vector, b, axis_rotation, n):
@@ -208,13 +208,12 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
 
 if __name__ == "__main__":
     ds = argv[1]
-    n = int(argv[2])
     try:
-        ray_dir = argv[3]
+        ray_dir = argv[2]
     except IndexError:
         ray_dir = None
 
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
 
-    main(ds, center, n_vec, 30, n_rays=n, ray_dir=ray_dir)
+    main(ds, center, n_vec, 10, ray_dir=ray_dir)
