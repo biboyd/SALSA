@@ -25,7 +25,7 @@ class multi_plot():
                 slice_field=None,
                 absorber_fields=[],
                 north_vector=[0, 0, 1],
-                center = None,
+                galaxy_center = None,
                 wavelength_center=None,
                 wavelength_width = 300,
                 resolution = 0.1,
@@ -41,20 +41,21 @@ class multi_plot():
         ds_filename : Path/name of the enzo dataset to be loaded
         ray_filename : Path/name of the hdf5 ray file to be loaded
 
-        ion_name : Name of the ion to plot in number density plot
-        slice_field : Field to plot in slice plot. defaults to ion_name's number density
-        absorber_fields : Additional ions to include in plots/Spectra, enter as list
-        north_vector : vector used to fix the orientation of the slice plot defaults to z-axis
-        wavelength_center : Wavelength to center spectrum plot on. defaults to
+        ion_name :string: Name of the ion to plot in number density plot
+        slice_field :string: Field to plot in slice plot. defaults to ion_name's number density
+        absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
+        north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
+        galaxy_center :array type: center of galaxy in code_length. if None, then defaults to domain_center
+        wavelength_center :float: Wavelength to center spectrum plot on. defaults to
                             a known spectral line of ion_name. in units of Angstrom
-        wavelength_width : sets the wavelength range of the spectrum plot. defaults
+        wavelength_width :float: sets the wavelength range of the spectrum plot. defaults
                             to 300 Angstroms
-        resolution : width of wavelength bins in spectrum plot. default 0.1 Angstrom
-        redshift : redshift of galaxy's motion. adjusts velocity plot calculation.
-        markers : whether to include markers on light ray and number density plot
-        figure : matplotlib figure where the multi_plot will be plotted. creates one if
+        resolution :float: width of wavelength bins in spectrum plot. default 0.1 Angstrom
+        redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
+        markers :bool: whether to include markers on light ray and number density plot
+        figure :matplotlib figure: where the multi_plot will be plotted. creates one if
                 none is specified.
-        open_start : option on whether to immediately open dataset and ray files. defaults to True.
+        open_start :bool: option on whether to immediately open dataset and ray files. defaults to True.
 
         mark_plot_args : dict : set the property of markers if they are to be plotted.
                         optional settings are:
@@ -77,7 +78,7 @@ class multi_plot():
         #set a value for slice
         self.slice = None
         self.north_vector = north_vector
-        self.center = center
+        self.center_gal= galaxy_center
 
         #set slice field to ion name if no field is specified
         if (slice_field == None):
@@ -236,13 +237,14 @@ class multi_plot():
 
 
         ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
-        #construct vec orthogonal to ray
-        norm_vector = [ray_unit[1], -1*ray_unit[0], 0]
+        #construct vec orthogonal to ray/plane
+        norm_vector = np.cross(ray_unit, self.north_vector)
+        norm_vector = norm_vector/np.linalg.norm(norm_vector)
 
 
         #handle case where it is an on axis slice in the y plane
         #yt will ignore north_vector and place z-axis on horizontal axis
-        if (norm_vector[0] == 0):
+        if (norm_vector[0] == 0 and norm_vector[1] == norm_vector[2]):
             # change yt coordinates so that z-axis is vertical
             self.ds.coordinates.x_axis[1] = 0
             self.ds.coordinates.x_axis['y'] = 0
@@ -250,16 +252,15 @@ class multi_plot():
             self.ds.coordinates.y_axis[1] = 2
             self.ds.coordinates.y_axis['y'] = 2
 
-        if self.center is None:
-            center = ds.domain_center
-        elif self.center == 'max':
-            center = "max"
-        elif self.center == 'ray':
-            center = abs(ray_end - ray_begin)/2
-            center = ray_cent.in_units('code_length')
-        else:
-            center = self.center
-        #Create slice along ray. keep slice pointed in z-direction
+        if self.center_gal is None:
+            self.center_gal = ds.domain_center
+
+        #adjust center so that it is in the plane of ray and north_vector
+        ray_center = (ray_begin + ray_end)/2
+        center_dif = ray_center - center_gal
+        center = np.dot(center_dif, norm_vec)*norm_vec + self.center_gal
+        
+        #Create slice along ray. keep slice pointed in north_Vec direction
         self.slice = yt.SlicePlot(self.ds,
                           norm_vector,
                           self.slice_field,
@@ -687,7 +688,7 @@ if __name__ == '__main__':
     num=argv[4]
     absorbers = [ion] #['H I', 'O VI']
 
-    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, center='max',wavelength_width = 100)
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, center='ray',wavelength_width = 100)
 
     outfile = "multi_plot_images/multi_plot_" + ion[0] +"_"+ num + ".png"
     mp.create_multi_plot(outfname=outfile)
