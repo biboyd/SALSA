@@ -52,19 +52,22 @@ def main(ds_fname,
 
     #rotate axis_vector by azimuthal if non-zero
     if azimuth_angle != 0:
-        north_rot_vector = north_vector/np.linalg.norm(north_vector)*azimuth_ang
+        azimuth_angle = np.deg2rad(azimuth_angle)
+        print('rotatin')
+        north_rot_vector = north_vector/np.linalg.norm(north_vector)*azimuth_angle
         az_rot = Rotation.from_rotvec(north_rot_vector)
         axis_vector = az_rot.apply(axis_vector)
 
+    print('getting coordinates')
     #coordinates rel to center
     rs_rel, phi_array = get_coord(north_vector, impact_param, axis_vector, n_rays)
     rs_rel = ds.arr(rs_rel, 'kpc')
     ion="H I"
-
+    print('getting rays')
     #construct rays if not already made
     if ray_dir is None:
         ray_dir = construct_rays(ds, rs_rel, center, axis_vector, ray_length, n_rays, ion, out_dir)
-
+    print('got the rays')
     ray_files = []
     for file in listdir(ray_dir):
         if file[-3:] == ".h5":
@@ -193,6 +196,7 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
     pad = np.floor( np.log10(n_rays) )
     pad = int(pad) + 1
 
+    print(axis_vector)
     #define offset from coord
     offset = axis_vector/np.linalg.norm(axis_vector)*ray_length/2
     for i in range(n_rays):
@@ -210,12 +214,13 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
 if __name__ == "__main__":
     ds = argv[1]
     n = int(argv[2])
+    b = float(argv[3])
     try:
-        ray_dir = argv[3]
+        ray_dir = argv[4]
     except IndexError:
         ray_dir = None
 
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
-
-    main(ds, center, n_vec, 10, n_rays=n,ray_dir=ray_dir)
+    angle = 45
+    main(ds, center, n_vec, b, n_rays=n,ray_dir=ray_dir, azimuth_angle=angle, out_dir=f"impact_{b:0.1f}_nrays_{n:d}_ang_{angle}")
