@@ -237,14 +237,16 @@ class multi_plot():
 
 
         ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
+
         #construct vec orthogonal to ray/plane
+        self.north_vector = ds.arr(self.north_vector, 'dimensionless')
         norm_vector = np.cross(ray_unit, self.north_vector)
         norm_vector = norm_vector/np.linalg.norm(norm_vector)
 
 
         #handle case where it is an on axis slice in the y plane
         #yt will ignore north_vector and place z-axis on horizontal axis
-        if norm_vector[0] == 0: 
+        if norm_vector[0] == 0:
             # change yt coordinates so that z-axis is vertical
             self.ds.coordinates.x_axis[1] = 0
             self.ds.coordinates.x_axis['y'] = 0
@@ -252,14 +254,19 @@ class multi_plot():
             self.ds.coordinates.y_axis[1] = 2
             self.ds.coordinates.y_axis['y'] = 2
 
+        #set center to domain_center unless specified
         if self.center_gal is None:
             self.center_gal = self.ds.domain_center
+        else:
+            self.center_gal = ds.arr(self.center_gal, 'code_length')
 
         #adjust center so that it is in the plane of ray and north_vector
         ray_center = (ray_begin + ray_end)/2
+        ray_center = ray_center.in_units('code_length')
         center_dif = ray_center - self.center_gal
-        center = np.dot(center_dif, norm_vector)*norm_vector + self.center_gal
-        
+        scale = ds.quan(np.dot(center_dif, norm_vector), 'code_length')
+        center = scale*norm_vector + self.center_gal
+
         #Create slice along ray. keep slice pointed in north_Vec direction
         self.slice = yt.SlicePlot(self.ds,
                           norm_vector,
