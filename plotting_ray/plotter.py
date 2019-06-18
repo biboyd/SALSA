@@ -244,7 +244,7 @@ class multi_plot():
 
         #handle case where it is an on axis slice in the y plane
         #yt will ignore north_vector and place z-axis on horizontal axis
-        if (norm_vector[0] == 0 and norm_vector[1] == norm_vector[2]):
+        if norm_vector[0] == 0: 
             # change yt coordinates so that z-axis is vertical
             self.ds.coordinates.x_axis[1] = 0
             self.ds.coordinates.x_axis['y'] = 0
@@ -253,12 +253,12 @@ class multi_plot():
             self.ds.coordinates.y_axis['y'] = 2
 
         if self.center_gal is None:
-            self.center_gal = ds.domain_center
+            self.center_gal = self.ds.domain_center
 
         #adjust center so that it is in the plane of ray and north_vector
         ray_center = (ray_begin + ray_end)/2
-        center_dif = ray_center - center_gal
-        center = np.dot(center_dif, norm_vec)*norm_vec + self.center_gal
+        center_dif = ray_center - self.center_gal
+        center = np.dot(center_dif, norm_vector)*norm_vector + self.center_gal
         
         #Create slice along ray. keep slice pointed in north_Vec direction
         self.slice = yt.SlicePlot(self.ds,
@@ -688,7 +688,7 @@ if __name__ == '__main__':
     num=argv[4]
     absorbers = [ion] #['H I', 'O VI']
 
-    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, center='ray',wavelength_width = 100)
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
 
     outfile = "multi_plot_images/multi_plot_" + ion[0] +"_"+ num + ".png"
     mp.create_multi_plot(outfname=outfile)

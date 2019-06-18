@@ -84,7 +84,7 @@ def main(ds_fname,
         ray.close()
 
 
-    prj = yt.ProjectionPlot(ds, normal=axis_vector,fields =prj_field,
+    prj = yt.OffAxisProjectionPlot(ds, normal=axis_vector,fields =prj_field,
                         center = center,
                         north_vector=north_vector,
                         width = (200, 'kpc'))
@@ -115,6 +115,7 @@ def main(ds_fname,
     prj._setup_plots()
 
     phi_array = np.rad2deg(phi_array)
+    col_dense = np.log10(col_dense)
     #plot column density
     ax = fig.add_subplot(111)
     ax.plot(phi_array, col_dense)
@@ -208,12 +209,13 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
 
 if __name__ == "__main__":
     ds = argv[1]
+    n = int(argv[2])
     try:
-        ray_dir = argv[2]
+        ray_dir = argv[3]
     except IndexError:
         ray_dir = None
 
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
 
-    main(ds, center, n_vec, 10, ray_dir=ray_dir)
+    main(ds, center, n_vec, 10, n_rays=n,ray_dir=ray_dir)
