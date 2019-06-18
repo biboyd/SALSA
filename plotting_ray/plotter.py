@@ -239,7 +239,7 @@ class multi_plot():
         ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
 
         #construct vec orthogonal to ray/plane
-        self.north_vector = ds.arr(self.north_vector, 'dimensionless')
+        self.north_vector = self.ds.arr(self.north_vector, 'dimensionless')
         norm_vector = np.cross(ray_unit, self.north_vector)
         norm_vector = norm_vector/np.linalg.norm(norm_vector)
 
@@ -258,13 +258,13 @@ class multi_plot():
         if self.center_gal is None:
             self.center_gal = self.ds.domain_center
         else:
-            self.center_gal = ds.arr(self.center_gal, 'code_length')
+            self.center_gal = self.ds.arr(self.center_gal, 'code_length')
 
         #adjust center so that it is in the plane of ray and north_vector
         ray_center = (ray_begin + ray_end)/2
         ray_center = ray_center.in_units('code_length')
         center_dif = ray_center - self.center_gal
-        scale = ds.quan(np.dot(center_dif, norm_vector), 'code_length')
+        scale = self.ds.quan(np.dot(center_dif, norm_vector), 'code_length')
         center = scale*norm_vector + self.center_gal
 
         #Create slice along ray. keep slice pointed in north_Vec direction
