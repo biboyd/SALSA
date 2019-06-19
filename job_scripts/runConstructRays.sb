@@ -4,6 +4,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=1G
 #SBATCH -t 00:15:00
+#SBATCH -o slurm_logs/slurm-%j.out
 
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/isolated_galaxy/DD0076/DD0076"
