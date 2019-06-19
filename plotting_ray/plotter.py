@@ -388,11 +388,13 @@ class multi_plot():
         if ax_los_velocity is not None:
             #make num density plots
             ax_los_velocity.plot(dl_list, los_vel)
+            xlims = ax_los_velocity.get_xlim()
+            ax_los_velocity.hlines(0, xlims[0], xlims[1])  
             ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
             ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_los_velocity.set_ylabel("Line of Sight Velocity $(km/s)$")
 
-            ax_los_velocity.set_ylim(-1000, 1000)
+            ax_los_velocity.set_ylim(-600, 600)
 
         #add appropriate markers to the plot
         if self.markers:
@@ -516,7 +518,7 @@ class movie_multi_plot(multi_plot):
             ray_dir,
             ion_name='H I',
             slice_field=None,
-            center = None,
+            center_gal = None,
             absorber_fields=[],
             north_vector=[0, 0, 1],
             wavelength_center=None,
@@ -578,7 +580,7 @@ class movie_multi_plot(multi_plot):
         #set a value for slice
         self.slice =None
         self.north_vector=north_vector
-        self.center = center
+        self.center_gal = center_gal
         #set slice field to ion name if no field is specified
         if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"
@@ -696,6 +698,6 @@ if __name__ == '__main__':
     absorbers = [ion] #['H I', 'O VI']
 
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
-
+    makedirs("multi_plot_images", exist_ok=True)
     outfile = "multi_plot_images/multi_plot_" + ion[0] +"_"+ num + ".png"
     mp.create_multi_plot(outfname=outfile)
