@@ -44,30 +44,26 @@ def main(ds_fname,
 
     ray_length = ds.quan(ray_length, 'kpc')
     #find axis of rotation
-    axis_vector = np.array( [-north_vector[2], 0, north_vector[0]] )
+    axis_vector = np.array( [north_vector[2], 0, -north_vector[0]] )
     #check not zero vector
     if axis_vector[0] == 0 and axis_vector[2] == 0:
         #switch to a non zero vector
-        axis_vector = np.array( [0, -north_vector[2], north_vector[1]] )
+        axis_vector = np.array( [0, north_vector[2], -north_vector[1]] )
 
     #rotate axis_vector by azimuthal if non-zero
     if azimuth_angle != 0:
         azimuth_angle = np.deg2rad(azimuth_angle)
-        print('rotatin')
         north_rot_vector = north_vector/np.linalg.norm(north_vector)*azimuth_angle
         az_rot = Rotation.from_rotvec(north_rot_vector)
         axis_vector = az_rot.apply(axis_vector)
 
-    print('getting coordinates')
     #coordinates rel to center
     rs_rel, phi_array = get_coord(north_vector, impact_param, axis_vector, n_rays)
     rs_rel = ds.arr(rs_rel, 'kpc')
     ion="H I"
-    print('getting rays')
     #construct rays if not already made
     if ray_dir is None:
         ray_dir = construct_rays(ds, rs_rel, center, axis_vector, ray_length, n_rays, ion, out_dir)
-    print('got the rays')
     ray_files = []
     for file in listdir(ray_dir):
         if file[-3:] == ".h5":
@@ -90,13 +86,13 @@ def main(ds_fname,
     prj = yt.OffAxisProjectionPlot(ds, normal=axis_vector,fields =prj_field,
                         center = center,
                         north_vector=north_vector,
-                        width = (200, 'kpc'))
+                        width = (4*impact_param, 'kpc'))
     prj.set_cmap(prj_field, cmap='magma')
     prj.set_background_color(prj_field)
     #plot markers onto projection
     for i in range(n_rays):
         prj.annotate_marker(rs_rel[i]+center, marker='.',
-                            plot_args={'s' : 25,'alpha' : 0.5})
+                            plot_args={'color' : 'white', 's' : 25,'alpha' : 0.25})
 
     #redraw projection onto figure
     fig = plt.figure(figsize=(10, 10))
@@ -196,7 +192,6 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
     pad = np.floor( np.log10(n_rays) )
     pad = int(pad) + 1
 
-    print(axis_vector)
     #define offset from coord
     offset = axis_vector/np.linalg.norm(axis_vector)*ray_length/2
     for i in range(n_rays):
@@ -207,20 +202,19 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
                                 lines=[ion],
                                 data_filename = f"{ray_dir}/ray{i:0{pad}d}.h5")
 
-
-
     return ray_dir
 
 if __name__ == "__main__":
     ds = argv[1]
     n = int(argv[2])
     b = float(argv[3])
+    angle=int(argv[4])
     try:
-        ray_dir = argv[4]
+        ray_dir = argv[5]
     except IndexError:
         ray_dir = None
 
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
-    angle = 45
+    
     main(ds, center, n_vec, b, n_rays=n,ray_dir=ray_dir, azimuth_angle=angle, out_dir=f"impact_{b:0.1f}_nrays_{n:d}_ang_{angle}")
