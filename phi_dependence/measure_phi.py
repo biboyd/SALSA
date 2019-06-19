@@ -95,7 +95,8 @@ def main(ds_fname,
     prj.set_background_color(prj_field)
     #plot markers onto projection
     for i in range(n_rays):
-        prj.annotate_marker(rs_rel[i]+center, marker='.')
+        prj.annotate_marker(rs_rel[i]+center, marker='.',
+                            plot_args={'s' : 25,'alpha' : 0.5})
 
     #redraw projection onto figure
     fig = plt.figure(figsize=(10, 10))
@@ -126,7 +127,6 @@ def main(ds_fname,
                 xy=(0.85, 1.05),
                 xycoords='axes fraction')
 
-    ax.set_xlim(-3, 93)
     ax.set_position([0, -0.25, 0.5, 0.15])
     #ax.set_yscale('log')
     ax.set_title(f'{ion} Column density vs Polar Angle')
