@@ -246,13 +246,13 @@ class multi_plot():
 
         #handle case where it is an on axis slice in the y plane
         #yt will ignore north_vector and place z-axis on horizontal axis
-        if norm_vector[0] == 0:
+        """if norm_vector[0] == 0:
             # change yt coordinates so that z-axis is vertical
             self.ds.coordinates.x_axis[1] = 0
             self.ds.coordinates.x_axis['y'] = 0
 
             self.ds.coordinates.y_axis[1] = 2
-            self.ds.coordinates.y_axis['y'] = 2
+            self.ds.coordinates.y_axis['y'] = 2"""
 
         #set center to domain_center unless specified
         if self.center_gal is None:
@@ -268,7 +268,7 @@ class multi_plot():
         center = scale*norm_vector + self.center_gal
 
         #Create slice along ray. keep slice pointed in north_Vec direction
-        self.slice = yt.SlicePlot(self.ds,
+        self.slice = yt.OffAxisSlicePlot(self.ds,
                           norm_vector,
                           self.slice_field,
                           center=center,
@@ -390,7 +390,7 @@ class multi_plot():
             #make num density plots
             ax_los_velocity.plot(dl_list, los_vel)
             xlims = ax_los_velocity.get_xlim()
-            ax_los_velocity.hlines(0, xlims[0], xlims[1])  
+            ax_los_velocity.hlines(0, xlims[0], xlims[1])
             ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
             ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_los_velocity.set_ylabel("Line of Sight Velocity $(km/s)$")
