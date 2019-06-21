@@ -16,6 +16,7 @@ def main(ds_fname,
          n_rays=10,
          ray_length=200,
          ray_dir = None,
+         save_data=True,
          out_dir="./"):
     """
     Creates image of projection plot and plot measuring Column Density vs polar angle.
@@ -130,6 +131,9 @@ def main(ds_fname,
     ax.set_xlabel('Polar Angle (degrees)')
     fig.savefig(f"{out_dir}/projection_and_angle.png", bbox_inches='tight')
 
+    if save_data:
+        np.save(f'{out_dir}/col_dense', col_dense)
+        np.save(f'{out_dir}/angle', phi_array)
 
 def get_coord(vector, b, axis_rotation, n):
     """
@@ -216,5 +220,5 @@ if __name__ == "__main__":
 
     center = [0.5, 0.5, 0.5]
     n_vec = [0, 0, 1]
-    
+
     main(ds, center, n_vec, b, n_rays=n,ray_dir=ray_dir, azimuth_angle=angle, out_dir=f"impact_{b:0.1f}_nrays_{n:d}_ang_{angle}")
