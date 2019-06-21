@@ -347,6 +347,7 @@ class multi_plot():
             ax_vel.set_xlabel("Delta_v (km/s)")
             ax_vel.set_ylabel("Flux")
             ax_vel.set_xlim(-1500, 1500)
+        return wavelength, velocity, flux
 
     def plot_num_dense_los_vel(self, ax_num_dense=None, ax_los_velocity=None):
         """
