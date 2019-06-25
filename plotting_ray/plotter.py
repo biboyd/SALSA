@@ -46,8 +46,8 @@ class multi_plot():
         absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
         north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
         galaxy_center :array type: center of galaxy in code_length. if None, then defaults to domain_center
-        wavelength_center :float: Wavelength to center spectrum plot on. defaults to
-                            a known spectral line of ion_name. in units of Angstrom
+        wavelength_center :float: Wavelength to center spectrum plot on. defaults to the stringest
+                            known spectral line of ion_name. in units of Angstrom
         wavelength_width :float: sets the wavelength range of the spectrum plot. defaults
                             to 300 Angstroms
         resolution :float: width of wavelength bins in spectrum plot. default 0.1 Angstrom
@@ -96,8 +96,12 @@ class multi_plot():
             lbd = trident.LineDatabase("lines.txt")
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
-            #take first one and return its wavelength
-            self.wavelength_center = lines[0].wavelength
+            #take one with largest f_value
+            f_val = 0
+            for line in lines:
+                if line.f_value >= f_val:
+                    f_val = line.f_value
+                    self.wavelength_center = line.wavelength
 
         #open up a figure if none specified
         if (figure == None):
@@ -338,7 +342,7 @@ class multi_plot():
             ax_spect.set_title(f"Spectrum {self.ion_name}", loc='right')
             ax_spect.set_xlabel("Wavelength $\AA$")
             ax_spect.set_ylabel("Flux")
-
+            ax_spect.grid()
         if ax_vel is not None:
             #plot values for velocity plot
             ax_vel.plot(velocity, flux)
@@ -347,6 +351,7 @@ class multi_plot():
             ax_vel.set_xlabel("Delta_v (km/s)")
             ax_vel.set_ylabel("Flux")
             ax_vel.set_xlim(-1500, 1500)
+            ax_vel.grid()
         return wavelength, velocity, flux
 
     def plot_num_dense_los_vel(self, ax_num_dense=None, ax_los_velocity=None):
@@ -393,7 +398,7 @@ class multi_plot():
             ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
             ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_los_velocity.set_ylabel("Line of Sight Velocity $(km/s)$")
-            ax_los_grid()
+            ax_los_velocity.grid()
             ax_los_velocity.set_ylim(-600, 600)
 
         #add appropriate markers to the plot
@@ -457,7 +462,8 @@ class multi_plot():
         self.plot_spect_vel(ax_vel=ax3)
         #annotate plot with column density
         log_col_dense = np.log10(self.compute_col_density())
-        ax3.annotate(f'logN={log_col_dense:.2f}', xy=(0.85, 0.85), xycoords='axes fraction')
+        box_props = dict(boxstyle='square', facecolor='white')
+        ax3.text(0.825, 0.05, f'logN={log_col_dense:.1f}', transform=ax3.transAxes, bbox = box_props)
 
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
@@ -597,8 +603,12 @@ class movie_multi_plot(multi_plot):
             lbd = trident.LineDatabase("lines.txt")
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
-            #take first one and return its wavelength
-            self.wavelength_center = lines[0].wavelength
+            #take one with largest f_value
+            f_val = 0
+            for line in lines:
+                if line.f_value >= f_val:
+                    f_val = line.f_value
+                    self.wavelength_center = line.wavelength
 
 
         #set marker plot properties
@@ -694,7 +704,7 @@ if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
     ion = argv[3]
-    num=argv[4]
+    num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
 
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)

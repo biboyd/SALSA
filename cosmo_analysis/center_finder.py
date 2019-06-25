@@ -7,15 +7,20 @@ from sys import argv
 #return center coordinates and normal vector
 #
 
-def find_center(ds_fname):
+def find_center(ds_fname, center=None):
     ds = yt.load(ds_fname)
 
-    #let max density be center of gal
-    v, center = ds.find_max('density')
-
+    if center is None:
+        #let max density be center of gal
+        v, center = ds.find_max('density')
+    else:
+        center = ds.arr(center, 'code_length')
     #create sphere around disk of galaxy
-    sph_gal = ds.sphere(center, (4, 'kpc'))
+    sph_gal = ds.sphere(center, (20, 'kpc'))
 
+    #compute the bulk velocity
+    bulk_velocity = sph_gal.quantities.bulk_velocity(use_particles=False)
+    sph_gal.set_field_parameter(("bulk_velocity"), bulk_velocity)
     #compute angular momentum vector normalize it
     axis_rot = sph_gal.quantities.angular_momentum_vector()
     norm_vector = axis_rot/(np.linalg.norm(axis_rot) * axis_rot.unit_array)
