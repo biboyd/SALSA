@@ -700,5 +700,5 @@ if __name__ == '__main__':
 
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
     makedirs("multi_plot_images", exist_ok=True)
-    outfile = "multi_plot_images/multi_plot_" + ion[0] +"_"+ num + ".png"
+    outfile = f"multi_plot_images/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(outfname=outfile)
