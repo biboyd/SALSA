@@ -378,7 +378,7 @@ class multi_plot():
             ax_num_dense.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_num_dense.set_ylabel("Number Density $(cm^{-3})$")
             ax_num_dense.set_yscale('log')
-
+            ax_num_dense.grid()
             #chech if min/max num dense was called
             if (self.num_dense_min == None and self.num_dense_max == None):
                 med = np.median(num_density)
@@ -388,13 +388,12 @@ class multi_plot():
 
         if ax_los_velocity is not None:
             #make num density plots
+            ax_los_velocity.hlines(0, dl_list[0], dl_list[-1], linestyles='dashed',alpha=0.25)
             ax_los_velocity.plot(dl_list, los_vel)
-            xlims = ax_los_velocity.get_xlim()
-            ax_los_velocity.hlines(0, xlims[0], xlims[1])
             ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
             ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_los_velocity.set_ylabel("Line of Sight Velocity $(km/s)$")
-
+            ax_los_grid()
             ax_los_velocity.set_ylim(-600, 600)
 
         #add appropriate markers to the plot
