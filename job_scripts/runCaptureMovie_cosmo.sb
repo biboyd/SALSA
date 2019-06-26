@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#SBATCH --ntasks=64
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=1G
+#SBATCH -t 00:15:00
+#SBATCH --x11=all
+#SBATCH -o slurm_logs/slurm-%j.out
+
+dsName=$1
+ionName=$2
+rayDist=$3
+s="/mnt/gs18/scratch/users/boydbre1"
+dataFile="$s/cosmological/foggie/$dsName/$dsName"
+mainDir="$s/multiplot_movie/foggie/$dsName/movie_${rayDist}kpc"
+rayDir="$mainDir/rays"
+#label outdir but split ion into element and number
+ionLabel=${ionName% *}_${ionName#* }
+outDir="$mainDir/frames/movie_${ionLabel}_frames"
+
+if ! [ -d $outDir ];
+then
+        mkdir -p $outDir
+else
+	rm -rf $outDir/*
+fi
+unset XDG_RUNTIME_DIR
+mpirun -np 64 								\
+	python ~/Repo/CGM/cosmo_analysis/capture_movie_frames.py	\
+		$dataFile $rayDir "$ionName" $outDir
+scontrol show job $SLURM_JOB_ID
