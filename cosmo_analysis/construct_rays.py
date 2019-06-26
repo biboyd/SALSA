@@ -76,6 +76,14 @@ def construct_rays( dataset,
     else:
         center = ds.arr(center, 'code_length')
 
+    if parallel:
+        if comm.rank == 0:
+            slc = yt.SlicePlot(ds, norm_vector, 'density', center=center, width=length)
+            slc.save(f"{out_dir}/verify.png")
+    else:
+        slc = yt.SlicePlot(ds, norm_vector, 'density', center=center, width=length )
+        slc.save(f"{out_dir}/verify.png")
+
     #find the beginning and ending centers of all rays
     start_ray_cent = center + max_impact_param*norm_vector
     end_ray_cent = center - max_impact_param*norm_vector
