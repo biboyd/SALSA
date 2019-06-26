@@ -35,7 +35,7 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
         n_vec = find_normal_vector(ds, center)
     else:
         #get directory where tracker files are kept
-        sfname = fname.split('/')
+        sfname = ds_fname.split('/')
         if tracking_dir is None:
             tracking_dir = '/'.join(sfname[:-2]) + '/track_files'
 
@@ -48,19 +48,19 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
 
             #check if center was found
             if center is None:
-                raise EntryNotFoundError("could not find {} in {}" \
+                raise RuntimeError("could not find {} in {}" \
                                         .format(sfname[-1], center_norm_file))
             else:
                 center = ds.arr(center, 'code_length')
                 n_vec = ds.arr(n_vec, 'dimensionless')
         #catch if file or entry not found
-        except (FileNotFoundError, EntryNotFoundError):
+        except (FileNotFoundError, RuntimeError):
             #check for center in center_track file
             try:
                 #return center of track with nearest redshift to dataset's
                 center_file = tracking_dir + '/center_track.dat'
                 f = np.loadtxt(center_file, skiprows=2, usecols=(0, 1, 2, 3))
-                indx = np.abs(f[0] - ds.current_redshift).argmin()
+                indx = np.abs(f[:, 0] - ds.current_redshift).argmin()
                 center = ds.arr(f[indx, 1:], 'code_length')
 
                 #compute normal vec from center
@@ -69,14 +69,14 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
                 #write center and norm to file
                 w = open(center_norm_file, 'a')
                 write_str = "{:s} {:f} ".format(sfname[-1], ds.current_redshift)
-                write_str += ' '.join(str(x) for x in center.value)
+                write_str += ' '.join(str(x) for x in center.value) + ' '
                 write_str += ' '.join(str(x) for x in n_vec.value)
 
                 w.write(write_str + '\n')
                 w.close()
 
             except OSError:
-                raise FileNotFoundError("Need {} to exist, otherwise set max_field to define center"\
+                raise RuntimeError("Need {} to exist, otherwise set max_field to define center"\
                                         .format(tracking_dir + '/center_track.dat'))
 
     return center, n_vec
@@ -103,6 +103,9 @@ def search_center_norm(file, ds_name):
     f = open(file, 'r')
     for line in f:
         sline = line.split()
+        #check line is not empty
+        if len(sline) ==0:
+            continue
 
         #check dataset name. return center and n_vector
         if ds_name == sline[0]:
@@ -127,7 +130,7 @@ def find_normal_vector(ds, center):
     """
 
     #create sphere inside disk of galaxy
-    sph_gal = ds.sphere(center, (10, 'kpc'))
+    sph_gal = ds.sphere(center, (20, 'kpc'))
 
     #compute the bulk velocity
     bulk_velocity = sph_gal.quantities.bulk_velocity(use_particles=False)
