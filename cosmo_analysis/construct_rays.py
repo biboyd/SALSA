@@ -128,7 +128,7 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("Takes in 4 Arguments. Dataset_filename num_rays ray_lenght out_directory")
 
-    center, n_vec = find_center(filename)
+    center, n_vec, rshift = find_center(filename)
     #divide rays evenly
     construct_rays(filename, line_list,
                     n_rays=num_rays,
