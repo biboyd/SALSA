@@ -462,15 +462,15 @@ class multi_plot():
         ax1 = self.fig.add_subplot(411)
         ax2 = self.fig.add_subplot(412)
         ax3 = self.fig.add_subplot(413)
-        ax4 = self.fig.add_subplot(414)
+        #ax4 = self.fig.add_subplot(414)
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
-        self.plot_spect_vel(ax_vel=ax3, ax_spect=ax4)
+        self.plot_spect_vel(ax_vel=ax3)
         #annotate plot with column density
         log_col_dense = np.log10(self.compute_col_density())
         box_props = dict(boxstyle='square', facecolor='white')
         ax3.text(0.825, 0.05, f'logN={log_col_dense:.1f}', transform=ax3.transAxes, bbox = box_props)
 
-        axes= [ax1, ax2, ax3, ax4]
+        axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
         strt_pos = -0.25
         for i in range(len(axes)):

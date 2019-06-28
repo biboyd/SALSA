@@ -44,9 +44,9 @@ movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
                 center_gal = center,
                 north_vector = nvec,
 				out_dir=out_dir,
-                redshift=rshift,
+                redshift=rshift[0],
 				wavelength_width=25,
-				resolution=0.01)
+				resolution=0.1)
 
 #split up ray id numbers betweeen proccesors
 rayrange = np.arange( len(movie.ray_files) )
