@@ -1,13 +1,14 @@
 import yt
 import trident
 import numpy as np
-from sys import argv
+from sys import argv, path
 from os import remove, listdir, makedirs
 import errno
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
-
+path.insert(0, "/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/")
+from center_finder import find_center
 import astropy.units  as u
 
 class multi_plot():
@@ -25,7 +26,7 @@ class multi_plot():
                 slice_field=None,
                 absorber_fields=[],
                 north_vector=[0, 0, 1],
-                galaxy_center = None,
+                center_gal = None,
                 wavelength_center=None,
                 wavelength_width = 300,
                 resolution = 0.1,
@@ -45,7 +46,7 @@ class multi_plot():
         slice_field :string: Field to plot in slice plot. defaults to ion_name's number density
         absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
         north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
-        galaxy_center :array type: center of galaxy in code_length. if None, then defaults to domain_center
+        center_gal :array type: center of galaxy in code_length. if None, then defaults to domain_center
         wavelength_center :float: Wavelength to center spectrum plot on. defaults to the stringest
                             known spectral line of ion_name. in units of Angstrom
         wavelength_width :float: sets the wavelength range of the spectrum plot. defaults
@@ -78,7 +79,7 @@ class multi_plot():
         #set a value for slice
         self.slice = None
         self.north_vector = north_vector
-        self.center_gal= galaxy_center
+        self.center_gal= center_gal
 
         #set slice field to ion name if no field is specified
         if (slice_field == None):
@@ -350,7 +351,6 @@ class multi_plot():
             ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
             ax_vel.set_xlabel("Delta_v (km/s)")
             ax_vel.set_ylabel("Flux")
-            ax_vel.set_xlim(-1500, 1500)
             ax_vel.grid()
         return wavelength, velocity, flux
 
@@ -455,17 +455,18 @@ class multi_plot():
         self.slice._setup_plots()
 
         #set up axes and draw other plots to them
-        ax1 = self.fig.add_subplot(311)
-        ax2 = self.fig.add_subplot(312)
-        ax3 = self.fig.add_subplot(313)
+        ax1 = self.fig.add_subplot(411)
+        ax2 = self.fig.add_subplot(412)
+        ax3 = self.fig.add_subplot(413)
+        ax4 = self.fig.add_subplot(414)
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
-        self.plot_spect_vel(ax_vel=ax3)
+        self.plot_spect_vel(ax_vel=ax3, ax_spect=ax4)
         #annotate plot with column density
         log_col_dense = np.log10(self.compute_col_density())
         box_props = dict(boxstyle='square', facecolor='white')
         ax3.text(0.825, 0.05, f'logN={log_col_dense:.1f}', transform=ax3.transAxes, bbox = box_props)
 
-        axes= [ax1, ax2, ax3]
+        axes= [ax1, ax2, ax3, ax4]
         #setup positioning for the plots underneath
         strt_pos = -0.25
         for i in range(len(axes)):
@@ -692,7 +693,7 @@ class movie_multi_plot(multi_plot):
             self.slice.annotate_title(f"ray {i:0{pad}d}")
 
             #create multi_plot using slice and current ray plots
-            self.create_multi_plot(outfname = f"{self.out_dir}/mp{i:0{pad}d}", cmap=cmap)
+            self.create_multi_plot(outfname = f"{self.out_dir}/mp{i:0{pad}d}.png", cmap=cmap)
 
             #close ray files and clear figure
             self.ray.close()
@@ -706,8 +707,8 @@ if __name__ == '__main__':
     ion = argv[3]
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
-
-    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
+    center, nvec = find_center(data_set_fname)
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, center_gal=center, north_vector=nvec,wavelength_width = 300)
     makedirs("multi_plot_images", exist_ok=True)
     outfile = f"multi_plot_images/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(outfname=outfile)
