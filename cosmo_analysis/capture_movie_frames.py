@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, '../plotting_ray/')
+sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/plotting_ray/')
 import plotter
 from mpi4py import MPI
 import numpy as np

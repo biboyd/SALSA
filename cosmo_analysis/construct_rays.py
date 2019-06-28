@@ -76,10 +76,10 @@ def construct_rays( dataset,
     else:
         center = ds.arr(center, 'code_length')
 
-    #plot slices for density, temp and metalicity to compare with multi plot 
+    #plot slices for density, temp and metallicity to compare with multi plot 
     if parallel:
         if comm.rank == 0:
-            for fld in ('density', 'temperature', 'metalicity'):
+            for fld in ('density', 'temperature', 'metallicity'):
                 slc = yt.SlicePlot(ds, norm_vector, fld, center=center, width=length)
                 slc.set_axes_unit('kpc')
                 slc.set_background_color(fld)
@@ -89,7 +89,7 @@ def construct_rays( dataset,
             slc.set_axes_unit('kpc')
             slc.save(f"{out_dir}/density_projection.png")
     else:
-        for fld in ('density', 'temperature', 'metalicity'):
+        for fld in ('density', 'temperature', 'metallicity'):
             slc = yt.SlicePlot(ds, norm_vector, fld, center=center, width=length)
             slc.set_axes_unit('kpc')
             slc.set_background_color(fld)
@@ -117,10 +117,16 @@ def construct_rays( dataset,
     my_ray_nums = np.arange(n_rays)
     if parallel:
         #split ray numbers then take a portion based on rank
-        split_ray_nums = np.array_split(my_ray_nums, comm.size)
-        my_ray_nums = split_ray_nums[ comm.rank ]
-
+        #skip root procces (rank 0)
+        split_ray_nums = np.array_split(my_ray_nums, comm.size-1)
+        my_ray_nums = split_ray_nums[ comm.rank-1 ]
+        
     for i in my_ray_nums:
+        #if root process then don't create any rays
+        if parallel:
+            if comm.rank == 0:
+                break
+
         #construct ray
         trident.make_simple_ray(ds,
                                 ray_begins[i],
