@@ -26,7 +26,7 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
                         of the galaxy. (units are dimensionless)
     """
     ds = yt.load(ds_fname)
-    curr_rshift = ds.current_redshift
+    rshift = ds.current_redshift
 
 
     if max_field is not None:
@@ -60,7 +60,7 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
                 #return center of track with nearest redshift to dataset's
                 center_file = tracking_dir + '/center_track.dat'
                 f = np.loadtxt(center_file, skiprows=2, usecols=(0, 1, 2, 3))
-                indx = np.abs(f[:, 0] - ds.current_redshift).argmin()
+                indx = np.abs(f[:, 0] - rshift).argmin()
                 center = ds.arr(f[indx, 1:], 'code_length')
 
                 #compute normal vec from center
@@ -68,7 +68,7 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
 
                 #write center and norm to file
                 w = open(center_norm_file, 'a')
-                write_str = "{:s} {:f} ".format(sfname[-1], ds.current_redshift)
+                write_str = "{:s} {:f} ".format(sfname[-1], rshift)
                 write_str += ' '.join(str(x) for x in center.value) + ' '
                 write_str += ' '.join(str(x) for x in n_vec.value)
 
@@ -79,7 +79,7 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
                 raise RuntimeError("Need {} to exist, otherwise set max_field to define center"\
                                         .format(tracking_dir + '/center_track.dat'))
 
-    return center, n_vec
+    return center, n_vec, rshift
 
 def search_center_norm(file, ds_name):
     """
@@ -143,7 +143,7 @@ def find_normal_vector(ds, center):
     return normal_vector
 if __name__ == '__main__':
     ds_filename = argv[1]
-    c, n = find_center(ds_filename)
+    c, n, r = find_center(ds_filename)
 
     print("x, y, z")
     print(f"{c[0]}, {c[1]}, {c[2]}")

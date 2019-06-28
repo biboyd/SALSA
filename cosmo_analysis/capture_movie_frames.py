@@ -23,16 +23,19 @@ else:
     raise RuntimeError("Takes 4 arguments: Dataset_fname Ray_directory Ion_name Output_directory")
 
 if comm.rank == 0:
-    center, nvec = find_center(filename)
+    center, nvec, rshift = find_center(filename)
     center = np.array( center.in_units('code_length'), dtype=np.float64)
     nvec = np.array(nvec, dtype=np.float64)
+    rshift = np.array([rshift], dtype=np.float64)
 else:
     center= np.zeros(3, dtype=np.float64)
     nvec = np.zeros(3, dtype=np.float64)
+    rshift = np.zeros(1, dtype=np.float64)
 
 comm.Barrier()
 comm.Bcast([center, MPI.DOUBLE])
 comm.Bcast([nvec, MPI.DOUBLE])
+comm.Bcast([rshift, MPI.DOUBLE])
 comm.Barrier()
 
 #now actual test
@@ -41,8 +44,9 @@ movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
                 center_gal = center,
                 north_vector = nvec,
 				out_dir=out_dir,
-				wavelength_width=100,
-				resolution=0.1)
+                redshift=rshift,
+				wavelength_width=25,
+				resolution=0.01)
 
 #split up ray id numbers betweeen proccesors
 rayrange = np.arange( len(movie.ray_files) )
