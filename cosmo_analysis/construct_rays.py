@@ -80,25 +80,30 @@ def construct_rays( dataset,
     if parallel:
         if comm.rank == 0:
             for fld in ('density', 'temperature', 'metallicity'):
-                slc = yt.SlicePlot(ds, norm_vector, fld, center=center, width=length)
+                slc_norm = np.cross(ray_unit, norm_vector)
+                slc = yt.SlicePlot(ds, slc_norm, fld,
+                                    north_vector = norm_vector,
+                                    center=center, width=length)
                 slc.set_axes_unit('kpc')
                 slc.set_background_color(fld)
                 slc.save(f"{out_dir}/{fld}_slice.png")
 
             prj = yt.OffAxisProjectionPlot(ds, norm_vector, 'density', center=center, width=length)
-            slc.set_axes_unit('kpc')
-            slc.save(f"{out_dir}/density_projection.png")
+            prj.set_axes_unit('kpc')
+            prj.save(f"{out_dir}/density_projection.png")
     else:
         for fld in ('density', 'temperature', 'metallicity'):
-            slc = yt.SlicePlot(ds, norm_vector, fld, center=center, width=length)
+            slc_norm = np.cross(ray_unit, norm_vector)
+            slc = yt.SlicePlot(ds, slc_norm, fld,
+                                north_vector = norm_vector,
+                                center=center, width=length)
             slc.set_axes_unit('kpc')
             slc.set_background_color(fld)
             slc.save(f"{out_dir}/{fld}_slice.png")
 
         prj = yt.OffAxisProjectionPlot(ds, norm_vector, 'density', center=center, width=length)
-        slc.set_axes_unit('kpc')
-        slc.save(f"{out_dir}/density_projection.png")
-
+        prj.set_axes_unit('kpc')
+        prj.save(f"{out_dir}/density_projection.png")
 
     #find the beginning and ending centers of all rays
     start_ray_cent = center + max_impact_param*norm_vector
