@@ -103,6 +103,8 @@ class multi_plot():
                 if line.f_value >= f_val:
                     f_val = line.f_value
                     self.wavelength_center = line.wavelength
+        else:
+            self.wavelength_center = wavelength_center
 
         #open up a figure if none specified
         if (figure == None):
@@ -320,9 +322,11 @@ class multi_plot():
         Returns:
             none
         """
+        #adjust wavelegnth_center for redshift
+        rest_wavelength = self.wavelength_center*(1+self.redshift)
         #set max and min wavelength and resolution
-        wave_min = self.wavelength_center - self.wavelength_width/2
-        wave_max = self.wavelength_center + self.wavelength_width/2
+        wave_min = rest_wavelength - self.wavelength_width/2
+        wave_max = rest_wavelength + self.wavelength_width/2
         #generate spectrum defined by inputs
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
         spect_gen.make_spectrum(self.ray, lines=self.ion_list)
@@ -332,7 +336,7 @@ class multi_plot():
         flux = spect_gen.flux_field
 
         #calc velocity using relativistic doppler equation
-        rest_wavelength = u.Unit('angstrom')*self.wavelength_center*(1+self.redshift)
+        rest_wavelength = rest_wavelength*u.Unit('angstrom')
         doppler_equiv = u.equivalencies.doppler_relativistic(rest_wavelength)
         velocity = wavelength.to('km/s', equivalencies=doppler_equiv)
 
