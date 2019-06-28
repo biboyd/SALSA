@@ -8,7 +8,7 @@ from pathlib import Path
 #return center coordinates and normal vector
 #
 
-def find_center(ds_fname, tracking_dir=None, max_field=None):
+def find_center(ds_fname, tracking_dir=None, save_data=True, max_field=None):
     """
     Use to retrieve the center of galaxy
 
@@ -16,6 +16,7 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
         ds_fname : string: path to dataset containing galaxy
         tracking_dir : string: path to directory contianing tracking files
                     if set to None, defaults to ds_path/../../track_files
+        save_data : bool : write data to file? defaults to True
         max_field : string : field name. finds maximum of that field and sets
                     that to be the center. If None, will try to retrieve the center
                     from files in track_files directory
@@ -26,8 +27,6 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
                         of the galaxy. (units are dimensionless)
     """
     ds = yt.load(ds_fname)
-    curr_rshift = ds.current_redshift
-
 
     if max_field is not None:
         #let max field be center of gal
@@ -38,7 +37,6 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
         sfname = ds_fname.split('/')
         if tracking_dir is None:
             tracking_dir = '/'.join(sfname[:-2]) + '/track_files'
-
 
         try:
             #check if kept center and normal_vector in center_normal_track.dat
@@ -65,15 +63,16 @@ def find_center(ds_fname, tracking_dir=None, max_field=None):
 
                 #compute normal vec from center
                 n_vec = find_normal_vector(ds, center)
+                
+                if save_data:
+                    #write center and norm to file
+                    w = open(center_norm_file, 'a')
+                    write_str = "{:s} {:f} ".format(sfname[-1], ds.current_redshift)
+                    write_str += ' '.join(str(x) for x in center.value) + ' '
+                    write_str += ' '.join(str(x) for x in n_vec.value)
 
-                #write center and norm to file
-                w = open(center_norm_file, 'a')
-                write_str = "{:s} {:f} ".format(sfname[-1], ds.current_redshift)
-                write_str += ' '.join(str(x) for x in center.value) + ' '
-                write_str += ' '.join(str(x) for x in n_vec.value)
-
-                w.write(write_str + '\n')
-                w.close()
+                    w.write(write_str + '\n')
+                    w.close()
 
             except OSError:
                 raise RuntimeError("Need {} to exist, otherwise set max_field to define center"\
