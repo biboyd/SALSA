@@ -299,9 +299,6 @@ class multi_plot():
         #annotate plot
         self.add_annotations()
 
-        # set y label to Z
-        self.slice.set_ylabel("Z (kpc)")
-
         # set color map
         self.slice.set_cmap(field=self.slice_field, cmap = cmap)
 

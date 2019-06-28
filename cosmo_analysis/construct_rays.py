@@ -76,13 +76,29 @@ def construct_rays( dataset,
     else:
         center = ds.arr(center, 'code_length')
 
+    #plot slices for density, temp and metalicity to compare with multi plot 
     if parallel:
         if comm.rank == 0:
-            slc = yt.SlicePlot(ds, norm_vector, 'density', center=center, width=length)
-            slc.save(f"{out_dir}/verify.png")
+            for fld in ('density', 'temperature', 'metalicity'):
+                slc = yt.SlicePlot(ds, norm_vector, fld, center=center, width=length)
+                slc.set_axes_unit('kpc')
+                slc.set_background_color(fld)
+                slc.save(f"{out_dir}/{fld}_slice.png")
+
+            prj = yt.OffAxisProjectionPlot(ds, norm_vector, 'density', center=center, width=length)
+            slc.set_axes_unit('kpc')
+            slc.save(f"{out_dir}/density_projection.png")
     else:
-        slc = yt.SlicePlot(ds, norm_vector, 'density', center=center, width=length )
-        slc.save(f"{out_dir}/verify.png")
+        for fld in ('density', 'temperature', 'metalicity'):
+            slc = yt.SlicePlot(ds, norm_vector, fld, center=center, width=length)
+            slc.set_axes_unit('kpc')
+            slc.set_background_color(fld)
+            slc.save(f"{out_dir}/{fld}_slice.png")
+
+        prj = yt.OffAxisProjectionPlot(ds, norm_vector, 'density', center=center, width=length)
+        slc.set_axes_unit('kpc')
+        slc.save(f"{out_dir}/density_projection.png")
+
 
     #find the beginning and ending centers of all rays
     start_ray_cent = center + max_impact_param*norm_vector
@@ -119,7 +135,7 @@ def construct_rays( dataset,
 #now actual test
 if __name__ == '__main__':
     #setup conditions
-    line_list = ['H I', 'O VI', 'C IV']
+    line_list = ['H I', 'C IV', 'O VI', 'Ne VIII']
     if len(argv) == 5:
         filename = argv[1]
         num_rays=int(argv[2])
