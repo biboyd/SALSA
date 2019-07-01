@@ -31,7 +31,7 @@ class multi_plot():
                 wavelength_width = 300,
                 resolution = 0.1,
                 redshift = 0,
-                open_start=True,
+                bulk_velocity=None,
                 markers=True,
                 mark_plot_args=None,
                 figure=None):
@@ -72,6 +72,10 @@ class multi_plot():
         self.ray_filename = ray_filename
         self.ion_name = ion_name
 
+        #open up the dataset and ray files
+        self.ds = yt.load(self.ds_filename)
+        self.ray = yt.load(self.ray_filename)
+
         #add ion name to list of all ions to be plotted
         absorber_fields.append(ion_name)
         self.ion_list = absorber_fields
@@ -86,6 +90,14 @@ class multi_plot():
             self.slice_field = self.ion_p_name() + "_number_density"
         else:
             self.slice_field = slice_field
+
+        # set bulk velocity
+        if bulk_velocity is None:
+            self.bulk_velocity = 0
+        else:
+            ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
+            self.bulk_velocity = np.dot(ray_u, self.bulk_velocity)
+            self.bulk_velocity = ds.quan(self.bulk_velocity, 'km/s')
 
         self.redshift = redshift
         self.wavelength_width = wavelength_width
@@ -110,13 +122,7 @@ class multi_plot():
         if (figure == None):
             self.fig = plt.figure(figsize=(10, 10))
 
-        #open up the dataset and ray files or set their values to None
-        if (open_start):
-            self.ds = yt.load(self.ds_filename)
-            self.ray = yt.load(self.ray_filename)
-        else:
-            self.ds = None
-            self.ray = None
+
 
         #set marker plot properties
         self.markers = markers
@@ -319,8 +325,12 @@ class multi_plot():
         Returns:
             none
         """
+        # calc doppler redshift due to bulk motion
+        c = yt.units.c
+        beta = self.bulk_velocity/c
+        z_dopp = (1 + beta)/np.sqrt(1- beta**2) -1
         #adjust wavelegnth_center for redshift
-        rest_wavelength = self.wavelength_center*(1+self.redshift)
+        rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
         #set max and min wavelength and resolution
         wave_min = rest_wavelength - self.wavelength_width/2
         wave_max = rest_wavelength + self.wavelength_width/2
@@ -367,7 +377,7 @@ class multi_plot():
         #get list of num density  los velocity and corresponding lengths
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
         los_vel = self.ray.data['velocity_los']
-        los_vel = los_vel.in_units('km/s')
+        los_vel = los_vel.in_units('km/s') - self.bulk_velocity
         dl_list = self.ray.data['dl']
         dl_list = dl_list.in_units('kpc')
 
@@ -375,7 +385,6 @@ class multi_plot():
         num_dls = dl_list.size
         for i in range(1, num_dls):
             dl_list[i] += dl_list[i-1]
-
 
         if ax_num_dense is not None:
             #make num density plots
@@ -533,6 +542,7 @@ class movie_multi_plot(multi_plot):
             wavelength_width = 150,
             resolution = 0.01,
             redshift = 0,
+            bulk_velocity=None,
             markers=True,
             mark_plot_args=None,
             out_dir="./frames"):
@@ -596,6 +606,7 @@ class movie_multi_plot(multi_plot):
             self.slice_field = slice_field
 
         self.redshift = redshift
+        self.bulk_velocity = bulk_velocity
         self.wavelength_width = wavelength_width
         self.resolution = resolution
         #default set the wavelength center to one of the known spectral lines
@@ -674,8 +685,15 @@ class movie_multi_plot(multi_plot):
         #construct the first/template slice using middle ray
         self.ray = mid_ray
         self.create_slice(cmap = cmap, width=slice_width, height=slice_height)
-        mid_ray.close()
+        #get the bulk velocity along ray's direction
+        if self.bulk_velocity is None:
+            self.bulk_velocity = 0
+        else:
+            ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
+            self.bulk_velocity = np.dot(ray_u, self.bulk_velocity)
+            self.bulk_velocity = ds.quan(self.bulk_velocity, 'km/s')
 
+        mid_ray.close()
         #set padding for filenames
         pad = np.floor( np.log10(num_rays) )
         pad = int(pad) + 1
