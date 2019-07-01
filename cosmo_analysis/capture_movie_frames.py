@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, '../plotting_ray/')
+sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/plotting_ray/')
 import plotter
 from mpi4py import MPI
 import numpy as np
@@ -21,7 +21,7 @@ if len(argv) == 6:
     out_dir= argv[4]
     bv = argv[5]
 else:
-    raise RuntimeError("Takes 4 arguments: Dataset_fname Ray_directory Ion_name Output_directory")
+    raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory True/False_bv")
 
 if comm.rank == 0:
     center, nvec, rshift, bulk_vel = find_center(filename)

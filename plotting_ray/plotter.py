@@ -96,8 +96,8 @@ class multi_plot():
             self.bulk_velocity = 0
         else:
             ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
-            self.bulk_velocity = np.dot(ray_u, self.bulk_velocity)
-            self.bulk_velocity = ds.quan(self.bulk_velocity, 'km/s')
+            self.bulk_velocity = np.dot(ray_u, bulk_velocity)
+            self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
         self.redshift = redshift
         self.wavelength_width = wavelength_width
@@ -328,13 +328,17 @@ class multi_plot():
         # calc doppler redshift due to bulk motion
         c = yt.units.c
         beta = self.bulk_velocity/c
-        z_dopp = (1 + beta)/np.sqrt(1- beta**2) -1
+        z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
+        z_dopp = z_dopp.value
         #adjust wavelegnth_center for redshift
         rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
         #set max and min wavelength and resolution
         wave_min = rest_wavelength - self.wavelength_width/2
         wave_max = rest_wavelength + self.wavelength_width/2
         #generate spectrum defined by inputs
+        #print(self.redshift, z_dopp)
+        #print(rest_wavelength)
+        #print(wave_min, wave_max)
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
         spect_gen.make_spectrum(self.ray, lines=self.ion_list)
 
@@ -377,7 +381,7 @@ class multi_plot():
         #get list of num density  los velocity and corresponding lengths
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
         los_vel = self.ray.data['velocity_los']
-        los_vel = los_vel.in_units('km/s') - self.bulk_velocity
+        los_vel = los_vel.in_units('km/s') + self.bulk_velocity
         dl_list = self.ray.data['dl']
         dl_list = dl_list.in_units('kpc')
 
@@ -691,7 +695,7 @@ class movie_multi_plot(multi_plot):
         else:
             ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
             self.bulk_velocity = np.dot(ray_u, self.bulk_velocity)
-            self.bulk_velocity = ds.quan(self.bulk_velocity, 'km/s')
+            self.bulk_velocity =self.ds.quan(self.bulk_velocity, 'km/s')
 
         mid_ray.close()
         #set padding for filenames
