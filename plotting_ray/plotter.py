@@ -1,13 +1,14 @@
 import yt
 import trident
 import numpy as np
-from sys import argv
+from sys import argv, path
 from os import remove, listdir, makedirs
 import errno
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
-
+path.insert(0, "/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/")
+from center_finder import find_center
 import astropy.units  as u
 
 class multi_plot():
@@ -25,12 +26,12 @@ class multi_plot():
                 slice_field=None,
                 absorber_fields=[],
                 north_vector=[0, 0, 1],
-                galaxy_center = None,
+                center_gal = None,
                 wavelength_center=None,
                 wavelength_width = 300,
                 resolution = 0.1,
                 redshift = 0,
-                open_start=True,
+                bulk_velocity=None,
                 markers=True,
                 mark_plot_args=None,
                 figure=None):
@@ -45,7 +46,7 @@ class multi_plot():
         slice_field :string: Field to plot in slice plot. defaults to ion_name's number density
         absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
         north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
-        galaxy_center :array type: center of galaxy in code_length. if None, then defaults to domain_center
+        center_gal :array type: center of galaxy in code_length. if None, then defaults to domain_center
         wavelength_center :float: Wavelength to center spectrum plot on. defaults to the stringest
                             known spectral line of ion_name. in units of Angstrom
         wavelength_width :float: sets the wavelength range of the spectrum plot. defaults
@@ -71,6 +72,10 @@ class multi_plot():
         self.ray_filename = ray_filename
         self.ion_name = ion_name
 
+        #open up the dataset and ray files
+        self.ds = yt.load(self.ds_filename)
+        self.ray = yt.load(self.ray_filename)
+
         #add ion name to list of all ions to be plotted
         absorber_fields.append(ion_name)
         self.ion_list = absorber_fields
@@ -78,13 +83,21 @@ class multi_plot():
         #set a value for slice
         self.slice = None
         self.north_vector = north_vector
-        self.center_gal= galaxy_center
+        self.center_gal= center_gal
 
         #set slice field to ion name if no field is specified
         if (slice_field == None):
             self.slice_field = self.ion_p_name() + "_number_density"
         else:
             self.slice_field = slice_field
+
+        # set bulk velocity
+        if bulk_velocity is None:
+            self.bulk_velocity = 0
+        else:
+            ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
+            self.bulk_velocity = np.dot(ray_u, bulk_velocity)
+            self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
         self.redshift = redshift
         self.wavelength_width = wavelength_width
@@ -102,18 +115,14 @@ class multi_plot():
                 if line.f_value >= f_val:
                     f_val = line.f_value
                     self.wavelength_center = line.wavelength
+        else:
+            self.wavelength_center = wavelength_center
 
         #open up a figure if none specified
         if (figure == None):
             self.fig = plt.figure(figsize=(10, 10))
 
-        #open up the dataset and ray files or set their values to None
-        if (open_start):
-            self.ds = yt.load(self.ds_filename)
-            self.ray = yt.load(self.ray_filename)
-        else:
-            self.ds = None
-            self.ray = None
+
 
         #set marker plot properties
         self.markers = markers
@@ -296,9 +305,6 @@ class multi_plot():
         #annotate plot
         self.add_annotations()
 
-        # set y label to Z
-        self.slice.set_ylabel("Z (kpc)")
-
         # set color map
         self.slice.set_cmap(field=self.slice_field, cmap = cmap)
 
@@ -319,19 +325,29 @@ class multi_plot():
         Returns:
             none
         """
+        # calc doppler redshift due to bulk motion
+        c = yt.units.c
+        beta = self.bulk_velocity/c
+        z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
+        z_dopp = z_dopp.value
+        #adjust wavelegnth_center for redshift
+        rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
         #set max and min wavelength and resolution
-        wave_min = self.wavelength_center - self.wavelength_width/2
-        wave_max = self.wavelength_center + self.wavelength_width/2
+        wave_min = rest_wavelength - self.wavelength_width/2
+        wave_max = rest_wavelength + self.wavelength_width/2
         #generate spectrum defined by inputs
+        #print(self.redshift, z_dopp)
+        #print(rest_wavelength)
+        #print(wave_min, wave_max)
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
         spect_gen.make_spectrum(self.ray, lines=self.ion_list)
 
         #get wavelength and flux in order to plot and calc velocity
+        rest_wavelength = rest_wavelength*u.Unit('angstrom')
         wavelength = spect_gen.lambda_field * u.Unit('angstrom')
         flux = spect_gen.flux_field
 
         #calc velocity using relativistic doppler equation
-        rest_wavelength = u.Unit('angstrom')*self.wavelength_center*(1+self.redshift)
         doppler_equiv = u.equivalencies.doppler_relativistic(rest_wavelength)
         velocity = wavelength.to('km/s', equivalencies=doppler_equiv)
 
@@ -350,7 +366,6 @@ class multi_plot():
             ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
             ax_vel.set_xlabel("Delta_v (km/s)")
             ax_vel.set_ylabel("Flux")
-            ax_vel.set_xlim(-1500, 1500)
             ax_vel.grid()
         return wavelength, velocity, flux
 
@@ -366,7 +381,7 @@ class multi_plot():
         #get list of num density  los velocity and corresponding lengths
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
         los_vel = self.ray.data['velocity_los']
-        los_vel = los_vel.in_units('km/s')
+        los_vel = los_vel.in_units('km/s') + self.bulk_velocity
         dl_list = self.ray.data['dl']
         dl_list = dl_list.in_units('kpc')
 
@@ -374,7 +389,6 @@ class multi_plot():
         num_dls = dl_list.size
         for i in range(1, num_dls):
             dl_list[i] += dl_list[i-1]
-
 
         if ax_num_dense is not None:
             #make num density plots
@@ -455,9 +469,10 @@ class multi_plot():
         self.slice._setup_plots()
 
         #set up axes and draw other plots to them
-        ax1 = self.fig.add_subplot(311)
-        ax2 = self.fig.add_subplot(312)
-        ax3 = self.fig.add_subplot(313)
+        ax1 = self.fig.add_subplot(411)
+        ax2 = self.fig.add_subplot(412)
+        ax3 = self.fig.add_subplot(413)
+        #ax4 = self.fig.add_subplot(414)
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
         self.plot_spect_vel(ax_vel=ax3)
         #annotate plot with column density
@@ -531,6 +546,7 @@ class movie_multi_plot(multi_plot):
             wavelength_width = 150,
             resolution = 0.01,
             redshift = 0,
+            bulk_velocity=None,
             markers=True,
             mark_plot_args=None,
             out_dir="./frames"):
@@ -594,6 +610,7 @@ class movie_multi_plot(multi_plot):
             self.slice_field = slice_field
 
         self.redshift = redshift
+        self.bulk_velocity = bulk_velocity
         self.wavelength_width = wavelength_width
         self.resolution = resolution
         #default set the wavelength center to one of the known spectral lines
@@ -672,8 +689,15 @@ class movie_multi_plot(multi_plot):
         #construct the first/template slice using middle ray
         self.ray = mid_ray
         self.create_slice(cmap = cmap, width=slice_width, height=slice_height)
-        mid_ray.close()
+        #get the bulk velocity along ray's direction
+        if self.bulk_velocity is None:
+            self.bulk_velocity = 0
+        else:
+            ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
+            self.bulk_velocity = np.dot(ray_u, self.bulk_velocity)
+            self.bulk_velocity =self.ds.quan(self.bulk_velocity, 'km/s')
 
+        mid_ray.close()
         #set padding for filenames
         pad = np.floor( np.log10(num_rays) )
         pad = int(pad) + 1
@@ -692,7 +716,7 @@ class movie_multi_plot(multi_plot):
             self.slice.annotate_title(f"ray {i:0{pad}d}")
 
             #create multi_plot using slice and current ray plots
-            self.create_multi_plot(outfname = f"{self.out_dir}/mp{i:0{pad}d}", cmap=cmap)
+            self.create_multi_plot(outfname = f"{self.out_dir}/mp{i:0{pad}d}.png", cmap=cmap)
 
             #close ray files and clear figure
             self.ray.close()
@@ -706,8 +730,10 @@ if __name__ == '__main__':
     ion = argv[3]
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
-
-    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, wavelength_width = 100)
+    center, nvec, rshift, bv = find_center(data_set_fname)
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, 
+                    center_gal=center, north_vector=nvec, bulk_velocity=bv,
+                    redshift=rshift, wavelength_width = 30)
     makedirs("multi_plot_images", exist_ok=True)
     outfile = f"multi_plot_images/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(outfname=outfile)

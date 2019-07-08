@@ -15,6 +15,7 @@ def construct_rays( dataset,
                     n_rays=100,
                     norm_vector=[0, 0, 1],
                     angle=0,
+                    bulk_vel = 0,
                     max_impact_param=200,
                     center=None,
                     parallel=False,
@@ -57,13 +58,13 @@ def construct_rays( dataset,
 
     #create the unit vector for rays
     ray_unit = np.array( [norm_vector[2], 0, -norm_vector[0]] )
-    ray_unit = ray_unit/np.linalg.norm(ray_unit)
 
     #check not zero vector
     if ray_unit[0] == 0 and ray_unit[2] == 0:
         #switch to a non zero vector
         ray_unit = np.array( [0, norm_vector[2], -norm_vector[1]] )
 
+    ray_unit = ray_unit/np.linalg.norm(ray_unit)
     #rotate ray unit
     if angle != 0:
         angle = np.deg2rad(angle)
@@ -76,13 +77,44 @@ def construct_rays( dataset,
     else:
         center = ds.arr(center, 'code_length')
 
-    if parallel:
-        if comm.rank == 0:
-            slc = yt.SlicePlot(ds, norm_vector, 'density', center=center, width=length)
-            slc.save(f"{out_dir}/verify.png")
-    else:
-        slc = yt.SlicePlot(ds, norm_vector, 'density', center=center, width=length )
-        slc.save(f"{out_dir}/verify.png")
+    #plot slices for density, temp and metallicity to compare with multi plot 
+    num_slices =4 
+    if not parallel or comm.rank < num_slices:
+        fld = ['density', 'temperature', 'metallicity', 'velocity_magnitude']
+        cmap = ['magma', 'thermal', 'haline', 'viridis']
+        i = comm.rank
+        slc_norm = np.cross(ray_unit, norm_vector)
+        slc = yt.SlicePlot(ds, slc_norm, fld[i],
+                               north_vector = norm_vector,
+                               center=center, width=length)
+        slc.set_axes_unit('kpc')
+        slc.set_cmap(field=fld[i], cmap=cmap[i])
+        slc.set_background_color(fld[i])
+        if fld[i] == 'velocity_magnitude':
+            slc.set_unit('velocity_magnitude', 'km/s')
+        slc.save(f"{out_dir}/{fld[i]}_slice.png")
+        if fld[i] == 'density':
+            #overplot velocities 
+            slc.annotate_quiver('cutting_plane_velocity_x', 'cutting_plane_velocity_y',
+                                factor=24, plot_args={'color':'white'},
+                                bv_x=0, bv_y=0)
+            slc.annotate_title("Velocity Field in observors reference frame")
+            slc.save(f"{out_dir}/velocity_field_no_bv.png")
+
+            #take in account bulk velocity
+            slc.annotate_clear()
+            bv_x = np.dot(ray_unit, bulk_vel)
+            bv_y = np.dot(norm_vector, bulk_vel)
+            slc.annotate_quiver('cutting_plane_velocity_x', 'cutting_plane_velocity_y',
+                                factor=24, plot_args={'color':'white'},
+                                bv_x=bv_x, bv_y=bv_y)
+            slc.annotate_title("Velocity Field in galaxy's reference frame")
+            slc.save(f"{out_dir}/velocity_field_bv.png")
+
+        if comm.rank == 1:
+            prj = yt.OffAxisProjectionPlot(ds, norm_vector, 'density', center=center, width=length)
+            prj.set_axes_unit('kpc')
+            prj.save(f"{out_dir}/density_projection.png")
 
     #find the beginning and ending centers of all rays
     start_ray_cent = center + max_impact_param*norm_vector
@@ -101,10 +133,16 @@ def construct_rays( dataset,
     my_ray_nums = np.arange(n_rays)
     if parallel:
         #split ray numbers then take a portion based on rank
-        split_ray_nums = np.array_split(my_ray_nums, comm.size)
-        my_ray_nums = split_ray_nums[ comm.rank ]
-
+        #skip root procces (rank 0)
+        split_ray_nums = np.array_split(my_ray_nums, comm.size-num_slices)
+        my_ray_nums = split_ray_nums[ comm.rank-num_slices ]
+        
     for i in my_ray_nums:
+        #if root process then don't create any rays
+        if parallel:
+            if comm.rank < num_slices:
+                break
+
         #construct ray
         trident.make_simple_ray(ds,
                                 ray_begins[i],
@@ -119,7 +157,7 @@ def construct_rays( dataset,
 #now actual test
 if __name__ == '__main__':
     #setup conditions
-    line_list = ['H I', 'O VI', 'C IV']
+    line_list = ['H I','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
     if len(argv) == 5:
         filename = argv[1]
         num_rays=int(argv[2])
@@ -128,11 +166,12 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("Takes in 4 Arguments. Dataset_filename num_rays ray_lenght out_directory")
 
-    center, n_vec = find_center(filename)
+    center, n_vec, rshift, bv = find_center(filename)
     #divide rays evenly
     construct_rays(filename, line_list,
                     n_rays=num_rays,
                     norm_vector = n_vec,
+                    bulk_vel = bv,
                     length=ray_length,
                     max_impact_param=ray_length/2,
                     center = center,

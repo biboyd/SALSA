@@ -20,14 +20,14 @@ else
 	exit 1
 fi
 #make individual movies using movie.sh
-for i in H_I C_IV O_VI
+for i in H_I C_IV O_VI Si_II Si_III Ne_VIII Mg_X
 do 
-	~/Repo/CGM/movie.sh movie_${i}.mp4 5 frames/movie_${i}_frames/*.png 
+	~/Repo/CGM/movie_scripts/movie.sh movie_${i}.mp4 5 frames/movie_${i}_frames/*.png 
 done
 
 for i in H_I C_IV O_VI
 do 
-        ~/Repo/CGM/movie.sh movie_${i}_slow.mp4 1 frames/movie_${i}_frames/*.png 
+        ~/Repo/CGM/movie_scripts/movie.sh movie_${i}_slow.mp4 1 frames/movie_${i}_frames/*.png 
 done
 
 #make combined movies

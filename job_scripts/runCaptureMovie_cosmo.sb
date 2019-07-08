@@ -2,10 +2,11 @@
 
 #SBATCH --ntasks=64
 #SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=1G
-#SBATCH -t 00:15:00
+#SBATCH --mem-per-cpu=2G
+#SBATCH -t 02:00:00
 #SBATCH --x11=all
 #SBATCH -o slurm_logs/slurm-%j.out
+#SBATCH -e slurm_logs/slurm-%jerr.out
 
 dsName=$1
 ionName=$2
@@ -27,5 +28,5 @@ fi
 unset XDG_RUNTIME_DIR
 mpirun -np 64 								\
 	python ~/Repo/CGM/cosmo_analysis/capture_movie_frames.py	\
-		$dataFile $rayDir "$ionName" $outDir
+		$dataFile $rayDir "$ionName" $outDir False
 scontrol show job $SLURM_JOB_ID

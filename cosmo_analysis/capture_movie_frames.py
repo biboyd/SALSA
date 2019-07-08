@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, '../plotting_ray/')
+sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/plotting_ray/')
 import plotter
 from mpi4py import MPI
 import numpy as np
@@ -14,35 +14,55 @@ comm = MPI.COMM_WORLD
 line_list = []#['H I', 'O VI', 'C IV']
 
 #take in arguments
-if len(argv) == 5:
+if len(argv) == 6:
     filename = argv[1]
     in_dir = argv[2]
     i_name = argv[3]
     out_dir= argv[4]
+    bv = argv[5]
 else:
-    raise RuntimeError("Takes 4 arguments: Dataset_fname Ray_directory Ion_name Output_directory")
+    raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory True/False_bv")
 
 if comm.rank == 0:
-    center, nvec = find_center(filename)
+    center, nvec, rshift, bulk_vel = find_center(filename)
     center = np.array( center.in_units('code_length'), dtype=np.float64)
     nvec = np.array(nvec, dtype=np.float64)
+    rshift = np.array([rshift], dtype=np.float64)
+    bulk_vel = np.array(bulk_vel, dtype=np.float64)
 else:
     center= np.zeros(3, dtype=np.float64)
     nvec = np.zeros(3, dtype=np.float64)
+    rshift = np.zeros(1, dtype=np.float64)
+    bulk_vel = np.zeros(3, dtype=np.float64)
 
+#broadcast information to all processes
 comm.Barrier()
 comm.Bcast([center, MPI.DOUBLE])
 comm.Bcast([nvec, MPI.DOUBLE])
+comm.Bcast([rshift, MPI.DOUBLE])
+comm.Bcast([bulk_vel, MPI.DOUBLE])
 comm.Barrier()
 
 #now actual test
-movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
-				absorber_fields=line_list,
-                center_gal = center,
-                north_vector = nvec,
-				out_dir=out_dir,
-				wavelength_width=100,
-				resolution=0.1)
+if bv == 'True':
+    movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
+    				absorber_fields=line_list,
+                    center_gal = center,
+                    north_vector = nvec,
+    				out_dir=out_dir,
+                    redshift=rshift[0],
+                    bulk_velocity=bulk_vel,
+    				wavelength_width=25,
+    				resolution=0.1)
+else:
+    movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
+    				absorber_fields=line_list,
+                    center_gal = center,
+                    north_vector = nvec,
+    				out_dir=out_dir,
+                    redshift=rshift[0],
+    				wavelength_width=25,
+    				resolution=0.1)
 
 #split up ray id numbers betweeen proccesors
 rayrange = np.arange( len(movie.ray_files) )
