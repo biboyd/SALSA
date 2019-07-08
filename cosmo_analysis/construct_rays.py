@@ -89,6 +89,8 @@ def construct_rays( dataset,
             slc.set_axes_unit('kpc')
             slc.set_cmap(field=fld, cmap=cmap)
             slc.set_background_color(fld)
+            if fld == 'velocity_magnitude':
+                slc.set_unit('velocity_magnitude', 'km/s')
             slc.save(f"{out_dir}/{fld}_slice.png")
             if fld == 'density':
                 #overplot velocities 

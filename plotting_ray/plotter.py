@@ -343,11 +343,11 @@ class multi_plot():
         spect_gen.make_spectrum(self.ray, lines=self.ion_list)
 
         #get wavelength and flux in order to plot and calc velocity
+        rest_wavelength = rest_wavelength*u.Unit('angstrom')
         wavelength = spect_gen.lambda_field * u.Unit('angstrom')
         flux = spect_gen.flux_field
 
         #calc velocity using relativistic doppler equation
-        rest_wavelength = rest_wavelength*u.Unit('angstrom')
         doppler_equiv = u.equivalencies.doppler_relativistic(rest_wavelength)
         velocity = wavelength.to('km/s', equivalencies=doppler_equiv)
 
@@ -730,8 +730,10 @@ if __name__ == '__main__':
     ion = argv[3]
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
-    center, nvec = find_center(data_set_fname)
-    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, center_gal=center, north_vector=nvec,wavelength_width = 300)
+    center, nvec, rshift, bv = find_center(data_set_fname)
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, 
+                    center_gal=center, north_vector=nvec, bulk_velocity=bv,
+                    redshift=rshift, wavelength_width = 30)
     makedirs("multi_plot_images", exist_ok=True)
     outfile = f"multi_plot_images/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(outfname=outfile)
