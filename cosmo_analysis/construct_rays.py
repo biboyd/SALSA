@@ -58,13 +58,13 @@ def construct_rays( dataset,
 
     #create the unit vector for rays
     ray_unit = np.array( [norm_vector[2], 0, -norm_vector[0]] )
-    ray_unit = ray_unit/np.linalg.norm(ray_unit)
 
     #check not zero vector
     if ray_unit[0] == 0 and ray_unit[2] == 0:
         #switch to a non zero vector
         ray_unit = np.array( [0, norm_vector[2], -norm_vector[1]] )
 
+    ray_unit = ray_unit/np.linalg.norm(ray_unit)
     #rotate ray unit
     if angle != 0:
         angle = np.deg2rad(angle)
