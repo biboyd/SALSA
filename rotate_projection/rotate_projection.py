@@ -1,6 +1,5 @@
 import sys
 sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/')
-from center_finder import find_center
 import yt
 import numpy as np
 from mpi4py import MPI
@@ -18,7 +17,7 @@ def create_proj_frames(ds_fname,
                        ):
 
     comm = MPI.COMM_WORLD
-
+    normal_vec = np.array(normal_vec)
     if comm.rank == 0:
         #get in plane of galaxy vector to rot offset
         inplane_vec = np.array( [normal_vec[2], 0, -normal_vec[0]] )
@@ -32,16 +31,17 @@ def create_proj_frames(ds_fname,
         #create rotation vector then rotate norm vec to get our axis of rot
         rot_vec = inplane_vec * np.deg2rad(offset)
         rot = Rotation.from_rotvec(rot_vec)
-        axis_rot_vec = rot.apply(normal_vec)
-        axis_rot_vec = np.float64(axis_rot_vec)
+        off_axis_vec = rot.apply(normal_vec)
+        off_axis_vec = np.float64(axis_rot_vec)
+
+        f_proj_vec = np.cross(off_axis_vec, inplane_vec)
+        f_proj_vec = f_proj_vec/np.linalg.norm(f_proj_vec)
 
     else:
-        axis_rot_vec = np.zeros(3, dtype=np.float64)
-        inplane_vec = np.zeros(3, dtype=np.float64)
+        f_proj_vec = np.zeros(3, dtype=np.float64)
 
     comm.Barrier()
-    comm.Bcast([axis_rot_vec, MPI.DOUBLE])
-    comm.Bcast([inplane_vec, MPI.DOUBLE])
+    comm.Bcast([f_proj_vec, MPI.DOUBLE])
     rotations = np.linspace(0, 2*np.pi, num_frames)
     my_rot_nums = np.arange(num_frames)
     #split ray numbers then take a portion based on rank
@@ -51,24 +51,24 @@ def create_proj_frames(ds_fname,
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
     sph = ds.sphere(center, (100, 'kpc'))
-
     pad = int(np.ceil( np.log10(num_frames)))
     for i in my_rot_nums:
         #construct rotation vector and use to rotate
-        rot_vec = axis_rot_vec * rotations[i]
+        rot_vec = normal_vec * rotations[i]
         rot = Rotation.from_rotvec(rot_vec)
-        proj_vec = rot.apply(inplane_vec)
-
+        proj_vec = rot.apply(f_proj_vec)
         prj = yt.OffAxisProjectionPlot(ds, proj_vec, field,
                                        center=center, width=(100, 'kpc'),
                                        north_vector=normal_vec,
                                        weight_field=weight,
                                        data_source=sph)
+
+        prj.annotate_line([0.5, 0.5, 0.5], [1, 0.5, 0.5])
         prj.save(f"{out_dir}/proj{i:0{pad}d}.png")
 
 if __name__ == '__main__':
     dsname = sys.argv[1]
-    frms = int(sys.argv[2]) 
+    frms = int(sys.argv[2])
     out_dir = sys.argv[3]
 
     c, n, r, bv = find_center(dsname)
