@@ -5,6 +5,7 @@ import numpy as np
 from mpi4py import MPI
 from scipy.spatial.transform import Rotation
 from os import makedirs
+from center_finder import find_center
 
 def create_proj_frames(ds_fname,
                        center,
@@ -32,7 +33,7 @@ def create_proj_frames(ds_fname,
         rot_vec = inplane_vec * np.deg2rad(offset)
         rot = Rotation.from_rotvec(rot_vec)
         off_axis_vec = rot.apply(normal_vec)
-        off_axis_vec = np.float64(axis_rot_vec)
+        off_axis_vec = np.float64(off_axis_vec)
 
         f_proj_vec = np.cross(off_axis_vec, inplane_vec)
         f_proj_vec = f_proj_vec/np.linalg.norm(f_proj_vec)
