@@ -280,24 +280,27 @@ class multi_plot():
         scale = self.ds.quan(np.dot(center_dif, norm_vector), 'code_length')
         center = scale*norm_vector + self.center_gal
 
+        #set width/height
+        if width ==None and height==None:
+            #default to length of ray
+            wid_hght=ray_length
+        elif width ==None and height != None:
+            #width still defaults to length of ray
+            wid_hght=((ray_length.to_value(), 'kpc'), (height, 'kpc'))
+        elif width != None and height ==None:
+            wid_hght= ((width, 'kpc'), (ray_length.to_value(), 'kpc'))
+        else:
+            wid_hght= ((width, 'kpc'), (height, 'kpc'))
+
         #Create slice along ray. keep slice pointed in north_Vec direction
         self.slice = yt.OffAxisSlicePlot(self.ds,
                           norm_vector,
                           self.slice_field,
                           center=center,
-                          north_vector = self.north_vector)
+                          north_vector = self.north_vector,
+                          width = wid_hght)
 
-        #set width/height
-        if width ==None and height==None:
-            #default to length of ray
-            self.slice.set_width(ray_length)
-        elif width ==None and height != None:
-            #width still defaults to length of ray
-            self.slice.set_width(((ray_length.to_value(), 'kpc'), (height, 'kpc')) )
-        elif width != None and height ==None:
-            self.slice.set_width( ((width, 'kpc'), (ray_length.to_value(), 'kpc')) )
-        else:
-            self.slice.set_width( ((width, 'kpc'), (height, 'kpc')) )
+
 
         #set axes to kpc
         self.slice.set_axes_unit('kpc')
@@ -731,7 +734,7 @@ if __name__ == '__main__':
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
     center, nvec, rshift, bv = find_center(data_set_fname)
-    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers, 
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
                     center_gal=center, north_vector=nvec, bulk_velocity=bv,
                     redshift=rshift, wavelength_width = 30)
     makedirs("multi_plot_images", exist_ok=True)
