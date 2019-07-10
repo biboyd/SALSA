@@ -5,12 +5,14 @@ import numpy as np
 from mpi4py import MPI
 from scipy.spatial.transform import Rotation
 from os import makedirs
+from center_finder import find_center
 
 def create_proj_frames(ds_fname,
                        center,
                        normal_vec,
                        offset=30,
-                       field='density',
+                       fields=['density'],
+                       color_maps=['magma'],
                        weight=None,
                        num_frames=10,
                        out_dir="./"
@@ -18,7 +20,7 @@ def create_proj_frames(ds_fname,
 
     comm = MPI.COMM_WORLD
     normal_vec = np.array(normal_vec)
-    if comm.rank == 0:
+    if comm.rank >= 0:
         #get in plane of galaxy vector to rot offset
         inplane_vec = np.array( [normal_vec[2], 0, -normal_vec[0]] )
 
@@ -32,7 +34,7 @@ def create_proj_frames(ds_fname,
         rot_vec = inplane_vec * np.deg2rad(offset)
         rot = Rotation.from_rotvec(rot_vec)
         off_axis_vec = rot.apply(normal_vec)
-        off_axis_vec = np.float64(axis_rot_vec)
+        off_axis_vec = np.float64(off_axis_vec)
 
         f_proj_vec = np.cross(off_axis_vec, inplane_vec)
         f_proj_vec = f_proj_vec/np.linalg.norm(f_proj_vec)
@@ -40,8 +42,8 @@ def create_proj_frames(ds_fname,
     else:
         f_proj_vec = np.zeros(3, dtype=np.float64)
 
-    comm.Barrier()
-    comm.Bcast([f_proj_vec, MPI.DOUBLE])
+    #comm.Barrier()
+    #comm.Bcast([f_proj_vec, MPI.DOUBLE])
     rotations = np.linspace(0, 2*np.pi, num_frames)
     my_rot_nums = np.arange(num_frames)
     #split ray numbers then take a portion based on rank
@@ -57,20 +59,24 @@ def create_proj_frames(ds_fname,
         rot_vec = normal_vec * rotations[i]
         rot = Rotation.from_rotvec(rot_vec)
         proj_vec = rot.apply(f_proj_vec)
-        prj = yt.OffAxisProjectionPlot(ds, proj_vec, field,
-                                       center=center, width=(100, 'kpc'),
-                                       north_vector=normal_vec,
-                                       weight_field=weight,
-                                       data_source=sph)
-
-        prj.annotate_line([0.5, 0.5, 0.5], [1, 0.5, 0.5])
-        prj.save(f"{out_dir}/proj{i:0{pad}d}.png")
+        for fld, cmap in zip(fields, color_maps):
+            prj = yt.OffAxisProjectionPlot(ds, proj_vec, fld,
+                                           center=center, width=(100, 'kpc'),
+                                           north_vector=normal_vec,
+                                           weight_field=weight,
+                                           data_source=sph)
+            prj.set_cmap(field=fld, cmap=cmap)
+            prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
 
 if __name__ == '__main__':
     dsname = sys.argv[1]
     frms = int(sys.argv[2])
     out_dir = sys.argv[3]
 
+    fields = ["density", "temperature", "metallicity", "H_p0_number_density"]
+    cmaps = ["magma", "thermal", "haline", "magma"]
     c, n, r, bv = find_center(dsname)
     makedirs(out_dir, exist_ok=True)
-    create_proj_frames(dsname, c, n, num_frames=frms, out_dir=out_dir)
+    for f in fields:
+        makedirs(f"{out_dir}/{f}", exist_ok=True)
+    create_proj_frames(dsname, c, n, fields=fields, color_maps=cmaps, num_frames=frms, out_dir=out_dir)

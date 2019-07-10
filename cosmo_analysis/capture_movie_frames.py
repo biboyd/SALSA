@@ -53,7 +53,7 @@ if bv == 'True':
                     redshift=rshift[0],
                     bulk_velocity=bulk_vel,
     				wavelength_width=25,
-    				resolution=0.1)
+    				resolution=0.01)
 else:
     movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
     				absorber_fields=line_list,
@@ -62,7 +62,7 @@ else:
     				out_dir=out_dir,
                     redshift=rshift[0],
     				wavelength_width=25,
-    				resolution=0.1)
+    				resolution=0.01)
 
 #split up ray id numbers betweeen proccesors
 rayrange = np.arange( len(movie.ray_files) )
