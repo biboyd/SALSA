@@ -77,45 +77,6 @@ def construct_rays( dataset,
     else:
         center = ds.arr(center, 'code_length')
 
-    #plot slices for density, temp and metallicity to compare with multi plot 
-    num_slices =4 
-    if not parallel or comm.rank < num_slices:
-        fld = ['density', 'temperature', 'metallicity', 'velocity_magnitude']
-        cmap = ['magma', 'thermal', 'haline', 'viridis']
-        i = comm.rank
-        slc_norm = np.cross(ray_unit, norm_vector)
-        slc = yt.SlicePlot(ds, slc_norm, fld[i],
-                               north_vector = norm_vector,
-                               center=center, width=length)
-        slc.set_axes_unit('kpc')
-        slc.set_cmap(field=fld[i], cmap=cmap[i])
-        slc.set_background_color(fld[i])
-        if fld[i] == 'velocity_magnitude':
-            slc.set_unit('velocity_magnitude', 'km/s')
-        slc.save(f"{out_dir}/{fld[i]}_slice.png")
-        if fld[i] == 'density':
-            #overplot velocities 
-            slc.annotate_quiver('cutting_plane_velocity_x', 'cutting_plane_velocity_y',
-                                factor=24, plot_args={'color':'white'},
-                                bv_x=0, bv_y=0)
-            slc.annotate_title("Velocity Field in observors reference frame")
-            slc.save(f"{out_dir}/velocity_field_no_bv.png")
-
-            #take in account bulk velocity
-            slc.annotate_clear()
-            bv_x = np.dot(ray_unit, bulk_vel)
-            bv_y = np.dot(norm_vector, bulk_vel)
-            slc.annotate_quiver('cutting_plane_velocity_x', 'cutting_plane_velocity_y',
-                                factor=24, plot_args={'color':'white'},
-                                bv_x=bv_x, bv_y=bv_y)
-            slc.annotate_title("Velocity Field in galaxy's reference frame")
-            slc.save(f"{out_dir}/velocity_field_bv.png")
-
-        if comm.rank == 1:
-            prj = yt.OffAxisProjectionPlot(ds, norm_vector, 'density', center=center, width=length)
-            prj.set_axes_unit('kpc')
-            prj.save(f"{out_dir}/density_projection.png")
-
     #find the beginning and ending centers of all rays
     start_ray_cent = center + max_impact_param*norm_vector
     end_ray_cent = center - max_impact_param*norm_vector
@@ -133,16 +94,10 @@ def construct_rays( dataset,
     my_ray_nums = np.arange(n_rays)
     if parallel:
         #split ray numbers then take a portion based on rank
-        #skip root procces (rank 0)
-        split_ray_nums = np.array_split(my_ray_nums, comm.size-num_slices)
-        my_ray_nums = split_ray_nums[ comm.rank-num_slices ]
-        
-    for i in my_ray_nums:
-        #if root process then don't create any rays
-        if parallel:
-            if comm.rank < num_slices:
-                break
+        split_ray_nums = np.array_split(my_ray_nums, comm.size)
+        my_ray_nums = split_ray_nums[ comm.rank]
 
+    for i in my_ray_nums:
         #construct ray
         trident.make_simple_ray(ds,
                                 ray_begins[i],
@@ -154,7 +109,7 @@ def construct_rays( dataset,
         if comm.rank == 0:
              print("-----all finished------")
 
-#now actual test
+
 if __name__ == '__main__':
     #setup conditions
     line_list = ['H I','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
