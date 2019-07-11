@@ -20,7 +20,7 @@ def create_proj_frames(ds_fname,
 
     comm = MPI.COMM_WORLD
     normal_vec = np.array(normal_vec)
-    if comm.rank >= 0:
+    if comm.rank == 0:
         #get in plane of galaxy vector to rot offset
         inplane_vec = np.array( [normal_vec[2], 0, -normal_vec[0]] )
 
@@ -42,9 +42,10 @@ def create_proj_frames(ds_fname,
     else:
         f_proj_vec = np.zeros(3, dtype=np.float64)
 
-    #comm.Barrier()
-    #comm.Bcast([f_proj_vec, MPI.DOUBLE])
-    rotations = np.linspace(0, 2*np.pi, num_frames)
+    comm.Barrier()
+    comm.Bcast([f_proj_vec, MPI.DOUBLE])
+    interval = 2*np.pi/num_frames
+    rotations = np.arange(0, 2*np.pi, interval)
     my_rot_nums = np.arange(num_frames)
     #split ray numbers then take a portion based on rank
     split_rot_nums = np.array_split(my_rot_nums, comm.size)
@@ -87,4 +88,4 @@ if __name__ == '__main__':
     makedirs(out_dir, exist_ok=True)
     for f in fields:
         makedirs(f"{out_dir}/{f}", exist_ok=True)
-    create_proj_frames(dsname, c, n, fields=fields, weight='density',color_maps=cmaps, num_frames=frms, out_dir=out_dir)
+    create_proj_frames(dsname, c, n, fields=fields, color_maps=cmaps, num_frames=frms, out_dir=out_dir)

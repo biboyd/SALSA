@@ -110,7 +110,7 @@ def construct_rays( dataset,
 #now actual test
 if __name__ == '__main__':
     #setup conditions
-    line_list = ['H I', 'Si II', 'Si II', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
+    line_list = ['H I', 'Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
     if len(argv) == 5:
         filename = argv[1]
         num_rays=int(argv[2])
