@@ -50,6 +50,11 @@ def create_proj_frames(ds_fname,
     split_rot_nums = np.array_split(my_rot_nums, comm.size)
     my_rot_nums = split_rot_nums[comm.rank]
 
+    #limits dictionary to fix colobar scale
+    lim_dict = dict(density=[1e-6, 1e0],
+                    temperature=[1e29, 1e31],
+                    metallicity=[1e22, 1e24],
+                    H_p0_number_density=[1e15, 1e22])
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
     sph = ds.sphere(center, (100, 'kpc'))
@@ -65,6 +70,9 @@ def create_proj_frames(ds_fname,
                                            north_vector=normal_vec,
                                            weight_field=weight,
                                            data_source=sph)
+            # set color bar and color map to be consistent on all proj
+            lim_lb, lim_ub = lim_dict(fld)
+            prj.set_zlim(fld, lim_lb, lim_ub)
             prj.set_cmap(field=fld, cmap=cmap)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
 
