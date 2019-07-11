@@ -55,7 +55,11 @@ def create_proj_frames(ds_fname,
     lim_dict = dict(density=[1e-6, 1e0],
                     temperature=[1e29, 1e31],
                     metallicity=[1e22, 1e24],
-                    H_p0_number_density=[1e15, 1e22])
+                    H_p0_number_density=[1e15, 1e22],
+                    cold=[1e-10, 1e-3],
+                    cool=[1e-10, 1e-2],
+                    warm=[1e-6, 1e-3],
+                    hot=[1e-11, 1e-3])
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
     sph = ds.sphere(center, (100, 'kpc'))
@@ -76,14 +80,32 @@ def create_proj_frames(ds_fname,
             prj.set_zlim(fld, lim_lb, lim_ub)
             prj.set_cmap(field=fld, cmap=cmap)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
+        
+        #make projections of dif temp gas
+        names=['cold', 'cool', 'warm', 'hot']
+        temps = [ [0, 1e4], [1e4, 1e5], [1e5, 1e6], [1e6, 1e10]]
+        
+        for temp, name in zip(temps, names):
+            reg = ds.cut_region(sph, [f"obj['temperature'] > temp[0]", 
+                                      f"obj['temperature'] < temp[1]"])
+            prj = yt.OffAxisProjectionPlot(ds, proj_vec, 'density',
+                                           center=center, width=(100, 'kpc'),
+                                           north_vector=normal_vec,
+                                           weight_field=weight,
+                                           data_source=reg)
+            
+            lim_lb, lim_ub = lim_dict[name]
+            prj.set_zlim('density', lim_lb, lim_ub)
+            prj.set_cmap(field='density', cmap=cmap)
+            prj.save(f"{out_dir}/{name}_gas/proj{i:0{pad}d}.png")
 
 if __name__ == '__main__':
     dsname = sys.argv[1]
     frms = int(sys.argv[2])
     out_dir = sys.argv[3]
 
-    fields = ["density", "temperature", "metallicity", "H_p0_number_density"]
-    cmaps = ["magma", "thermal", "haline", "magma"]
+    fields = ["density", "H_p0_number_density", "temperature", "metallicity"]
+    cmaps = ["magma", "magma", "thermal", "haline"]
     c, n, r, bv = find_center(dsname)
     makedirs(out_dir, exist_ok=True)
     for f in fields:

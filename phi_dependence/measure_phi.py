@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/')
 import yt
 import trident
 import numpy as np
@@ -7,6 +9,7 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 from sys import argv
 from os import listdir, makedirs
 import errno
+from center_finder import find_center
 
 def main(ds_fname,
          center,
@@ -218,7 +221,5 @@ if __name__ == "__main__":
     except IndexError:
         ray_dir = None
 
-    center = [0.5, 0.5, 0.5]
-    n_vec = [0, 0, 1]
-
+    center, n_vec, r, bv = find_center(ds)
     main(ds, center, n_vec, b, n_rays=n,ray_dir=ray_dir, azimuth_angle=angle, out_dir=f"impact_{b:0.1f}_nrays_{n:d}_ang_{angle}")

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#SBATCH --ntasks=64
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=2G
+#SBATCH -t 03:00:00
+#SBATCH -o slurm_logs/slurm-%j.out
+
+dsName=$1
+nFrames=$2
+scratch="/mnt/gs18/scratch/users/boydbre1"
+inFile="$scratch/cosmological/foggie/$dsName/$dsName"
+outDir="$scratch/rotate_projection/$dsName/weighted"
+if ! [ -d $outDir ]
+then
+	mkdir -p $outDir
+else
+	rm -rf $outDir/*
+fi
+
+mpirun -np 64							\
+	python ~/Repo/CGM/rotate_projection/rotate_projection.py\
+		$inFile $nFrames $outDir
+scontrol show job $SLURM_JOB_ID
+

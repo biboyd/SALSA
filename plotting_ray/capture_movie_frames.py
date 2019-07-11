@@ -23,8 +23,8 @@ else:
 movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
 				absorber_fields=line_list,
 				out_dir=out_dir,
-				wavelength_width=100,
-				resolution=0.1)
+				wavelength_width=30,
+				resolution=0.01)
 
 #split up ray id numbers betweeen proccesors
 rayrange = np.arange( len(movie.ray_files) )
