@@ -71,7 +71,7 @@ def create_proj_frames(ds_fname,
                                            weight_field=weight,
                                            data_source=sph)
             # set color bar and color map to be consistent on all proj
-            lim_lb, lim_ub = lim_dict(fld)
+            lim_lb, lim_ub = lim_dict[fld]
             prj.set_zlim(fld, lim_lb, lim_ub)
             prj.set_cmap(field=fld, cmap=cmap)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
@@ -87,4 +87,4 @@ if __name__ == '__main__':
     makedirs(out_dir, exist_ok=True)
     for f in fields:
         makedirs(f"{out_dir}/{f}", exist_ok=True)
-    create_proj_frames(dsname, c, n, fields=fields, color_maps=cmaps, num_frames=frms, out_dir=out_dir)
+    create_proj_frames(dsname, c, n, fields=fields, weight='density',color_maps=cmaps, num_frames=frms, out_dir=out_dir)

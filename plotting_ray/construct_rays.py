@@ -110,7 +110,7 @@ def construct_rays( dataset,
 #now actual test
 if __name__ == '__main__':
     #setup conditions
-    line_list = ['H I', 'O VI', 'C IV']
+    line_list = ['H I', 'Si II', 'Si II', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
     if len(argv) == 5:
         filename = argv[1]
         num_rays=int(argv[2])
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     #divide rays evenly
     construct_rays(filename, line_list,
                     n_rays=num_rays,
-                    norm_vector = [0.5, 0, 0.5],
+                    norm_vector = [0., 0., 1.],
                     length=ray_length,
                     max_impact_param=ray_length/2,
                     out_dir=out_dir,
