@@ -86,7 +86,7 @@ def main(ds_fname,
         col_dense[i] = np.sum( ray.data["H_p0_number_density"] * ray.data['dl'])
         ray.close()
 
-
+    #plot projection and column density 
     prj = yt.OffAxisProjectionPlot(ds, normal=axis_vector,fields =prj_field,
                         center = center,
                         north_vector=north_vector,
