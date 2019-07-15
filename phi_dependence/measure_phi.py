@@ -9,7 +9,7 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 from sys import argv
 from os import listdir, makedirs
 import errno
-from center_finder import find_center
+#from center_finder import find_center
 
 def main(ds_fname,
          center,
@@ -68,6 +68,8 @@ def main(ds_fname,
     #construct rays if not already made
     if ray_dir is None:
         ray_dir = construct_rays(ds, rs_rel, center, axis_vector, ray_length, n_rays, ion, out_dir)
+
+    #get files from directory
     ray_files = []
     for file in listdir(ray_dir):
         if file[-3:] == ".h5":
@@ -86,7 +88,7 @@ def main(ds_fname,
         col_dense[i] = np.sum( ray.data["H_p0_number_density"] * ray.data['dl'])
         ray.close()
 
-    #plot projection and column density 
+    #plot projection and column density
     prj = yt.OffAxisProjectionPlot(ds, normal=axis_vector,fields =prj_field,
                         center = center,
                         north_vector=north_vector,
@@ -187,7 +189,7 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
         center : Center of galaxy/point of choosing. in kpc
         axis_vector : axis about which points were rotated
                       rays will be constructed along this direction
-        ray_lenghth : the lenght of the rays in kpc
+        ray_length : the lenght of the rays in kpc
 
     Returns:
         col_dense : an array of column densities for each coordinate

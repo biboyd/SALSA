@@ -21,5 +21,19 @@ Holds (currently deprecated) wrapper for extracting information from trident dat
 wavelength space to velocity space. 
 Additionally there is code for experimenting with Spectacle (spectra fitting software)
 
-## slurm_scripts
-scripts for submitting jobs related to making a movie out of the multiplot
+## job_scripts
+scripts for submitting jobs to slurm   
+
+## phi_dependence
+Code for looking at the relation between column density and polar angle
+from axis of galaxy.   
+
+## cosmo_analysis
+Code for runninng/making multi_plot jobs for cosmological simulations. Specifically FOGGIE Simulation data  
+
+## rotate_projection
+Code for making movies of rotating projections of a galaxy. Useful for seeing the structure 
+
+## movie_scripts
+scripts for making movies (combining frames) and for editing movies (combining side by side etc.)  
+ 

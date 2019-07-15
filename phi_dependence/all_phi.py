@@ -46,7 +46,7 @@ def main(ds_fname, center,
     #divy up the angles evenly
     n_procs = comm.size
     num_angles_arr = np.zeros(comm.size, dtype=int) + n_az_angle//n_procs
-    #add remaining angles to firt processes
+    #add remaining angles to first processes
     num_angles_arr[:n_az_angle%n_procs] += 1
 
     ds = yt.load(ds_fname)
@@ -93,7 +93,12 @@ def main(ds_fname, center,
 
         #construct rays
         rout_dir = f"{out_dir}/rank{comm.rank}_angle{i}"
-
+        f = open(info.dat, 'w')
+        f.write(f"dataset: {ds_fname}\n")
+        f.write(f"az_angle: {azimuth_angle} radians\n")
+        f.write(f"Impact_param: {impact_param} kpc\n")
+        f.write(f"num_rays: {n_rays}\n")
+        f.close()
         ray_dir = construct_rays(ds, rs_rel, center,
                                  ax_rotation, ray_length,
                                  n_rays, ion, rout_dir)
@@ -105,10 +110,9 @@ def main(ds_fname, center,
         ray_files = sorted(ray_files)
 
         #get column density from rays
-        col_dense = np.empty(n_rays)
         for j in range(n_rays):
             fname="/".join((ray_dir, ray_files[j]))
-            ray = yt.load(f"{fname}")
+            ray = yt.load(fname)
             col_dense = np.sum( ray.data["H_p0_number_density"] * ray.data['dl'])
 
             #store data
@@ -116,7 +120,7 @@ def main(ds_fname, center,
 
             ray.close()
 
-    #calc the number of entries for each process
+    #calc the total number of entries for each process
     num_cnts =  num_angles_arr*2*n_rays
     #collect all data from processes
     comm.Gatherv([my_phi_col_dense, MPI.DOUBLE],
@@ -125,13 +129,21 @@ def main(ds_fname, center,
     if comm.rank==0:
         np.save(f"{out_dir}/phi_col_dense_data", phi_col_dense)
 
-        plt.scatter(np.rad2deg(phi_col_dense[:, 0]), np.log10(phi_col_dense[:,1]))
-        plt.savefig(f"{out_dir}/myplot.png")
+        #make a plot of all the data
+        plt.scatter(np.rad2deg(phi_col_dense[:, 0]), np.log10(phi_col_dense[:,1]), marker='.')
+        plt.title("H I Column Density at b={:.1f} kpc".format(impact_param))
+        plt.xlabel("Polar Angle (degrees)")
+        plt.ylabel("Log(N) (N in $cm^2$)")
+        plt.savefig(f"{out_dir}/scatter_plot.png")
         print('all done')
 
 
 if __name__ == '__main__':
     ds = argv[1]
     b = float(argv[2])
+    n_a = int(argv[3])
+    n_r = int(argv[4])
+    odir = argv[5]
     c, nv, r, bv = find_center(ds)
-    main(ds, c, b, north_vector=nv, n_rays=5, n_az_angle=4, rand_seed=16)
+    main(ds, c, b, north_vector=nv, n_az_angle=n_a,
+         n_rays=n_r, out_dir=odir,rand_seed=16)
