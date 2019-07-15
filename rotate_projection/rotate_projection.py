@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/')
 import yt
+import trident
 import numpy as np
 from mpi4py import MPI
 from scipy.spatial.transform import Rotation
@@ -56,12 +57,15 @@ def create_proj_frames(ds_fname,
                     temperature=[1e29, 1e31],
                     metallicity=[1e22, 1e24],
                     H_p0_number_density=[1e15, 1e22],
+                    C_p3_number_density=[1e10, 1e16],
+                    O_p5_number_density=[1e14, 1e16],
                     cold=[1e-5, 1e-1],
                     cool=[1e-6, 1e-2],
                     warm=[1e-7, 1e-3],
                     hot=[1e-8, 1e-4])
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
+    trident.add_ion_fields(ds, ['C IV', 'O VI'])
     sph = ds.sphere(center, (100, 'kpc'))
     pad = int(np.ceil( np.log10(num_frames)))
     for i in my_rot_nums:
@@ -70,6 +74,7 @@ def create_proj_frames(ds_fname,
         rot = Rotation.from_rotvec(rot_vec)
         proj_vec = rot.apply(f_proj_vec)
         for fld, cmap in zip(fields, color_maps):
+            break
             prj = yt.OffAxisProjectionPlot(ds, proj_vec, fld,
                                            center=center, width=(100, 'kpc'),
                                            north_vector=normal_vec,
@@ -84,8 +89,10 @@ def create_proj_frames(ds_fname,
         #make projections of dif temp gas
         names=['cold', 'cool', 'warm', 'hot']
         temps = [ [0, 1e4], [1e4, 1e5], [1e5, 1e6], [1e6, 1e10]]
-        
-        for temp, name in zip(temps, names):
+        labels = ["Cold Gas Density $(T < 10^4 K)$", "Cool Gas Density $(10^4 < T < 10^5 K)$",
+                  "Warm Gas Density $(10^5 < T < 10^6 K)$", "Hot Gas Density $(T > 10^6 K)$"]
+
+        for temp, name, label in zip(temps, names, labels):
             reg = ds.cut_region(sph, [f"obj['temperature'] > {temp[0]}", 
                                       f"obj['temperature'] < {temp[1]}"])
             prj = yt.OffAxisProjectionPlot(ds, proj_vec, 'density',
@@ -98,6 +105,9 @@ def create_proj_frames(ds_fname,
             prj.set_zlim('density', lim_lb, lim_ub)
             prj.set_cmap(field='density', cmap='magma')
             prj.set_background_color('density')
+            prj.annotate_title(label)
+            prj.annotate_scale()
+            prj.hide_axes(draw_frame=True)
             prj.save(f"{out_dir}/{name}_gas/proj{i:0{pad}d}.png")
 
 if __name__ == '__main__':
@@ -105,6 +115,8 @@ if __name__ == '__main__':
     frms = int(sys.argv[2])
     out_dir = sys.argv[3]
 
+    #fields = ["C_p3_number_density", "O_p5_number_density"]
+    #cmaps = ['magma', 'magma']
     fields = ["density", "H_p0_number_density", "temperature", "metallicity"]
     cmaps = ["magma", "magma", "thermal", "haline"]
     c, n, r, bv = find_center(dsname)

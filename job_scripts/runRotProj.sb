@@ -10,12 +10,10 @@ dsName=$1
 nFrames=$2
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/rotate_projection/$dsName/weighted"
+outDir="$scratch/rotate_projection/$dsName/frames"
 if ! [ -d $outDir ]
 then
 	mkdir -p $outDir
-else
-	rm -rf $outDir/*
 fi
 
 mpirun -np 64							\
