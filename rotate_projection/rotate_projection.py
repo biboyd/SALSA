@@ -14,10 +14,36 @@ def create_proj_frames(ds_fname,
                        offset=30,
                        fields=['density'],
                        color_maps=['magma'],
+                       ccwh_gas=True,
                        weight=None,
                        num_frames=10,
+                       width = 100,
                        out_dir="./"
                        ):
+    """
+    Creates projection plots at different rotations. Then frames can be combined
+    to make a movie. Divides rotations at which projections are made evenly
+    between number of proccess given.
+
+    Parameters:
+        ds_fname : str/path : path to the dataset
+        center :list/array floats: coordiantes of the galaxy's center (in code_length)
+        normal_vec :list/array floats: vector pointing perpendicular to galaxy's disk
+        offset :float : angle to "tilt" the galaxy (in degrees)
+        fields : list of str: Fields to make projections of
+        color_maps : list of str: colormaps to use for each field. Must be same
+                    size as fields and indices should match up.
+        ccwh_gas : bool : Also Create projections of the density of cold, cool,
+                    warm and hot gas. Cold gas <10^4 K. Cool 10^4 - 10^5 K.
+                    Warm gas 10^5 - 10^6 K. Hot gas > 10^6 K.
+        weight : str : field to use to make a weighted projection
+        num_frames : int: number of frames to create for one full rotation
+        width : float : width of the projection in kpc
+        out_dir : str/path: path to where files will be saved
+
+    Returns:
+        none
+    """
 
     comm = MPI.COMM_WORLD
     normal_vec = np.array(normal_vec)
@@ -66,7 +92,7 @@ def create_proj_frames(ds_fname,
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
     trident.add_ion_fields(ds, ['C IV', 'O VI'])
-    sph = ds.sphere(center, (100, 'kpc'))
+    sph = ds.sphere(center, (width, 'kpc'))
     pad = int(np.ceil( np.log10(num_frames)))
     for i in my_rot_nums:
         #construct rotation vector and use to rotate
@@ -75,7 +101,7 @@ def create_proj_frames(ds_fname,
         proj_vec = rot.apply(f_proj_vec)
         for fld, cmap in zip(fields, color_maps):
             prj = yt.OffAxisProjectionPlot(ds, proj_vec, fld,
-                                           center=center, width=(100, 'kpc'),
+                                           center=center, width=(width, 'kpc'),
                                            north_vector=normal_vec,
                                            weight_field=weight,
                                            data_source=sph)
@@ -84,30 +110,31 @@ def create_proj_frames(ds_fname,
             prj.set_zlim(fld, lim_lb, lim_ub)
             prj.set_cmap(field=fld, cmap=cmap)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
-        
-        #make projections of dif temp gas
-        names=['cold', 'cool', 'warm', 'hot']
-        temps = [ [0, 1e4], [1e4, 1e5], [1e5, 1e6], [1e6, 1e10]]
-        labels = ["Cold Gas Density $(T < 10^4 K)$", "Cool Gas Density $(10^4 < T < 10^5 K)$",
-                  "Warm Gas Density $(10^5 < T < 10^6 K)$", "Hot Gas Density $(T > 10^6 K)$"]
 
-        for temp, name, label in zip(temps, names, labels):
-            reg = ds.cut_region(sph, [f"obj['temperature'] > {temp[0]}", 
-                                      f"obj['temperature'] < {temp[1]}"])
-            prj = yt.OffAxisProjectionPlot(ds, proj_vec, 'density',
-                                           center=center, width=(100, 'kpc'),
-                                           north_vector=normal_vec,
-                                           weight_field=weight,
-                                           data_source=reg)
-            
-            lim_lb, lim_ub = lim_dict[name]
-            prj.set_zlim('density', lim_lb, lim_ub)
-            prj.set_cmap(field='density', cmap='magma')
-            prj.set_background_color('density')
-            prj.annotate_title(label)
-            prj.annotate_scale()
-            prj.hide_axes(draw_frame=True)
-            prj.save(f"{out_dir}/{name}_gas/proj{i:0{pad}d}.png")
+        if ccwh_gas:
+            #make projections of dif temp gas
+            names=['cold', 'cool', 'warm', 'hot']
+            temps = [ [0, 1e4], [1e4, 1e5], [1e5, 1e6], [1e6, 1e10]]
+            labels = ["Cold Gas Density $(T < 10^4 K)$", "Cool Gas Density $(10^4 < T < 10^5 K)$",
+                      "Warm Gas Density $(10^5 < T < 10^6 K)$", "Hot Gas Density $(T > 10^6 K)$"]
+
+            for temp, name, label in zip(temps, names, labels):
+                reg = ds.cut_region(sph, [f"obj['temperature'] > {temp[0]}",
+                                          f"obj['temperature'] < {temp[1]}"])
+                prj = yt.OffAxisProjectionPlot(ds, proj_vec, 'density',
+                                               center=center, width=(width, 'kpc'),
+                                               north_vector=normal_vec,
+                                               weight_field=weight,
+                                               data_source=reg)
+
+                lim_lb, lim_ub = lim_dict[name]
+                prj.set_zlim('density', lim_lb, lim_ub)
+                prj.set_cmap(field='density', cmap='magma')
+                prj.set_background_color('density')
+                prj.annotate_title(label)
+                prj.annotate_scale()
+                prj.hide_axes(draw_frame=True)
+                prj.save(f"{out_dir}/{name}_gas/proj{i:0{pad}d}.png")
 
 if __name__ == '__main__':
     dsname = sys.argv[1]
@@ -123,7 +150,7 @@ if __name__ == '__main__':
     makedirs(out_dir, exist_ok=True)
     for f in fields:
         makedirs(f"{out_dir}/{f}", exist_ok=True)
-        
+
     names=['cold', 'cool', 'warm', 'hot']
     for f in names:
         makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
