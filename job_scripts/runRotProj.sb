@@ -8,9 +8,10 @@
 
 dsName=$1
 nFrames=$2
+off=$3
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/rotate_projection/$dsName/frames"
+outDir="$scratch/rotate_projection/$dsName/offset${off}/frames"
 if ! [ -d $outDir ]
 then
 	mkdir -p $outDir
@@ -18,6 +19,6 @@ fi
 
 mpirun -np 64							\
 	python ~/Repo/CGM/rotate_projection/rotate_projection.py\
-		$inFile $nFrames $outDir
+		$inFile $nFrames $off $outDir
 scontrol show job $SLURM_JOB_ID
 

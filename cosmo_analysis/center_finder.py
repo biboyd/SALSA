@@ -152,3 +152,6 @@ if __name__ == '__main__':
     print("x, y, z")
     print(f"{c[0]}, {c[1]}, {c[2]}")
     print(f"{n[0]}, {n[1]}, {n[2]}")
+    print(f"{r}")
+    print(f"{bv[0]}, {bv[1]}, {bv[2]}")
+

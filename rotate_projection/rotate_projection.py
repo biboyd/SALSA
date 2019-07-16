@@ -74,7 +74,6 @@ def create_proj_frames(ds_fname,
         rot = Rotation.from_rotvec(rot_vec)
         proj_vec = rot.apply(f_proj_vec)
         for fld, cmap in zip(fields, color_maps):
-            break
             prj = yt.OffAxisProjectionPlot(ds, proj_vec, fld,
                                            center=center, width=(100, 'kpc'),
                                            north_vector=normal_vec,
@@ -113,7 +112,8 @@ def create_proj_frames(ds_fname,
 if __name__ == '__main__':
     dsname = sys.argv[1]
     frms = int(sys.argv[2])
-    out_dir = sys.argv[3]
+    offset=float(sys.argv[3])
+    out_dir = sys.argv[4]
 
     #fields = ["C_p3_number_density", "O_p5_number_density"]
     #cmaps = ['magma', 'magma']
@@ -127,4 +127,4 @@ if __name__ == '__main__':
     names=['cold', 'cool', 'warm', 'hot']
     for f in names:
         makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
-    create_proj_frames(dsname, c, n, fields=fields, color_maps=cmaps, num_frames=frms, out_dir=out_dir)
+    create_proj_frames(dsname, c, n, fields=fields, color_maps=cmaps, num_frames=frms, offset=offset, out_dir=out_dir)

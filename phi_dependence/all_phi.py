@@ -93,15 +93,17 @@ def main(ds_fname, center,
 
         #construct rays
         rout_dir = f"{out_dir}/rank{comm.rank}_angle{i}"
-        f = open(info.dat, 'w')
-        f.write(f"dataset: {ds_fname}\n")
-        f.write(f"az_angle: {azimuth_angle} radians\n")
-        f.write(f"Impact_param: {impact_param} kpc\n")
-        f.write(f"num_rays: {n_rays}\n")
-        f.close()
         ray_dir = construct_rays(ds, rs_rel, center,
                                  ax_rotation, ray_length,
                                  n_rays, ion, rout_dir)
+        f = open(f"{rout_dir}/info.dat", 'w')
+        f.write(f"dataset: {ds_fname}\n")
+        f.write(f"az_angle(rad): {azimuth_angle:.3f}\n")
+        f.write(f"az_angel(deg): {np.rad2deg(azimuth_angle):.2f}\n")
+        f.write(f"Impact_param: {impact_param} kpc\n")
+        f.write(f"num_rays: {n_rays}\n")
+        f.close()
+
         #get files from directory
         ray_files = []
         for file in listdir(ray_dir):

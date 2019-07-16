@@ -9,7 +9,7 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 from sys import argv
 from os import listdir, makedirs
 import errno
-#from center_finder import find_center
+from center_finder import find_center
 
 def main(ds_fname,
          center,
@@ -89,10 +89,12 @@ def main(ds_fname,
         ray.close()
 
     #plot projection and column density
+    sph = ds.sphere(center, ray_length)
     prj = yt.OffAxisProjectionPlot(ds, normal=axis_vector,fields =prj_field,
                         center = center,
                         north_vector=north_vector,
-                        width = (4*impact_param, 'kpc'))
+                        width = (4*impact_param, 'kpc'),
+                        data_source = sph)
     prj.set_cmap(prj_field, cmap='magma')
     prj.set_background_color(prj_field)
     #plot markers onto projection
@@ -215,13 +217,13 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
 
 if __name__ == "__main__":
     ds = argv[1]
-    n = int(argv[2])
+    angle=float(argv[2])
     b = float(argv[3])
-    angle=int(argv[4])
+    n = int(argv[4])
     try:
         ray_dir = argv[5]
     except IndexError:
         ray_dir = None
 
     center, n_vec, r, bv = find_center(ds)
-    main(ds, center, n_vec, b, n_rays=n,ray_dir=ray_dir, azimuth_angle=angle, out_dir=f"impact_{b:0.1f}_nrays_{n:d}_ang_{angle}")
+    main(ds, center, n_vec, b, n_rays=n,ray_dir=ray_dir, azimuth_angle=angle, out_dir=f"impact_{b:0.1f}_nrays_{n:d}_ang_{angle:.0f}")
