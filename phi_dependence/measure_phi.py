@@ -9,17 +9,20 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 from sys import argv
 from os import listdir, makedirs
 import errno
+from spectacle import LineFinder1D
 from center_finder import find_center
 
 def main(ds_fname,
          center,
          north_vector,
          impact_param,
+         ion='H I',
          azimuth_angle=0,
          n_rays=10,
          ray_length=200,
          ray_dir = None,
          save_data=True,
+         use_spectacle=False,
          out_dir="./"):
     """
     Creates image of projection plot and plot measuring Column Density vs polar angle.
@@ -29,11 +32,15 @@ def main(ds_fname,
         ds_fname : string/path : path/filename of dataset to load
         center : array like object : Center of galaxy in code_length
         impact_param : float : impact parameter of rays in kpc
+        ion : string: name of the ion to compute column Densities of
         azimuth_angle : float : azimuthal angle to construct rays in radians
         n_rays : int : number of rays provided or to be constructed
         ray_length : float : length of rays in kpc
         ray_dir : string/path : path to directory containing rays. If set to None
                 rays will be constructed using provided information
+        use_spectacle : bool: Choose whether to try to fit the spectra using spectacle
+                or just to compute column density by summing the the num_density
+                along the ray
         out_dir : string/path : directory where image will be saved and rays constructed
 
     Returns:
@@ -41,7 +48,9 @@ def main(ds_fname,
     """
 
     ds = yt.load(ds_fname)
-    prj_field = 'H_p0_number_density'
+    #convert ion 'X x' to X_px_number_density
+    proj_field = ion_p_num(ion)
+    trident.add_ion_fields(ds, ions=[ion])
 
     north_vector = ds.arr(north_vector, 'dimensionless')
     center = ds.arr(center, 'code_length').in_units('kpc')
@@ -64,7 +73,6 @@ def main(ds_fname,
     #coordinates rel to center
     rs_rel, phi_array = get_coord(north_vector, impact_param, axis_vector, n_rays)
     rs_rel = ds.arr(rs_rel, 'kpc')
-    ion="H I"
     #construct rays if not already made
     if ray_dir is None:
         ray_dir = construct_rays(ds, rs_rel, center, axis_vector, ray_length, n_rays, ion, out_dir)
@@ -82,24 +90,28 @@ def main(ds_fname,
     ray_files = sorted(ray_files)
     #get column density from rays
     col_dense = np.empty(n_rays)
-    for i in range(n_rays):
-        fname="/".join((ray_dir, ray_files[i]))
-        ray = yt.load(f"{fname}")
-        col_dense[i] = np.sum( ray.data["H_p0_number_density"] * ray.data['dl'])
-        ray.close()
+    if use_spectacle:
+        #on the todo list :)
+        pass
+    else:
+        for i in range(n_rays):
+            fname="/".join((ray_dir, ray_files[i]))
+            ray = yt.load(f"{fname}")
+            col_dense[i] = np.sum( ray.data[proj_field] * ray.data['dl'])
+            ray.close()
 
     #plot projection and column density
     sph = ds.sphere(center, ray_length)
-    prj = yt.OffAxisProjectionPlot(ds, normal=axis_vector,fields =prj_field,
+    proj = yt.OffAxisProjectionPlot(ds, normal=axis_vector,fields =proj_field,
                         center = center,
                         north_vector=north_vector,
                         width = (4*impact_param, 'kpc'),
                         data_source = sph)
-    prj.set_cmap(prj_field, cmap='magma')
-    prj.set_background_color(prj_field)
+    proj.set_cmap(proj_field, cmap='magma')
+    proj.set_background_color(proj_field)
     #plot markers onto projection
     for i in range(n_rays):
-        prj.annotate_marker(rs_rel[i]+center, marker='.',
+        proj.annotate_marker(rs_rel[i]+center, marker='.',
                             plot_args={'color' : 'white', 's' : 25,'alpha' : 0.25})
 
     #redraw projection onto figure
@@ -115,12 +127,12 @@ def main(ds_fname,
                     cbar_pad="0%")
 
     #redraw projection plot onto figure
-    plot = prj.plots[prj_field]
+    plot = proj.plots[proj_field]
     plot.figure = fig
     plot.axes = grid[0].axes
     plot.cax = grid.cbar_axes[0]
 
-    prj._setup_plots()
+    proj._setup_plots()
 
     phi_array = np.rad2deg(phi_array)
     col_dense = np.log10(col_dense)
@@ -214,6 +226,21 @@ def construct_rays(ds, coordinates_rel, center, axis_vector, ray_length, n_rays,
                                 data_filename = f"{ray_dir}/ray{i:0{pad}d}.h5")
 
     return ray_dir
+
+def ion_p_num(ion_name):
+    """
+    convert ion species name from trident style to one that
+    can be used with h5 files
+    """
+    #split up the words in ion species name
+    ion_split = ion_name.split()
+
+    #convert num from roman numeral. subtract run b/c h5
+    num = trident.from_roman(ion_name[1])-1
+
+    #combine all the names
+    outname = ion_split[0] + '_p' + num +'_number_density'
+    return outname
 
 if __name__ == "__main__":
     ds = argv[1]
