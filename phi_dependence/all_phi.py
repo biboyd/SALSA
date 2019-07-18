@@ -8,6 +8,7 @@ import trident
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
+from spectacle.fitting import LineFinder1D
 from mpi4py import MPI
 from measure_phi import get_coord, construct_rays, ion_p_num
 from sys import argv
@@ -57,7 +58,7 @@ def main(ds_fname, center,
 
     ds = yt.load(ds_fname)
     ion_num_field = ion_p_num(ion)
-
+    trident.add_ion_fields(ds, ions=[ion])
     north_vector = np.array(north_vector)/np.linalg.norm(north_vector)
     #give units to inputs
     north_vector = ds.arr(north_vector, 'dimensionless')
@@ -80,7 +81,7 @@ def main(ds_fname, center,
     else:
         az_angles = np.zeros(2)
     #create array to store phi_array/col dense data
-    phi_col_dense = np.empty((n_az_angle*n_rays,2), dtype=np.float64)
+    phi_col_dense = np.empty((n_az_angle*n_rays, 3), dtype=np.float64)
     my_az_angles = np.empty(num_angles_arr[comm.rank], dtype=np.float64)
     comm.Scatterv([az_angles, num_angles_arr, MPI.DOUBLE],
                   [my_az_angles, MPI.DOUBLE])
@@ -144,7 +145,7 @@ def main(ds_fname, center,
 
         #make a plot of all the data
         plt.scatter(phi_col_dense[:, 0], phi_col_dense[:,1], marker='.')
-        plt.title(f"{ion} Column Density at b={impact_param:d} kpc")
+        plt.title(f"{ion} Column Density at b={impact_param:.0f} kpc")
         plt.xlabel("Polar Angle (degrees)")
         plt.ylabel("Log(N) (N in $cm^2$)")
         plt.savefig(f"{out_dir}/scatter_plot.png")
@@ -153,10 +154,11 @@ def main(ds_fname, center,
 
 if __name__ == '__main__':
     ds = argv[1]
-    b = float(argv[2])
-    n_a = int(argv[3])
-    n_r = int(argv[4])
-    odir = argv[5]
+    ion = argv[2]
+    b = float(argv[3])
+    n_a = int(argv[4])
+    n_r = int(argv[5])
+    odir = argv[6]
     c, nv, r, bv = find_center(ds)
-    main(ds, c, b, north_vector=nv, n_az_angle=n_a,
+    main(ds, c, b, ion=ion, north_vector=nv, n_az_angle=n_a,
          n_rays=n_r, out_dir=odir,rand_seed=16)

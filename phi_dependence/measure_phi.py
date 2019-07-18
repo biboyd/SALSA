@@ -9,7 +9,7 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 from sys import argv
 from os import listdir, makedirs
 import errno
-from spectacle import LineFinder1D
+from spectacle.fitting import LineFinder1D
 from center_finder import find_center
 
 def main(ds_fname,
@@ -46,7 +46,7 @@ def main(ds_fname,
     Returns:
         none
     """
-
+    makedirs(out_dir, exist_ok=True)
     ds = yt.load(ds_fname)
     #convert ion 'X x' to X_px_number_density
     proj_field = ion_p_num(ion)
@@ -111,8 +111,12 @@ def main(ds_fname,
     proj.set_background_color(proj_field)
     #plot markers onto projection
     for i in range(n_rays):
+        if i == 0:
+            color='red'
+        else:
+            color='white'
         proj.annotate_marker(rs_rel[i]+center, marker='.',
-                            plot_args={'color' : 'white', 's' : 25,'alpha' : 0.25})
+                            plot_args={'color' : color, 's' : 25,'alpha' : 0.25})
 
     #redraw projection onto figure
     fig = plt.figure(figsize=(10, 10))
@@ -234,12 +238,11 @@ def ion_p_num(ion_name):
     """
     #split up the words in ion species name
     ion_split = ion_name.split()
-
     #convert num from roman numeral. subtract run b/c h5
-    num = trident.from_roman(ion_name[1])-1
+    num = trident.from_roman(ion_split[1])-1
 
     #combine all the names
-    outname = ion_split[0] + '_p' + num +'_number_density'
+    outname = f"{ion_split[0]}_p{num}_number_density"
     return outname
 
 if __name__ == "__main__":
@@ -247,10 +250,11 @@ if __name__ == "__main__":
     angle=float(argv[2])
     b = float(argv[3])
     n = int(argv[4])
+    ion= argv[5]
     try:
-        ray_dir = argv[5]
+        ray_dir = argv[6]
     except IndexError:
         ray_dir = None
 
     center, n_vec, r, bv = find_center(ds)
-    main(ds, center, n_vec, b, n_rays=n,ray_dir=ray_dir, azimuth_angle=angle, out_dir=f"impact_{b:0.1f}_nrays_{n:d}_ang_{angle:.0f}")
+    main(ds, center, n_vec, b, ion=ion, n_rays=n,ray_dir=ray_dir, azimuth_angle=angle, out_dir=f"impact_{b:0.1f}_nrays_{n:d}_ang_{angle:.0f}")

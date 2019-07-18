@@ -84,7 +84,7 @@ def create_proj_frames(ds_fname,
                     metallicity=[1e22, 1e24],
                     H_p0_number_density=[1e15, 1e22],
                     C_p3_number_density=[1e10, 1e16],
-                    O_p5_number_density=[1e14, 1e16],
+                    O_p5_number_density=[1e12, 1e16],
                     cold=[1e-5, 1e-1],
                     cool=[1e-6, 1e-2],
                     warm=[1e-7, 1e-3],
@@ -154,4 +154,4 @@ if __name__ == '__main__':
     names=['cold', 'cool', 'warm', 'hot']
     for f in names:
         makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
-    create_proj_frames(dsname, c, n, fields=fields, color_maps=cmaps, num_frames=frms, offset=offset, out_dir=out_dir)
+    create_proj_frames(dsname, c, n, ccwh_gas=False,fields=fields, color_maps=cmaps, num_frames=frms, offset=offset, out_dir=out_dir)

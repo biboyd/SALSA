@@ -122,9 +122,10 @@ class multi_plot():
             self.wavelength_center = wavelength_center
 
         #open up a figure if none specified
-        if (figure == None):
+        if figure is None:
             self.fig = plt.figure(figsize=(10, 10))
-
+        else:
+            self.fig = figure
 
 
         #set marker plot properties
@@ -512,6 +513,9 @@ class multi_plot():
 
         if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
+
+        return self.fig, axes
+
 
     def zoom(self, factor):
         """
