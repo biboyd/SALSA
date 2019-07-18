@@ -108,6 +108,7 @@ def create_proj_frames(ds_fname,
             # set color bar and color map to be consistent on all proj
             lim_lb, lim_ub = lim_dict[fld]
             prj.set_zlim(fld, lim_lb, lim_ub)
+            prj.set_unit(('gas', 'density'), 'Msun/pc**2')
             prj.set_cmap(field=fld, cmap=cmap)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
 
@@ -132,6 +133,7 @@ def create_proj_frames(ds_fname,
                 prj.set_cmap(field='density', cmap='magma')
                 prj.set_background_color('density')
                 prj.annotate_title(label)
+                prj.set_unit(('gas', 'density'), 'Msun/pc**2')
                 prj.annotate_scale()
                 prj.hide_axes(draw_frame=True)
                 prj.save(f"{out_dir}/{name}_gas/proj{i:0{pad}d}.png")
@@ -154,4 +156,4 @@ if __name__ == '__main__':
     names=['cold', 'cool', 'warm', 'hot']
     for f in names:
         makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
-    create_proj_frames(dsname, c, n, ccwh_gas=False,fields=fields, color_maps=cmaps, num_frames=frms, offset=offset, out_dir=out_dir)
+    create_proj_frames(dsname, c, n, ccwh_gas=True,fields=fields, color_maps=cmaps, num_frames=frms, offset=offset, out_dir=out_dir)
