@@ -32,6 +32,7 @@ class multi_plot():
                 resolution = 0.1,
                 redshift = 0,
                 bulk_velocity=None,
+                use_spectacle=False,
                 markers=True,
                 mark_plot_args=None,
                 figure=None):
@@ -53,6 +54,8 @@ class multi_plot():
                             to 300 Angstroms
         resolution :float: width of wavelength bins in spectrum plot. default 0.1 Angstrom
         redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
+        bulk_velocity : array type : bulk velocity of the galaxy in km/s
+        use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
         markers :bool: whether to include markers on light ray and number density plot
         figure :matplotlib figure: where the multi_plot will be plotted. creates one if
                 none is specified.
@@ -104,7 +107,7 @@ class multi_plot():
         self.resolution = resolution
         #default set the wavelength center to one of the known spectral lines
         #for ion name. Use tridents line database to search for correct wavelength
-        if (wavelength_center == None):
+        if wavelength_center is None:
             #open up tridents default line database
             lbd = trident.LineDatabase("lines.txt")
             #find all lines that match ion
@@ -146,6 +149,10 @@ class multi_plot():
         self.num_dense_min = None
         self.num_dense_max = None
 
+        #arrays storing spectra
+        self.lambda_array = None
+        self.velocity_array = None
+        self.flux_array = None
         #optionally set position of markers on number density plot
         self.markers_nd_pos = None
 
@@ -370,6 +377,11 @@ class multi_plot():
             ax_vel.set_xlabel("Delta_v (km/s)")
             ax_vel.set_ylabel("Flux")
             ax_vel.grid()
+
+        self.lambda_array = wavelength
+        self.velocity_array = velocity
+        self.flux_array = flux
+
         return wavelength, velocity, flux
 
     def plot_num_dense_los_vel(self, ax_num_dense=None, ax_los_velocity=None):
@@ -447,7 +459,8 @@ class multi_plot():
             cmap='magma' :     the color map to use for the slice plot
 
         Returns:
-            none
+            fig : matplotlib figure: figure multi_plot is drawn on
+            axes : matplotlib axes: axes the three lower plots are drawn on
         """
         if (self.slice == None):
             #create the slicePlot using the field of the ion density
@@ -478,10 +491,17 @@ class multi_plot():
         #ax4 = self.fig.add_subplot(414)
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
         self.plot_spect_vel(ax_vel=ax3)
-        #annotate plot with column density
-        log_col_dense = np.log10(self.compute_col_density())
+
+        #annotate plot with column densities
+        sums_list, line_arr, line_txt= self.compute_col_density()
         box_props = dict(boxstyle='square', facecolor='white')
-        ax3.text(0.825, 0.05, f'logN={log_col_dense:.1f}', transform=ax3.transAxes, bbox = box_props)
+        ax3.text(0.8, 0.05, line_txt, transform=ax3.transAxes, bbox = box_props)
+
+        #plot individual column lines
+        if line_arr is not None:
+            for line in line_arr:
+                ax3.scatter(line[1], 1, marker='v', label="logN={:04.1f}".format(line[0]))
+            ax3.legend(loc='lower left')
 
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
@@ -492,7 +512,6 @@ class multi_plot():
 
         if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
-
 
     def zoom(self, factor):
         """
@@ -517,23 +536,84 @@ class multi_plot():
 
     def compute_col_density(self):
         """
-        computes the column density along the given ray for a given ion species. This is done
+        computes the column density along the given ray for a given ion species.
+        This is done by using spectacle if use_spectacle is True. as well as
         by summing the product of the number density for a given length by that length.
 
         Parameters:
+            none
 
+        Returns:
+            line_array : array : array of col density and delta_v for lines and
+                        sum by summing lines as well as sum by summing number
+                        density along ray. col dense in log(N) N in cm^2
+                        delta_v in km/s
+            line_txt : string : a string of properly formatted col dense to
+                        be added on to multi_plot
         """
-        if (self.ray == None):
+        if self.ray is None:
             self.ray = yt.load(self.ray_filename)
 
-        #get list of num density and corresponding length
+        if self.use_spectacle:
+            #check if spectra computed
+            if self.flux_array is None:
+                self.plot_spect_vel()
+
+            #format ion_line to fit
+            element, num = self.ion_name.split()
+            wav = int( np.round(self.wavelegnth_center) )
+            ion_wav= f"{element}{num}{wav}"
+
+            #create line model
+            line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
+                                       threshold=0.05, output='flux', auto_fit=True)
+
+            #fit data
+            fit_spec_mod = line_finder(self.velocity_array, self.flux_array)
+            #check that fit was succesful/at least one line
+            if fit_spec_mod is None:
+                print('no line could be fit')
+                line_array = None
+                sum_col_dense = 0
+
+            else:
+                vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
+                line_stats = fit_spec_mod.line_stats(vel_array)
+                col_dense_arr = line_stats["col_dens"]
+                delta_v_arr = line_stats["delta_v"]
+
+                #compute total column density
+                sum_col_dense = 0
+                for cd in col_dense_arr:
+                    sum_col_dense+= 10**cd
+                sum_col_dense = np.log10(sum_col_dense)
+
+                # get biggest lines (max of 3)
+                num_lines = col_dense_arr.size
+                if num_lines > 3: num_lines = 3
+
+                line_array = []
+                indx_max = col_dense_arr.argsort()
+                for indx in indx_max[-num_lines:]:
+                    line_array.append([ delta_v_arr[indx].value, col_dense_arr[indx] ])
+
+                #sort based on delta_v
+                line_array = np.array(line_array)
+                line_array = [ line_array[:, 0].argsort() ]
+
+        #compute col density from summing along ray
         num_density = np.array(self.ray.data[self.ion_p_name()+'_number_density'])
         dl_array = np.array(self.ray.data['dl'])
 
-        #multiply num density by its dl and sum up to get column density
-        col_density = np.sum( num_density*dl_array )
+        #multiply num density by its dl and sum up to get column density of ray
+        ray_col_dense= np.sum( num_density*dl_array )
+        sums = [sum_col_dense, ray_col_dense]
 
-        return col_density
+        #create text for text box
+        line_txt = "in LogN:\n"+\
+                   "line sum:  {:04.1f}\n"+\
+                   "total sum: {:04.1f}".format(sum_col_dense, ray_col_dense)
+        return sums, line_array, line_text
 
 class movie_multi_plot(multi_plot):
 
@@ -648,6 +728,12 @@ class movie_multi_plot(multi_plot):
             self.marker_cmap = self.mark_kwargs.pop('marker_cmap')
             self.marker_shape = self.mark_kwargs.pop('marker_shape')
 
+        #arrays storing spectra
+        self.lambda_array = None
+        self.velocity_array = None
+        self.flux_array = None
+
+        #set where files will be saved
         self.out_dir = out_dir
 
     def create_movie(self, num_dense=None,ray_range=None, slice_height=None, slice_width=None, cmap="magma"):
