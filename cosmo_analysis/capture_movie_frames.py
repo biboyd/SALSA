@@ -48,7 +48,7 @@ if use_bv != 'True':
     bulk_vel=None
 
 #use ion can use spectacle
-if ion_name == 'H I' or ion_name == 'Si III':
+if i_name == 'H I' or i_name == 'Si III':
     use_spect = True
 else:
     use_spect = False

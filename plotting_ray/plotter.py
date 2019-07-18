@@ -1,6 +1,7 @@
 import yt
 import trident
 import numpy as np
+from spectacle.fitting import LineFinder1D
 from sys import argv, path
 from os import remove, listdir, makedirs
 import errno
@@ -102,6 +103,7 @@ class multi_plot():
             self.bulk_velocity = np.dot(ray_u, bulk_velocity)
             self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
+        self.use_spectacle = use_spectacle
         self.redshift = redshift
         self.wavelength_width = wavelength_width
         self.resolution = resolution
@@ -501,7 +503,7 @@ class multi_plot():
         #plot individual column lines
         if line_arr is not None:
             for line in line_arr:
-                ax3.scatter(line[0], 1, marker='v', label="logN={:04.1f}".format(line[0]))
+                ax3.scatter(line[0], 1, marker='v', label="logN={:04.1f}".format(line[1]))
             ax3.legend(loc='lower left')
 
         axes= [ax1, ax2, ax3]
@@ -548,26 +550,39 @@ class multi_plot():
             none
 
         Returns:
+            sums_list : list: list of the sums by the summing line method and the
+                        summing all along the ray method
             line_array : array : array of col density and delta_v for lines and
                         sum by summing lines as well as sum by summing number
                         density along ray. col dense in log(N) N in cm^2
                         delta_v in km/s
-            line_txt : string : a string of properly formatted col dense to
+            line_text : string : a string of properly formatted col dense to
                         be added on to multi_plot
         """
         if self.ray is None:
             self.ray = yt.load(self.ray_filename)
 
+        #compute col density from summing along ray
+        num_density = np.array(self.ray.data[self.ion_p_name()+'_number_density'])
+        dl_array = np.array(self.ray.data['dl'])
+
+        #multiply num density by its dl and sum up to get column density of ray
+        ray_col_dense= np.sum( num_density*dl_array )
+        ray_col_dense= np.log10(ray_col_dense)
+
         sum_col_dense=0
         line_array = None
-        if self.use_spectacle:
+
+        #check if should try and fit with spect. 
+        #don't try to fit lines with over 20 logN. Very oversaturated
+        if self.use_spectacle and ray_col_dense < 20:
             #check if spectra computed
             if self.flux_array is None:
                 self.plot_spect_vel()
 
             #format ion_line to fit
             element, num = self.ion_name.split()
-            wav = int( np.round(self.wavelegnth_center) )
+            wav = int( np.round(self.wavelength_center) )
             ion_wav= f"{element}{num}{wav}"
 
             #create line model
@@ -575,10 +590,13 @@ class multi_plot():
                                        threshold=0.05, output='flux', auto_fit=True)
 
             #fit data
-            fit_spec_mod = line_finder(self.velocity_array, self.flux_array)
+            try:
+                fit_spec_mod = line_finder(self.velocity_array, self.flux_array)
+            except RuntimeError:
+                fit_spec_mod = None
             #check that fit was succesful/at least one line
             if fit_spec_mod is None:
-                print('no line could be fit')
+                print('line could not be fit on ray ', self.ray)
 
             else:
                 vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
@@ -603,23 +621,21 @@ class multi_plot():
 
                 #sort based on delta_v
                 line_array = np.array(line_array)
-                line_array = [ line_array[:, 0].argsort() ]
+                line_array = line_array[ line_array[:, 0].argsort() ]
 
-        #compute col density from summing along ray
-        num_density = np.array(self.ray.data[self.ion_p_name()+'_number_density'])
-        dl_array = np.array(self.ray.data['dl'])
 
-        #multiply num density by its dl and sum up to get column density of ray
-        ray_col_dense= np.sum( num_density*dl_array )
         sums = [sum_col_dense, ray_col_dense]
 
         if self.use_spectacle:
+            #compute percent difference
+            diff = np.abs(sum_col_dense - ray_col_dense)/sum_col_dense *100
             #create text for text box
-            line_txt = "in LogN:\n"+\
-                       "line sum:  {:04.1f}\n"+\
-                       "total sum: {:04.1f}".format(sum_col_dense, ray_col_dense)
+            line_text = "in LogN:\n"+\
+                       "line sum:  {:04.1f}\n".format(sum_col_dense)+\
+                       "total sum: {:04.1f}\n".format(ray_col_dense)+\
+                       "diff:        {:10.2f}%".format(diff)
         else:
-            line_txt = 'logN={:04.1f}'.format(ray_col_dense)
+            line_text = 'logN={:04.1f}'.format(ray_col_dense)
         return sums, line_array, line_text
 
 class movie_multi_plot(multi_plot):
@@ -699,7 +715,8 @@ class movie_multi_plot(multi_plot):
             self.slice_field = self.ion_p_name() + "_number_density"
         else:
             self.slice_field = slice_field
-
+        
+        self.use_spectacle=use_spectacle
         self.redshift = redshift
         self.bulk_velocity = bulk_velocity
         self.wavelength_width = wavelength_width
