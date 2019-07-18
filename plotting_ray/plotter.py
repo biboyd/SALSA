@@ -43,25 +43,20 @@ class multi_plot():
         Parameters:
         ds_filename : Path/name of the enzo dataset to be loaded
         ray_filename : Path/name of the hdf5 ray file to be loaded
-
         ion_name :string: Name of the ion to plot in number density plot
         slice_field :string: Field to plot in slice plot. defaults to ion_name's number density
         absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
         north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
         center_gal :array type: center of galaxy in code_length. if None, then defaults to domain_center
         wavelength_center :float: Wavelength to center spectrum plot on. defaults to the stringest
-                            known spectral line of ion_name. in units of Angstrom
+                        known spectral line of ion_name. in units of Angstrom
         wavelength_width :float: sets the wavelength range of the spectrum plot. defaults
-                            to 300 Angstroms
+                        to 300 Angstroms
         resolution :float: width of wavelength bins in spectrum plot. default 0.1 Angstrom
         redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
         bulk_velocity : array type : bulk velocity of the galaxy in km/s
         use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
         markers :bool: whether to include markers on light ray and number density plot
-        figure :matplotlib figure: where the multi_plot will be plotted. creates one if
-                none is specified.
-        open_start :bool: option on whether to immediately open dataset and ray files. defaults to True.
-
         mark_plot_args : dict : set the property of markers if they are to be plotted.
                         optional settings are:
                         marker_spacing : determines how far apart markers are in kpc
@@ -70,6 +65,8 @@ class multi_plot():
                         any other property that can be passer to matplotlib scatter
         ###NOTE### ion names should be in notaion:
               Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
+        figure :matplotlib figure: where the multi_plot will be plotted. creates one if
+                        none is specified.
         """
         #set file names and ion name
         self.ds_filename = ds_filename
@@ -573,7 +570,7 @@ class multi_plot():
         sum_col_dense=0
         line_array = None
 
-        #check if should try and fit with spect. 
+        #check if should try and fit with spect.
         #don't try to fit lines with over 20 logN. Very oversaturated
         if self.use_spectacle and ray_col_dense < 20:
             #check if spectra computed
@@ -633,7 +630,7 @@ class multi_plot():
             line_text = "in LogN:\n"+\
                        "line sum:  {:04.1f}\n".format(sum_col_dense)+\
                        "total sum: {:04.1f}\n".format(ray_col_dense)+\
-                       "diff:        {:10.2f}%".format(diff)
+                       "diff: {:10.2f}%".format(diff)
         else:
             line_text = 'logN={:04.1f}'.format(ray_col_dense)
         return sums, line_array, line_text
@@ -661,10 +658,11 @@ class movie_multi_plot(multi_plot):
         Parameters:
         ds_filename : Path/name of the enzo dataset to be loaded
         ray_dir : Path/name of the directory of numbered hdf5 ray files
-
         ion_name : Name of the ion to plot in number density plot
         slice_field : Field to plot in slice plot. defaults to ion_name's number density
+        center_gal :array type: center of galaxy in code_length. if None, then defaults to domain_center
         absorber_fields : Additional ions to include in plots/Spectra, enter as list
+        north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
         wavelength_center : Wavelength to center spectrum plot on. defaults to
                             a known spectral line of ion_name. in units of Angstrom
         wavelength_width : sets the wavelength range of the spectrum plot. defaults
@@ -672,6 +670,8 @@ class movie_multi_plot(multi_plot):
         resolution : width of wavelength bins in spectrum plot. default 0.1 Angstrom
         redshift : redshift due to the galaxies motion. used in velocity calculation
                    to properly adjust redshift
+        bulk_velocity : array type : bulk velocity of the galaxy in km/s
+        use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
         markers : whether to include markers on light ray and number density plot
         mark_plot_args : dict : set the property of markers if they are to be plotted.
                         optional settings are:
@@ -715,7 +715,7 @@ class movie_multi_plot(multi_plot):
             self.slice_field = self.ion_p_name() + "_number_density"
         else:
             self.slice_field = slice_field
-        
+
         self.use_spectacle=use_spectacle
         self.redshift = redshift
         self.bulk_velocity = bulk_velocity
