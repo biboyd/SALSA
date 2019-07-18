@@ -19,7 +19,7 @@ if len(argv) == 6:
     in_dir = argv[2]
     i_name = argv[3]
     out_dir= argv[4]
-    bv = argv[5]
+    use_bv = argv[5]
 else:
     raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory True/False_bv")
 
@@ -43,26 +43,27 @@ comm.Bcast([rshift, MPI.DOUBLE])
 comm.Bcast([bulk_vel, MPI.DOUBLE])
 comm.Barrier()
 
-#now actual test
-if bv == 'True':
-    movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
-    				absorber_fields=line_list,
-                    center_gal = center,
-                    north_vector = nvec,
-    				out_dir=out_dir,
-                    redshift=rshift[0],
-                    bulk_velocity=bulk_vel,
-    				wavelength_width=25,
-    				resolution=0.01)
+#check to see if should use bulk velocity
+if use_bv != 'True':
+    bulk_vel=None
+
+#use ion can use spectacle
+if ion_name == 'H I' or ion_name == 'Si III':
+    use_spect = True
 else:
-    movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
-    				    absorber_fields=line_list,
-                                    center_gal = center,
-                                    north_vector = nvec,
-    				    out_dir=out_dir,
-                                    redshift=rshift[0],
-    				    wavelength_width=25,
-    				    resolution=0.01)
+    use_spect = False
+
+#create movie plot
+movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
+				                absorber_fields=line_list,
+                                center_gal = center,
+                                north_vector = nvec,
+                                out_dir=out_dir,
+                                redshift=rshift[0],
+                                bulk_velocity=bulk_vel,
+                                use_spectacle= use_spect,
+                                wavelength_width=20,
+                                resolution=0.1)
 
 #split up ray id numbers betweeen proccesors
 rayrange = np.arange( len(movie.ray_files) )

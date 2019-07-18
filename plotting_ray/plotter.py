@@ -501,7 +501,7 @@ class multi_plot():
         #plot individual column lines
         if line_arr is not None:
             for line in line_arr:
-                ax3.scatter(line[1], 1, marker='v', label="logN={:04.1f}".format(line[0]))
+                ax3.scatter(line[0], 1, marker='v', label="logN={:04.1f}".format(line[0]))
             ax3.legend(loc='lower left')
 
         axes= [ax1, ax2, ax3]
@@ -558,6 +558,8 @@ class multi_plot():
         if self.ray is None:
             self.ray = yt.load(self.ray_filename)
 
+        sum_col_dense=0
+        line_array = None
         if self.use_spectacle:
             #check if spectra computed
             if self.flux_array is None:
@@ -577,8 +579,6 @@ class multi_plot():
             #check that fit was succesful/at least one line
             if fit_spec_mod is None:
                 print('no line could be fit')
-                line_array = None
-                sum_col_dense = 0
 
             else:
                 vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
@@ -613,10 +613,13 @@ class multi_plot():
         ray_col_dense= np.sum( num_density*dl_array )
         sums = [sum_col_dense, ray_col_dense]
 
-        #create text for text box
-        line_txt = "in LogN:\n"+\
-                   "line sum:  {:04.1f}\n"+\
-                   "total sum: {:04.1f}".format(sum_col_dense, ray_col_dense)
+        if self.use_spectacle:
+            #create text for text box
+            line_txt = "in LogN:\n"+\
+                       "line sum:  {:04.1f}\n"+\
+                       "total sum: {:04.1f}".format(sum_col_dense, ray_col_dense)
+        else:
+            line_txt = 'logN={:04.1f}'.format(ray_col_dense)
         return sums, line_array, line_text
 
 class movie_multi_plot(multi_plot):
@@ -634,6 +637,7 @@ class movie_multi_plot(multi_plot):
             resolution = 0.01,
             redshift = 0,
             bulk_velocity=None,
+            use_spectacle=False,
             markers=True,
             mark_plot_args=None,
             out_dir="./frames"):
