@@ -342,41 +342,46 @@ class multi_plot():
         z_dopp = z_dopp.value
         #adjust wavelegnth_center for redshift
         rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
-        #set max and min wavelength and resolution
-        wave_min = rest_wavelength - self.wavelength_width/2
-        wave_max = rest_wavelength + self.wavelength_width/2
         #generate spectrum defined by inputs
-        #print(self.redshift, z_dopp)
-        #print(rest_wavelength)
-        #print(wave_min, wave_max)
-        spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
+        lam_min = self.wavelength_center - 100 
+        lam_max = self.wavelength_center + 100
+        spect_gen = trident.SpectrumGenerator(lambda_min=lam_min, lambda_max=lam_max, dlambda = self.resolution)
         spect_gen.make_spectrum(self.ray, lines=self.ion_list)
 
         #get wavelength and flux in order to plot and calc velocity
         rest_wavelength = rest_wavelength*u.Unit('angstrom')
         wavelength = spect_gen.lambda_field * u.Unit('angstrom')
         flux = spect_gen.flux_field
+        
+        #set wavelength limits for plots
+        wave_min = rest_wavelength - u.Unit('angstrom')*self.wavelength_width/2
+        wave_max = rest_wavelength + u.Unit('angstrom')*self.wavelength_width/2
 
         #calc velocity using relativistic doppler equation
         doppler_equiv = u.equivalencies.doppler_relativistic(rest_wavelength)
         velocity = wavelength.to('km/s', equivalencies=doppler_equiv)
-
+        vel_min = wave_min.to('km/s', equivalencies=doppler_equiv)
+        vel_max = wave_max.to('km/s', equivalencies=doppler_equiv)
+        print("vel_min: ", vel_min)
+        print("vel_max: ", vel_max)
         if ax_spect is not None:
             #plot values for spectra
-            ax_spect.plot(wavelength, flux)
+            ax_spect.plot(wavelength, flux, zorder=10)
             ax_spect.set_ylim(0, 1.05)
+            ax_spect.set_xlim(wave_min.value, wave_max.value)
             ax_spect.set_title(f"Spectrum {self.ion_name}", loc='right')
             ax_spect.set_xlabel("Wavelength $\AA$")
             ax_spect.set_ylabel("Flux")
-            ax_spect.grid()
+            ax_spect.grid(zorder=0)
         if ax_vel is not None:
             #plot values for velocity plot
-            ax_vel.plot(velocity, flux)
+            ax_vel.plot(velocity, flux, zorder=10)
             ax_vel.set_ylim(0, 1.05)
+            ax_vel.set_xlim(vel_min.value, vel_max.value)
             ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
             ax_vel.set_xlabel("Delta_v (km/s)")
             ax_vel.set_ylabel("Flux")
-            ax_vel.grid()
+            ax_vel.grid(zorder=0)
 
         self.lambda_array = wavelength
         self.velocity_array = velocity
@@ -407,12 +412,12 @@ class multi_plot():
 
         if ax_num_dense is not None:
             #make num density plots
-            ax_num_dense.plot(dl_list, num_density)
+            ax_num_dense.plot(dl_list, num_density, zorder=10)
             ax_num_dense.set_title(f"Number Density of {self.ion_name} Along Ray", loc='right')
             ax_num_dense.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_num_dense.set_ylabel("Number Density $(cm^{-3})$")
             ax_num_dense.set_yscale('log')
-            ax_num_dense.grid()
+            ax_num_dense.grid(zorder=0)
             #chech if min/max num dense was called
             if (self.num_dense_min == None and self.num_dense_max == None):
                 med = np.median(num_density)
@@ -422,12 +427,12 @@ class multi_plot():
 
         if ax_los_velocity is not None:
             #make num density plots
-            ax_los_velocity.hlines(0, dl_list[0], dl_list[-1], linestyles='dashed',alpha=0.25)
-            ax_los_velocity.plot(dl_list, los_vel)
+            ax_los_velocity.hlines(0, dl_list[0], dl_list[-1], linestyles='dashed',alpha=0.25, zorder=2)
+            ax_los_velocity.plot(dl_list, los_vel, zorder=10)
             ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
             ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_los_velocity.set_ylabel("Line of Sight Velocity $(km/s)$")
-            ax_los_velocity.grid()
+            ax_los_velocity.grid(zorder=0)
             ax_los_velocity.set_ylim(-600, 600)
 
         #add appropriate markers to the plot
@@ -439,10 +444,10 @@ class multi_plot():
                 else:
                     ys += self.markers_nd_pos
 
-                ax_num_dense.scatter(self.mark_dist_arr.value, ys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
+                ax_num_dense.scatter(self.mark_dist_arr.value, ys,zorder=1, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
             if ax_los_velocity is not None:
                 Vys = np.zeros_like(self.mark_dist_arr) - 500
-                ax_los_velocity.scatter(self.mark_dist_arr.value, Vys, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
+                ax_los_velocity.scatter(self.mark_dist_arr.value, Vys,zorder=1, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
 
     def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
@@ -500,7 +505,7 @@ class multi_plot():
         #plot individual column lines
         if line_arr is not None:
             for line in line_arr:
-                ax3.scatter(line[0], 1, marker='v', label="logN={:04.1f}".format(line[1]))
+                ax3.scatter(line[0], 1, marker='v', zorder=1, label="logN={:04.1f}".format(line[1]))
             ax3.legend(loc='lower left')
 
         axes= [ax1, ax2, ax3]

@@ -25,10 +25,10 @@ do
 	~/Repo/CGM/movie_scripts/movie.sh movie_${i}.mp4 5 frames/movie_${i}_frames/*.png 
 done
 
-for i in H_I C_IV O_VI
-do 
-        ~/Repo/CGM/movie_scripts/movie.sh movie_${i}_slow.mp4 1 frames/movie_${i}_frames/*.png 
-done
+#for i in H_I C_IV O_VI
+#do 
+#        ~/Repo/CGM/movie_scripts/movie.sh movie_${i}_slow.mp4 1 frames/movie_${i}_frames/*.png 
+#done
 
 #make combined movies
 
@@ -39,10 +39,10 @@ ffmpeg  -y						 \
 	-filter_complex "[0:v][1:v][2:v]hstack=inputs=3" \
 	./combined_movie.mp4
 
-ffmpeg  -y 						 \
-	-i movie_H_I_slow.mp4 				 \
-	-i movie_C_IV_slow.mp4 				 \
-	-i movie_O_VI_slow.mp4 				 \
-	-filter_complex "[0:v][1:v][2:v]hstack=inputs=3" \
-	./combined_movie_slow.mp4
+#ffmpeg  -y 						 \
+#	-i movie_H_I_slow.mp4 				 \
+#	-i movie_C_IV_slow.mp4 				 \
+#	-i movie_O_VI_slow.mp4 				 \
+#	-filter_complex "[0:v][1:v][2:v]hstack=inputs=3" \
+#	./combined_movie_slow.mp4
 

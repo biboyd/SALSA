@@ -51,7 +51,7 @@ def main(dataset,
 
     #plot slices for density, temp and metallicity to compare with multi plot
     fields = ['density', 'temperature', 'metallicity', 'velocity_magnitude', 'vel_bv']
-    color_maps = ['magma', 'thermal', 'haline', 'viridis', 'magma']
+    color_maps = ['magma', 'thermal', 'haline', 'cvidis', 'magma']
      
     #construct sphere to make slices/projections from
     sph = ds.sphere(center, length)
@@ -84,6 +84,7 @@ def main(dataset,
             slc.set_axes_unit('kpc')
             slc.set_cmap(field=fld, cmap=cmap)
             slc.set_background_color(fld)
+            slc.annotate_title(fld)
             if fld == 'velocity_magnitude':
                 slc.set_unit('velocity_magnitude', 'km/s')
             slc.save(f"{out_dir}/{fld}_slice.png")

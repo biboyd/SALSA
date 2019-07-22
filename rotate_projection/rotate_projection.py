@@ -107,8 +107,11 @@ def create_proj_frames(ds_fname,
                                            data_source=sph)
             # set color bar and color map to be consistent on all proj
             lim_lb, lim_ub = lim_dict[fld]
+            if fld == 'density':
+                lim_lb = ds.quan(lim_lb, 'g/cm**2').in_units('Msun/pc**2')
+                lim_ub = ds.quan(lim_ub, 'g/cm**2').in_units('Msun/pc**2')
             prj.set_zlim(fld, lim_lb, lim_ub)
-            prj.set_unit(('gas', 'density'), 'Msun/pc**2')
+            prj.set_unit('density', 'Msun/pc**2')
             prj.set_cmap(field=fld, cmap=cmap)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
 
@@ -129,11 +132,14 @@ def create_proj_frames(ds_fname,
                                                data_source=reg)
 
                 lim_lb, lim_ub = lim_dict[name]
+                lim_lb = ds.quan(lim_lb, 'g/cm**2').in_units('Msun/pc**2')
+                lim_ub = ds.quan(lim_ub, 'g/cm**2').in_units('Msun/pc**2')
+                prj.set_unit('density', 'Msun/pc**2')
+
                 prj.set_zlim('density', lim_lb, lim_ub)
                 prj.set_cmap(field='density', cmap='magma')
                 prj.set_background_color('density')
                 prj.annotate_title(label)
-                prj.set_unit(('gas', 'density'), 'Msun/pc**2')
                 prj.annotate_scale()
                 prj.hide_axes(draw_frame=True)
                 prj.save(f"{out_dir}/{name}_gas/proj{i:0{pad}d}.png")
