@@ -34,6 +34,7 @@ class multi_plot():
                 redshift = 0,
                 bulk_velocity=None,
                 use_spectacle=False,
+                plot_spectacle=False,
                 markers=True,
                 mark_plot_args=None,
                 figure=None):
@@ -101,6 +102,7 @@ class multi_plot():
             self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
         self.use_spectacle = use_spectacle
+        self.plot_spectacle = plot_spectacle
         self.redshift = redshift
         self.wavelength_width = wavelength_width
         self.resolution = resolution
@@ -343,8 +345,8 @@ class multi_plot():
         #adjust wavelegnth_center for redshift
         rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
         #generate spectrum defined by inputs
-        lam_min = self.wavelength_center - 100 
-        lam_max = self.wavelength_center + 100
+        lam_min = rest_wavelength- 100 
+        lam_max = rest_wavelength+ 100
         spect_gen = trident.SpectrumGenerator(lambda_min=lam_min, lambda_max=lam_max, dlambda = self.resolution)
         spect_gen.make_spectrum(self.ray, lines=self.ion_list)
 
@@ -362,8 +364,10 @@ class multi_plot():
         velocity = wavelength.to('km/s', equivalencies=doppler_equiv)
         vel_min = wave_min.to('km/s', equivalencies=doppler_equiv)
         vel_max = wave_max.to('km/s', equivalencies=doppler_equiv)
-        print("vel_min: ", vel_min)
-        print("vel_max: ", vel_max)
+
+        self.lambda_array = wavelength
+        self.velocity_array = velocity
+        self.flux_array = flux
         if ax_spect is not None:
             #plot values for spectra
             ax_spect.plot(wavelength, flux, zorder=10)
@@ -383,9 +387,24 @@ class multi_plot():
             ax_vel.set_ylabel("Flux")
             ax_vel.grid(zorder=0)
 
-        self.lambda_array = wavelength
-        self.velocity_array = velocity
-        self.flux_array = flux
+
+            #annotate plot with column densities
+            sums_list, line_txt, line_models = self.compute_col_density()
+            box_props = dict(boxstyle='square', facecolor='white')
+            ax_vel.text(0.8, 0.05, line_txt, transform=ax_vel.transAxes, bbox = box_props)
+
+            colors = ['tab:blue', 'tab:orange', 'tab:green']
+            vel= np.linspace(-3000, 3000, 3000) *u.Unit('angstrom')
+            #plot individual column lines
+            if line_models is not None:
+                for mod, color in zip(line_models, colors):            
+                    dv = mod.lines[0].delta_v.value
+                    cd = mod.lines[0].column_density.value
+                    ax_vel.scatter(dv, 1, c=color, marker='v', zorder=1, label="logN={:04.1f}".format(cd))
+                    if self.plot_spectacle:
+                        ax_vel.step(self.velocity_array, mod(self.velocity_array), linestyle='--', color=color, alpha=0.75) 
+                ax_vel.legend(loc='lower left')
+
 
         return wavelength, velocity, flux
 
@@ -497,17 +516,6 @@ class multi_plot():
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
         self.plot_spect_vel(ax_vel=ax3)
 
-        #annotate plot with column densities
-        sums_list, line_arr, line_txt= self.compute_col_density()
-        box_props = dict(boxstyle='square', facecolor='white')
-        ax3.text(0.8, 0.05, line_txt, transform=ax3.transAxes, bbox = box_props)
-
-        #plot individual column lines
-        if line_arr is not None:
-            for line in line_arr:
-                ax3.scatter(line[0], 1, marker='v', zorder=1, label="logN={:04.1f}".format(line[1]))
-            ax3.legend(loc='lower left')
-
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
         strt_pos = -0.25
@@ -573,11 +581,10 @@ class multi_plot():
         ray_col_dense= np.log10(ray_col_dense)
 
         sum_col_dense=0
-        line_array = None
-
+        line_models = None
         #check if should try and fit with spect.
         #don't try to fit lines with over 20 logN. Very oversaturated
-        if self.use_spectacle and ray_col_dense < 20:
+        if self.use_spectacle:
             #check if spectra computed
             if self.flux_array is None:
                 self.plot_spect_vel()
@@ -589,12 +596,13 @@ class multi_plot():
 
             #create line model
             line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
-                                       threshold=0.05, output='flux', auto_fit=True)
+                                       threshold=0.01, output='flux', auto_fit=True)
 
             #fit data
             try:
                 fit_spec_mod = line_finder(self.velocity_array, self.flux_array)
             except RuntimeError:
+                print('fit failed', self.ray)
                 fit_spec_mod = None
             #check that fit was succesful/at least one line
             if fit_spec_mod is None:
@@ -603,28 +611,25 @@ class multi_plot():
             else:
                 vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
                 line_stats = fit_spec_mod.line_stats(vel_array)
-                col_dense_arr = line_stats["col_dens"]
-                delta_v_arr = line_stats["delta_v"]
 
                 #compute total column density
                 sum_col_dense = 0
-                for cd in col_dense_arr:
+                for cd in line_stats['col_dens']:
                     sum_col_dense+= 10**cd
                 sum_col_dense = np.log10(sum_col_dense)
 
                 # get biggest lines (max of 3)
-                num_lines = col_dense_arr.size
+                num_lines = line_stats['col_dens'].size
                 if num_lines > 3: num_lines = 3
 
-                line_array = []
-                indx_max = col_dense_arr.argsort()
+                line_models = []
+                indx_max = line_stats.argsort('col_dens')
                 for indx in indx_max[-num_lines:]:
-                    line_array.append([ delta_v_arr[indx].value, col_dense_arr[indx] ])
+                    line = fit_spec_mod.lines[indx]
+                    line_models.append( fit_spec_mod.with_line(line, reset=True))
 
-                #sort based on delta_v
-                line_array = np.array(line_array)
-                line_array = line_array[ line_array[:, 0].argsort() ]
-
+                #sort lines based on delta v
+                line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
 
         sums = [sum_col_dense, ray_col_dense]
 
@@ -638,7 +643,7 @@ class multi_plot():
                        "diff: {:10.2f}%".format(diff)
         else:
             line_text = 'logN={:04.1f}'.format(ray_col_dense)
-        return sums, line_array, line_text
+        return sums, line_text, line_models
 
 class movie_multi_plot(multi_plot):
 
