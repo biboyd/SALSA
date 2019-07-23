@@ -661,6 +661,7 @@ class movie_multi_plot(multi_plot):
             redshift = 0,
             bulk_velocity=None,
             use_spectacle=False,
+            plot_spectacle=False,
             markers=True,
             mark_plot_args=None,
             out_dir="./frames"):
@@ -727,6 +728,7 @@ class movie_multi_plot(multi_plot):
             self.slice_field = slice_field
 
         self.use_spectacle=use_spectacle
+        self.plot_spectacle=plot_spectacle
         self.redshift = redshift
         self.bulk_velocity = bulk_velocity
         self.wavelength_width = wavelength_width

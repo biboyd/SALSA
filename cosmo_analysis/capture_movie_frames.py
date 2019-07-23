@@ -62,6 +62,7 @@ movie =plotter.movie_multi_plot(filename, in_dir, ion_name=i_name,
                                 redshift=rshift[0],
                                 bulk_velocity=bulk_vel,
                                 use_spectacle= use_spect,
+                                plot_spectacle=True,
                                 wavelength_width=20,
                                 resolution=0.1)
 
