@@ -325,7 +325,7 @@ class multi_plot():
 
         return self.slice
 
-    def plot_spect_vel(self, ax_spect=None, ax_vel=None):
+    def plot_spect_vel(self, ax_spect=None, ax_vel=None, single_line=None):
         """
         Use trident to plot the absorption spectrum of the ray. Then
         convert wavelength to line of sight velocity and plot versus flux.
@@ -334,9 +334,14 @@ class multi_plot():
         Parameters:
             ax_spect : a matplotlib axis in which to draw the spectra plot
             ax_vel : a matplotlib axis in which to draw the velocity plot
+            single_line : str : option to plot a single line ie "HI1216"
         Returns:
             none
         """
+        if single_line is None:
+            ion_list = self.ion_list
+        else:
+            ion_list = [single_line]
         # calc doppler redshift due to bulk motion
         c = yt.units.c
         beta = self.bulk_velocity/c
@@ -345,16 +350,16 @@ class multi_plot():
         #adjust wavelegnth_center for redshift
         rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
         #generate spectrum defined by inputs
-        lam_min = rest_wavelength- 100 
+        lam_min = rest_wavelength- 100
         lam_max = rest_wavelength+ 100
         spect_gen = trident.SpectrumGenerator(lambda_min=lam_min, lambda_max=lam_max, dlambda = self.resolution)
-        spect_gen.make_spectrum(self.ray, lines=self.ion_list)
+        spect_gen.make_spectrum(self.ray, lines=ion_list)
 
         #get wavelength and flux in order to plot and calc velocity
         rest_wavelength = rest_wavelength*u.Unit('angstrom')
         wavelength = spect_gen.lambda_field * u.Unit('angstrom')
         flux = spect_gen.flux_field
-        
+
         #set wavelength limits for plots
         wave_min = rest_wavelength - u.Unit('angstrom')*self.wavelength_width/2
         wave_max = rest_wavelength + u.Unit('angstrom')*self.wavelength_width/2
@@ -365,9 +370,10 @@ class multi_plot():
         vel_min = wave_min.to('km/s', equivalencies=doppler_equiv)
         vel_max = wave_max.to('km/s', equivalencies=doppler_equiv)
 
-        self.lambda_array = wavelength
-        self.velocity_array = velocity
-        self.flux_array = flux
+        if single_line is None:
+            self.lambda_array = wavelength
+            self.velocity_array = velocity
+            self.flux_array = flux
         if ax_spect is not None:
             #plot values for spectra
             ax_spect.plot(wavelength, flux, zorder=10)
@@ -393,16 +399,16 @@ class multi_plot():
             box_props = dict(boxstyle='square', facecolor='white')
             ax_vel.text(0.8, 0.05, line_txt, transform=ax_vel.transAxes, bbox = box_props)
 
-            colors = ['tab:blue', 'tab:orange', 'tab:green']
-            vel= np.linspace(-3000, 3000, 3000) *u.Unit('angstrom')
+            colors = ['tab:purple', 'tab:orange', 'tab:green']
+            vel= np.linspace(-3000, 3000, 3000) *u.Unit('km/s')
             #plot individual column lines
             if line_models is not None:
-                for mod, color in zip(line_models, colors):            
+                for mod, color in zip(line_models, colors):
                     dv = mod.lines[0].delta_v.value
                     cd = mod.lines[0].column_density.value
-                    ax_vel.scatter(dv, 1, c=color, marker='v', zorder=1, label="logN={:04.1f}".format(cd))
+                    ax_vel.scatter(dv, 1, c=color, marker='v', zorder=2, label="logN={:04.1f}".format(cd))
                     if self.plot_spectacle:
-                        ax_vel.step(self.velocity_array, mod(self.velocity_array), linestyle='--', color=color, alpha=0.75) 
+                        ax_vel.step(vel, mod(vel), linestyle='--', zorder=10, color=color, alpha=0.75)
                 ax_vel.legend(loc='lower left')
 
 
@@ -585,22 +591,31 @@ class multi_plot():
         #check if should try and fit with spect.
         #don't try to fit lines with over 20 logN. Very oversaturated
         if self.use_spectacle:
-            #check if spectra computed
-            if self.flux_array is None:
-                self.plot_spect_vel()
-
-            #format ion_line to fit
-            element, num = self.ion_name.split()
-            wav = int( np.round(self.wavelength_center) )
-            ion_wav= f"{element}{num}{wav}"
-
+            #create spectra for a single line to fit
+            wav = int( np.round(self.wavelength_center) ) 
+            line = f"{self.ion_name} {wav}"
+            true_wav, true_vel, true_flux=self.plot_spect_vel(single_line=line)
+            #format ion correctly to fit
+            ion_wav= "".join(line.split())
+            
+            #constrain possible column density values
+            defaults_dict = { 
+                'bounds' :{
+                    'column_density' : (12.5, 23)
+                },
+                'fixed' : {
+                    'delta_lambda' : True,
+                    'column_density' : False
+                }
+            }
             #create line model
             line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
+                                       defaults=defaults_dict,
                                        threshold=0.01, output='flux', auto_fit=True)
 
             #fit data
             try:
-                fit_spec_mod = line_finder(self.velocity_array, self.flux_array)
+                fit_spec_mod = line_finder(true_vel, true_flux)
             except RuntimeError:
                 print('fit failed', self.ray)
                 fit_spec_mod = None
