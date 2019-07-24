@@ -35,6 +35,7 @@ class multi_plot():
                 bulk_velocity=None,
                 use_spectacle=False,
                 plot_spectacle=False,
+                spectacle_defaults=None,
                 markers=True,
                 mark_plot_args=None,
                 figure=None):
@@ -103,6 +104,18 @@ class multi_plot():
 
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
+        if spectacle_defaults is None:
+            self.defaults_dict = {
+                'bounds' :{
+                    'column_density' : (12.5, 23)
+                },
+                'fixed' : {
+                    'delta_lambda' : True,
+                    'column_density' : False
+                }
+            }
+        else:
+            self.defaults_dict = spectacle_defaults
         self.redshift = redshift
         self.wavelength_width = wavelength_width
         self.resolution = resolution
@@ -334,9 +347,11 @@ class multi_plot():
         Parameters:
             ax_spect : a matplotlib axis in which to draw the spectra plot
             ax_vel : a matplotlib axis in which to draw the velocity plot
-            single_line : str : option to plot a single line ie "HI1216"
+            single_line : str : option to plot a single line ie "HI1216" for
+                    fitting purposes.
         Returns:
-            none
+            wavelength, velocity and flux arrays created by spectrum generator
+                units are angstrom, km/s
         """
         if single_line is None:
             ion_list = self.ion_list
@@ -350,19 +365,39 @@ class multi_plot():
         #adjust wavelegnth_center for redshift
         rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
         #generate spectrum defined by inputs
-        lam_min = rest_wavelength- 100
-        lam_max = rest_wavelength+ 100
-        spect_gen = trident.SpectrumGenerator(lambda_min=lam_min, lambda_max=lam_max, dlambda = self.resolution)
-        spect_gen.make_spectrum(self.ray, lines=ion_list)
 
-        #get wavelength and flux in order to plot and calc velocity
+        while True:
+        #set wavelength limits for plots
+            if single_line is None:
+                wave_min = rest_wavelength - self.wavelength_width/2
+                wave_max = rest_wavelength + self.wavelength_width/2
+            else:
+                fit_range = 150
+                wave_min = rest_wavelength - fit_range
+                wave_max = rest_wavelength + fit_range
+
+            spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
+            spect_gen.make_spectrum(self.ray, lines=ion_list)
+
+            #increase width when doing a fit
+            if single_line is None:
+                break
+            else:
+                #check if wings are at flux of 1
+                if spect_gen.flux_field[0] >= 0.99:
+                    break
+                #increase fit range
+                else:
+                    fit_range +=50
+
+        #get necessary and give correct units
         rest_wavelength = rest_wavelength*u.Unit('angstrom')
         wavelength = spect_gen.lambda_field * u.Unit('angstrom')
         flux = spect_gen.flux_field
 
-        #set wavelength limits for plots
-        wave_min = rest_wavelength - u.Unit('angstrom')*self.wavelength_width/2
-        wave_max = rest_wavelength + u.Unit('angstrom')*self.wavelength_width/2
+        wave_min = wave_min*u.Unit('angstrom')
+        wave_max = wave_max*u.Unit('angstrom')
+
 
         #calc velocity using relativistic doppler equation
         doppler_equiv = u.equivalencies.doppler_relativistic(rest_wavelength)
@@ -370,13 +405,15 @@ class multi_plot():
         vel_min = wave_min.to('km/s', equivalencies=doppler_equiv)
         vel_max = wave_max.to('km/s', equivalencies=doppler_equiv)
 
+        #save arrays so they can be acessed
         if single_line is None:
             self.lambda_array = wavelength
             self.velocity_array = velocity
             self.flux_array = flux
+
         if ax_spect is not None:
             #plot values for spectra
-            ax_spect.plot(wavelength, flux, zorder=10)
+            ax_spect.plot(wavelength[:-1], flux[:-1], zorder=10)
             ax_spect.set_ylim(0, 1.05)
             ax_spect.set_xlim(wave_min.value, wave_max.value)
             ax_spect.set_title(f"Spectrum {self.ion_name}", loc='right')
@@ -385,7 +422,7 @@ class multi_plot():
             ax_spect.grid(zorder=0)
         if ax_vel is not None:
             #plot values for velocity plot
-            ax_vel.plot(velocity, flux, zorder=10)
+            ax_vel.plot(velocity[:-1], flux[:-1], zorder=10)
             ax_vel.set_ylim(0, 1.05)
             ax_vel.set_xlim(vel_min.value, vel_max.value)
             ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
@@ -400,13 +437,15 @@ class multi_plot():
             ax_vel.text(0.8, 0.05, line_txt, transform=ax_vel.transAxes, bbox = box_props)
 
             colors = ['tab:purple', 'tab:orange', 'tab:green']
-            vel= np.linspace(-3000, 3000, 3000) *u.Unit('km/s')
+            vel= np.linspace(vel_min.value, vel_max.value, 1000) *u.Unit('km/s')
             #plot individual column lines
             if line_models is not None:
                 for mod, color in zip(line_models, colors):
+                    #plot centroids of largest lines
                     dv = mod.lines[0].delta_v.value
                     cd = mod.lines[0].column_density.value
                     ax_vel.scatter(dv, 1, c=color, marker='v', zorder=2, label="logN={:04.1f}".format(cd))
+                    #plott the largest lines
                     if self.plot_spectacle:
                         ax_vel.step(vel, mod(vel), linestyle='--', zorder=10, color=color, alpha=0.75)
                 ax_vel.legend(loc='lower left')
@@ -592,32 +631,26 @@ class multi_plot():
         #don't try to fit lines with over 20 logN. Very oversaturated
         if self.use_spectacle:
             #create spectra for a single line to fit
-            wav = int( np.round(self.wavelength_center) ) 
+            wav = int( np.round(self.wavelength_center) )
             line = f"{self.ion_name} {wav}"
             true_wav, true_vel, true_flux=self.plot_spect_vel(single_line=line)
             #format ion correctly to fit
             ion_wav= "".join(line.split())
-            
+
             #constrain possible column density values
-            defaults_dict = { 
-                'bounds' :{
-                    'column_density' : (12.5, 23)
-                },
-                'fixed' : {
-                    'delta_lambda' : True,
-                    'column_density' : False
-                }
-            }
             #create line model
             line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
-                                       defaults=defaults_dict,
+                                       defaults=self.defaults_dict,fitter_args={'maxiter':10000},
                                        threshold=0.01, output='flux', auto_fit=True)
 
             #fit data
             try:
                 fit_spec_mod = line_finder(true_vel, true_flux)
             except RuntimeError:
-                print('fit failed', self.ray)
+                print('fit failed(prolly hit max iterations)', self.ray)
+                fit_spec_mod = None
+            except IndexError:
+                print('INDEX ERROR on', self.ray)
                 fit_spec_mod = None
             #check that fit was succesful/at least one line
             if fit_spec_mod is None:
@@ -651,8 +684,9 @@ class multi_plot():
         if self.use_spectacle:
             #compute percent difference
             diff = np.abs(sum_col_dense - ray_col_dense)/sum_col_dense *100
+            tot_num_lines = len(fit_spec_mod.lines)
             #create text for text box
-            line_text = "in LogN:\n"+\
+            line_text = "num lines: {}\n".format(tot_num_lines)+\
                        "line sum:  {:04.1f}\n".format(sum_col_dense)+\
                        "total sum: {:04.1f}\n".format(ray_col_dense)+\
                        "diff: {:10.2f}%".format(diff)

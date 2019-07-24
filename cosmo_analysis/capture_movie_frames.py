@@ -95,9 +95,3 @@ comm.Bcast( [num_density_range, MPI.DOUBLE] )
 #create movie frames
 movie.create_movie(num_dense=num_density_range, ray_range = my_range)
 print("-------------- {} finished----------------".format(comm.rank))
-
-comm.Barrier()
-if comm.rank==0:
-    print("-"*76)
-    print("All process finished :)")
-    print("-"*76)
