@@ -123,7 +123,7 @@ class multi_plot():
         #for ion name. Use tridents line database to search for correct wavelength
         if wavelength_center is None:
             #open up tridents default line database
-            lbd = trident.LineDatabase("lines.txt")
+            lbd = trident.LineDatabase("my_lines.txt")
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
             #take one with largest f_value
@@ -376,7 +376,7 @@ class multi_plot():
                 wave_min = rest_wavelength - fit_range
                 wave_max = rest_wavelength + fit_range
 
-            spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
+            spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution, line_database='my_lines.txt')
             spect_gen.make_spectrum(self.ray, lines=ion_list)
 
             #increase width when doing a fit
@@ -622,10 +622,10 @@ class multi_plot():
         dl_array = np.array(self.ray.data['dl'])
 
         #multiply num density by its dl and sum up to get column density of ray
-        ray_col_dense= np.sum( num_density*dl_array )
-        ray_col_dense= np.log10(ray_col_dense)
+        tot_ray_cd= np.sum( num_density*dl_array )
+        tot_ray_cd= tot_ray_cd
 
-        sum_col_dense=0
+        line_sum_cd=0
         line_models = None
         #check if should try and fit with spect.
         #don't try to fit lines with over 20 logN. Very oversaturated
@@ -640,7 +640,7 @@ class multi_plot():
             #constrain possible column density values
             #create line model
             line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
-                                       defaults=self.defaults_dict,fitter_args={'maxiter':10000},
+                                       defaults=self.defaults_dict,fitter_args={'maxiter':5000},
                                        threshold=0.01, output='flux', auto_fit=True)
 
             #fit data
@@ -655,16 +655,17 @@ class multi_plot():
             #check that fit was succesful/at least one line
             if fit_spec_mod is None:
                 print('line could not be fit on ray ', self.ray)
+                tot_num_lines=0
 
             else:
+                tot_num_lines = len(fit_spec_mod.lines)
                 vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
                 line_stats = fit_spec_mod.line_stats(vel_array)
 
                 #compute total column density
-                sum_col_dense = 0
+                line_sum_cd = 0
                 for cd in line_stats['col_dens']:
-                    sum_col_dense+= 10**cd
-                sum_col_dense = np.log10(sum_col_dense)
+                    line_sum_cd+= 10**cd
 
                 # get biggest lines (max of 3)
                 num_lines = line_stats['col_dens'].size
@@ -679,19 +680,26 @@ class multi_plot():
                 #sort lines based on delta v
                 line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
 
-        sums = [sum_col_dense, ray_col_dense]
+        log_line_sum = np.log10(line_sum_cd)
+        log_tot_ray = np.log10(tot_ray_cd)
+        sums = [log_line_sum, log_tot_ray]
 
         if self.use_spectacle:
-            #compute percent difference
-            diff = np.abs(sum_col_dense - ray_col_dense)/sum_col_dense *100
-            tot_num_lines = len(fit_spec_mod.lines)
-            #create text for text box
-            line_text = "num lines: {}\n".format(tot_num_lines)+\
-                       "line sum:  {:04.1f}\n".format(sum_col_dense)+\
-                       "total sum: {:04.1f}\n".format(ray_col_dense)+\
-                       "diff: {:10.2f}%".format(diff)
+            if line_sum_cd != 0:
+                #compute percent difference
+                diff = np.abs(line_sum_cd - tot_ray_cd)/tot_ray_cd*100
+                #create text for text box
+                line_text = "num lines: {}\n".format(tot_num_lines)+\
+                           "line sum:  {:04.1f}\n".format(log_line_sum)+\
+                           "total sum: {:04.1f}\n".format(log_tot_ray)+\
+                           "diff: {:10.2f}%".format(diff)
+            else:
+                line_text = "num lines: {}\n".format(tot_num_lines)+\
+                           "line sum:  {: >4s}\n".format('--')+\
+                           "total sum: {:04.1f}\n".format(log_tot_ray)+\
+                           "diff: {: >13s}%".format('--')
         else:
-            line_text = 'logN={:04.1f}'.format(ray_col_dense)
+            line_text = 'logN={:04.1f}'.format(log_tot_ray)
         return sums, line_text, line_models
 
 class movie_multi_plot(multi_plot):
@@ -706,7 +714,7 @@ class movie_multi_plot(multi_plot):
             north_vector=[0, 0, 1],
             wavelength_center=None,
             wavelength_width = 150,
-            resolution = 0.01,
+            resolution = 0.1,
             redshift = 0,
             bulk_velocity=None,
             use_spectacle=False,
@@ -776,6 +784,19 @@ class movie_multi_plot(multi_plot):
         else:
             self.slice_field = slice_field
 
+        spectacle_defaults=None
+        if spectacle_defaults is None:
+            self.defaults_dict = {
+                'bounds' :{
+                    'column_density' : (12.5, 23)
+                },
+                'fixed' : {
+                    'delta_lambda' : True,
+                    'column_density' : False
+                }
+            }
+        else:
+            self.defaults_dict = spectacle_defaults
         self.use_spectacle=use_spectacle
         self.plot_spectacle=plot_spectacle
         self.redshift = redshift
@@ -786,7 +807,7 @@ class movie_multi_plot(multi_plot):
         #for ion name. Use tridents line database to search for correct wavelength
         if (wavelength_center == None):
             #open up tridents default line database
-            lbd = trident.LineDatabase("lines.txt")
+            lbd = trident.LineDatabase("my_lines.txt")
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
             #take one with largest f_value
