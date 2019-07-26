@@ -22,7 +22,7 @@ Additionally there is code for experimenting with Spectacle (spectra fitting sof
 ## job_scripts
 scripts for submitting jobs to slurm   
 
-## phi_dependence
+## polar_dependence
 Code for looking at the relation between column density and polar angle
 from axis of galaxy.   
 
