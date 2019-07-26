@@ -1,5 +1,3 @@
-import sys
-sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/')
 import yt
 import trident
 import numpy as np
@@ -10,7 +8,6 @@ from sys import argv
 from os import listdir, makedirs
 import errno
 from spectacle.fitting import LineFinder1D
-from center_finder import find_center
 
 def main(ds_fname,
          center,
@@ -246,6 +243,10 @@ def ion_p_num(ion_name):
     return outname
 
 if __name__ == "__main__":
+    import sys
+    sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/')
+    from multi_plot.center_finder import find_center
+
     ds = argv[1]
     angle=float(argv[2])
     b = float(argv[3])

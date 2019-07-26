@@ -18,7 +18,7 @@ then
 fi
 
 mpirun -np 64							\
-	python ~/Repo/CGM/rotate_projection/rotate_projection.py\
+	python ~/Repo/CGM/rotation_movies/create_rot_frames.py\
 		$inFile $nFrames $off $outDir
 scontrol show job $SLURM_JOB_ID
 

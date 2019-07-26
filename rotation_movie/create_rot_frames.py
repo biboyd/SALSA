@@ -1,12 +1,9 @@
-import sys
-sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/')
 import yt
 import trident
 import numpy as np
 from mpi4py import MPI
 from scipy.spatial.transform import Rotation
 from os import makedirs
-from center_finder import find_center
 
 def create_proj_frames(ds_fname,
                        center,
@@ -145,6 +142,10 @@ def create_proj_frames(ds_fname,
                 prj.save(f"{out_dir}/{name}_gas/proj{i:0{pad}d}.png")
 
 if __name__ == '__main__':
+    import sys
+    sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/')
+    from multi_plot.center_finder import find_center
+
     dsname = sys.argv[1]
     frms = int(sys.argv[2])
     offset=float(sys.argv[3])

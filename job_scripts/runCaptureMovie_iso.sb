@@ -26,6 +26,6 @@ else
 fi
 unset XDG_RUNTIME_DIR
 mpirun -np 32 								\
-	python ~/Repo/CGM/plotting_ray/capture_movie_frames.py		\
-		$dataFile $rayDir "$ionName" $outDir
+	python ~/Repo/CGM/multi_plot/capture_movie_frames.py		\
+		$dataFile $rayDir "$ionName" $outDir False
 scontrol show job $SLURM_JOB_ID

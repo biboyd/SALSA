@@ -8,7 +8,6 @@ import errno
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
-path.insert(0, "/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/")
 from center_finder import find_center
 import astropy.units  as u
 

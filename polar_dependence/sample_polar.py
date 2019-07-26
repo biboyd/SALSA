@@ -1,8 +1,3 @@
-# Measure a large collection of azimuthal angles
-# to create a statistical analysis btwn col density and the polar angle
-# phi = polar in this case (bugs me too but just following convention)
-import sys
-sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/cosmo_analysis/')
 import yt
 import trident
 import numpy as np
@@ -10,10 +5,10 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 from spectacle.fitting import LineFinder1D
 from mpi4py import MPI
-from measure_phi import get_coord, construct_rays, ion_p_num
+from measure_polar import get_coord, construct_rays, ion_p_num
 from sys import argv
-from center_finder import find_center
 from os import listdir
+
 def main(ds_fname, center,
          impact_param,
          ion='H I',
@@ -153,6 +148,10 @@ def main(ds_fname, center,
 
 
 if __name__ == '__main__':
+    import sys
+    sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/')
+    from multi_plot.center_finder import find_center
+
     ds = argv[1]
     ion = argv[2]
     b = float(argv[3])

@@ -26,6 +26,6 @@ else
 	rm -rf $outDir/*
 fi
 mpirun -np 64 								\
-	python ~/Repo/CGM/cosmo_analysis/capture_movie_frames.py	\
+	python ~/Repo/CGM/multi_plot/capture_movie_frames.py	\
 		$dataFile $rayDir "$ionName" $outDir False
 scontrol show job $SLURM_JOB_ID

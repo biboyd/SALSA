@@ -1,11 +1,9 @@
-import sys
-sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/plotting_ray/')
-import plotter
 from mpi4py import MPI
 import numpy as np
 from sys import argv
 import yt
 import trident
+from multi_plot import multi_plot
 from center_finder import find_center
 from os import makedirs, listdir
 
@@ -123,7 +121,7 @@ def create_frames(rays,
     """
 
     #create initial slice
-    mp = plotter.multi_plot(ray_filename=rays[0], **multi_plot_kwargs)
+    mp = multi_plot(ray_filename=rays[0], **multi_plot_kwargs)
     mp.create_slice()
 
     #clear annotations

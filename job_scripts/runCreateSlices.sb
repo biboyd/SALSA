@@ -13,7 +13,7 @@ scratch=/mnt/gs18/scratch/users/boydbre1/
 dsPath=$scratch/cosmological/foggie/$ds/$ds
 outDir=$scratch/multiplot_movie/foggie/$ds/movie_${len}kpc/slices/
 
-mpirun -np 16 python ~/Repo/CGM/cosmo_analysis/create_slices_proj.py \
+mpirun -np 16 python ~/Repo/CGM/multi_plot/create_slices_proj.py \
 			$dsPath $len $outDir
 
 scontrol show job $SLURM_JOB_ID
