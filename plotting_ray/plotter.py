@@ -36,6 +36,9 @@ class multi_plot():
                 use_spectacle=False,
                 plot_spectacle=False,
                 spectacle_defaults=None,
+                num_dense_min=None,
+                num_dense_max=None,
+                markers_nd_pos=None,
                 markers=True,
                 mark_plot_args=None,
                 figure=None):
@@ -161,15 +164,15 @@ class multi_plot():
 
 
         #optionally set min/max value for number density plot
-        self.num_dense_min = None
-        self.num_dense_max = None
+        self.num_dense_min = num_dense_min
+        self.num_dense_max = num_dense_max
 
         #arrays storing spectra
         self.lambda_array = None
         self.velocity_array = None
         self.flux_array = None
         #optionally set position of markers on number density plot
-        self.markers_nd_pos = None
+        self.markers_nd_pos = markers_nd_pos
 
     def add_annotations(self):
         """
@@ -701,223 +704,6 @@ class multi_plot():
         else:
             line_text = 'logN={:04.1f}'.format(log_tot_ray)
         return sums, line_text, line_models
-
-class movie_multi_plot(multi_plot):
-
-    def __init__(self,
-            ds_filename,
-            ray_dir,
-            ion_name='H I',
-            slice_field=None,
-            center_gal = None,
-            absorber_fields=[],
-            north_vector=[0, 0, 1],
-            wavelength_center=None,
-            wavelength_width = 150,
-            resolution = 0.1,
-            redshift = 0,
-            bulk_velocity=None,
-            use_spectacle=False,
-            plot_spectacle=False,
-            markers=True,
-            mark_plot_args=None,
-            out_dir="./frames"):
-        """
-        Parameters:
-        ds_filename : Path/name of the enzo dataset to be loaded
-        ray_dir : Path/name of the directory of numbered hdf5 ray files
-        ion_name : Name of the ion to plot in number density plot
-        slice_field : Field to plot in slice plot. defaults to ion_name's number density
-        center_gal :array type: center of galaxy in code_length. if None, then defaults to domain_center
-        absorber_fields : Additional ions to include in plots/Spectra, enter as list
-        north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
-        wavelength_center : Wavelength to center spectrum plot on. defaults to
-                            a known spectral line of ion_name. in units of Angstrom
-        wavelength_width : sets the wavelength range of the spectrum plot. defaults
-                            to 300 Angstroms
-        resolution : width of wavelength bins in spectrum plot. default 0.1 Angstrom
-        redshift : redshift due to the galaxies motion. used in velocity calculation
-                   to properly adjust redshift
-        bulk_velocity : array type : bulk velocity of the galaxy in km/s
-        use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
-        markers : whether to include markers on light ray and number density plot
-        mark_plot_args : dict : set the property of markers if they are to be plotted.
-                        optional settings are:
-                        marker_spacing : determines how far apart markers are in kpc
-                        marker_shape : shape of marker see matplotlib for notation
-                        marker_cmap : colormap used to differentiate markers
-                        any other property that can be passer to matplotlib scatter
-
-        ###NOTE### ion names should be in notaion:
-              Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
-
-        out_dir : Directory in which to store the movie frames
-        """
-
-        self.ds_filename = ds_filename
-
-        #create directory if doesn't exist
-        makedirs(out_dir, exist_ok=True)
-
-        #collect only ray files in ray_dir
-        ray_files=[]
-        for f in listdir(ray_dir):
-            if (f[-3:] == ".h5"):
-                ray_files.append(f)
-
-        #sort the rays and assign
-        self.ray_files = sorted(ray_files)
-        self.ray_dir = ray_dir
-
-        self.ion_name = ion_name
-        #add ion name to list of all ions to be plotted
-        absorber_fields.append(ion_name)
-        self.ion_list = absorber_fields
-
-        #set a value for slice
-        self.slice =None
-        self.north_vector=north_vector
-        self.center_gal = center_gal
-        #set slice field to ion name if no field is specified
-        if (slice_field == None):
-            self.slice_field = self.ion_p_name() + "_number_density"
-        else:
-            self.slice_field = slice_field
-
-        spectacle_defaults=None
-        if spectacle_defaults is None:
-            self.defaults_dict = {
-                'bounds' :{
-                    'column_density' : (12.5, 23)
-                },
-                'fixed' : {
-                    'delta_lambda' : True,
-                    'column_density' : False
-                }
-            }
-        else:
-            self.defaults_dict = spectacle_defaults
-        self.use_spectacle=use_spectacle
-        self.plot_spectacle=plot_spectacle
-        self.redshift = redshift
-        self.bulk_velocity = bulk_velocity
-        self.wavelength_width = wavelength_width
-        self.resolution = resolution
-        #default set the wavelength center to one of the known spectral lines
-        #for ion name. Use tridents line database to search for correct wavelength
-        if (wavelength_center == None):
-            #open up tridents default line database
-            lbd = trident.LineDatabase("my_lines.txt")
-            #find all lines that match ion
-            lines = lbd.parse_subset(subsets= [self.ion_name])
-            #take one with largest f_value
-            f_val = 0
-            for line in lines:
-                if line.f_value >= f_val:
-                    f_val = line.f_value
-                    self.wavelength_center = line.wavelength
-
-
-        #set marker plot properties
-        self.markers = markers
-        if markers:
-            self.mark_kwargs = {'alpha' : 0.45,
-                                's' : 100,
-                                'edgecolors' : 'black',
-                                'linewidth' : 3,
-                                'spacing' :50,
-                                'marker_cmap' : 'viridis',
-                                'marker_shape' :'s'}
-            if mark_plot_args != None:
-                self.mark_kwargs.update(mark_plot_args)
-
-            self.marker_spacing = self.mark_kwargs.pop('spacing')
-            self.marker_cmap = self.mark_kwargs.pop('marker_cmap')
-            self.marker_shape = self.mark_kwargs.pop('marker_shape')
-
-        #arrays storing spectra
-        self.lambda_array = None
-        self.velocity_array = None
-        self.flux_array = None
-
-        #set where files will be saved
-        self.out_dir = out_dir
-
-    def create_movie(self, num_dense=None,ray_range=None, slice_height=None, slice_width=None, cmap="magma"):
-        """
-        creates a movie by combining all the plots made from the ray in ray_dir
-
-        Parameters:
-            num_dense : An array or array type object that contains min and max num_dense to plot.
-                        otherwise calculates by using the middle ray in the ray list
-            ray_range : a list/array of ray numbers to make frames of
-            slice_height : The vertical height of the slice plot in kpc. Defaults to lenght of ray
-            slice_width : The vertical height of the slice plot in kpc. Defaults to length of ray
-            cmap="magma" : the colormap with which to use for the slice plot
-        """
-        #open up dataset
-        self.ds = yt.load(self.ds_filename)
-        #create fig to plot on
-        self.fig = plt.figure(figsize=(10, 10))
-
-        #calculate the proper yscale for number density plot
-        tot_median=0.
-
-        #get middle ray to represent scale
-        num_rays = len(self.ray_files)
-        middle_ray_file = self.ray_files[ int(num_rays/2) ]
-        mid_ray= yt.load( f"{self.ray_dir}/{middle_ray_file}" )
-
-        if num_dense is None:
-            #get median num density
-            num_density = np.array(mid_ray.all_data()[ f"{self.ion_p_name()}_number_density" ])
-            med = np.median(num_density)
-
-            #estimate min max values to number dense plot. and markers positioning
-            self.num_dense_min = 0.01*med
-            self.num_dense_max = 1000*med
-            self.markers_nd_pos = 0.05*med
-
-        else:
-            self.num_dense_min, self.num_dense_max = num_dense
-            self.markers_nd_pos = 5*self.num_dense_min
-
-        #construct the first/template slice using middle ray
-        self.ray = mid_ray
-        self.create_slice(cmap = cmap, width=slice_width, height=slice_height)
-        #get the bulk velocity along ray's direction
-        if self.bulk_velocity is None:
-            self.bulk_velocity = 0
-        else:
-            ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
-            self.bulk_velocity = np.dot(ray_u, self.bulk_velocity)
-            self.bulk_velocity =self.ds.quan(self.bulk_velocity, 'km/s')
-
-        mid_ray.close()
-        #set padding for filenames
-        pad = np.floor( np.log10(num_rays) )
-        pad = int(pad) + 1
-        if ray_range is None:
-            ray_range = np.arange(num_rays)
-        for i in ray_range:
-
-            #assign the current ray filename
-            ray_filename = f"{self.ray_dir}/{self.ray_files[i]}"
-            #open the current ray file
-            self.ray = yt.load(ray_filename)
-
-            #annotate slice with ray (and markers) and title
-            self.slice.annotate_clear()
-            self.add_annotations()
-            self.slice.annotate_title(f"ray {i:0{pad}d}")
-
-            #create multi_plot using slice and current ray plots
-            self.create_multi_plot(outfname = f"{self.out_dir}/mp{i:0{pad}d}.png", cmap=cmap)
-
-            #close ray files and clear figure
-            self.ray.close()
-
-            self.fig.clear()
 
 
 if __name__ == '__main__':
