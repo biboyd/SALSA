@@ -17,8 +17,8 @@ then
 	mkdir -p $outDir
 fi
 
-mpirun -np 64							\
-	python ~/Repo/CGM/rotation_movies/create_rot_frames.py\
+mpirun -np 32							\
+	python ~/Repo/CGM/rotation_movie/create_rot_frames.py\
 		$inFile $nFrames $off $outDir
 scontrol show job $SLURM_JOB_ID
 

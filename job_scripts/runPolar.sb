@@ -26,6 +26,6 @@ fi
 mpirun -np 32					     \
 	python ~/Repo/CGM/polar_dependence/sample_polar.py\
 		$inFile "$ion" $b $n_a $n_r $outDir
-srun python ~/Repo/CGM/polar_dependence/analyze_polar.py \
+srun python ~/Repo/CGM/polar_dependence/analyze.py\
                 $dsName "$ion" $b
 scontrol show job $SLURM_JOB_ID

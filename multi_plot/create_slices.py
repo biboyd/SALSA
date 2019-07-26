@@ -51,7 +51,7 @@ def main(dataset,
 
     #plot slices for density, temp and metallicity to compare with multi plot
     fields = ['density', 'temperature', 'metallicity', 'velocity_magnitude', 'vel_bv']
-    color_maps = ['magma', 'thermal', 'haline', 'cvidis', 'magma']
+    color_maps = ['magma', 'thermal', 'haline', 'cividis', 'magma']
      
     #construct sphere to make slices/projections from
     sph = ds.sphere(center, length)
