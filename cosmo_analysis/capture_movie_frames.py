@@ -5,6 +5,7 @@ from mpi4py import MPI
 import numpy as np
 from sys import argv
 import yt
+import trident
 from center_finder import find_center
 from os import makedirs, listdir
 
@@ -50,11 +51,10 @@ def main():
         bulk_vel=None
 
     #set up multiplot settings
-    mp_kwargs = dict(filename, in_dir, ion_name=i_name,
-    				                absorber_fields=line_list,
+    mp_kwargs = dict(ds_filename=filename, ion_name=i_name,
+    				    absorber_fields=line_list,
                                     center_gal = center,
                                     north_vector = nvec,
-                                    out_dir=out_dir,
                                     redshift=rshift[0],
                                     bulk_velocity=bulk_vel,
                                     use_spectacle= True,
@@ -68,7 +68,8 @@ def main():
     for f in listdir(ray_dir):
         #check hdf5 file
         if (f[-3:] == ".h5"):
-            ray_files.append("/".join(ray_dir, f))
+            full_name ="/".join((ray_dir, f))
+            ray_files.append(full_name)
 
     #sort the rays
     #ray_files = sorted(ray_files)
@@ -82,7 +83,7 @@ def main():
         #get middle ray to represent scale
         num_rays = len(ray_files)
         middle_ray_file = ray_files[ int(num_rays/2) ]
-        mid_ray= yt.load( f"{ray_dir}/{middle_ray_file}" )
+        mid_ray= yt.load(middle_ray_file)
 
         #get median num density
         num_density = np.array(mid_ray.data[ f"{ion_p_num(i_name)}" ], dtype=np.float64)
@@ -103,12 +104,14 @@ def main():
                       'markers_nd_pos': num_density_range[1]*5})
 
     #create movie frames
-    create_frames(rays=my_rays, **mp_kwargs)
+    create_frames(my_rays, out_dir=out_dir, multi_plot_kwargs=mp_kwargs)
     print("-------------- {} finished----------------".format(comm.rank))
 
 def create_frames(rays,
                   slice_width=None,
-                  slice_height=None, multi_plot_kwargs={}):
+                  slice_height=None, 
+                  out_dir='./',
+                  multi_plot_kwargs={}):
     """
     creates a movie by combining all the plots made from the ray in ray_dir
 
@@ -118,9 +121,6 @@ def create_frames(rays,
         slice_width
         slice_height
     """
-
-    #create fig to plot all on
-    fig = plt.figure(figsize=(10, 10))
 
     #create initial slice
     mp = plotter.multi_plot(ray_filename=rays[0], **multi_plot_kwargs)
@@ -139,11 +139,11 @@ def create_frames(rays,
         mp.slice.annotate_title(f"ray {ray_num}")
 
         #create and save frame
-        outfile = f"{mp.out_dir}/mp{ray_num}.png"
+        outfile = f"{out_dir}/mp{ray_num}.png"
         mp.create_multi_plot(outfile)
 
         #close ray files and clear axes/annoations
-        self.ray.close()
+        mp.ray.close()
 
         mp.fig.clear()
         mp.slice.annotate_clear()
@@ -170,3 +170,4 @@ def ion_p_num(ion_name):
 
 if __name__ == '__main__':
     main()
+
