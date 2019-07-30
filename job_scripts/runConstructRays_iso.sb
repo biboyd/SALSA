@@ -20,7 +20,7 @@ else
 fi
 
 mpirun -np 16							\
-	python ~/Repo/CGM/multi_plot/construct_rays.py	\
+	python ~/Repo/CGM/multi_plot_movie/construct_rays.py	\
 		$inFile $nRays $rayDist $outDir
 scontrol show job $SLURM_JOB_ID
 

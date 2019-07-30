@@ -144,7 +144,7 @@ def create_proj_frames(ds_fname,
 if __name__ == '__main__':
     import sys
     sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/')
-    from multi_plot.center_finder import find_center
+    from multi_plot_movie.center_finder import find_center
 
     dsname = sys.argv[1]
     frms = int(sys.argv[2])

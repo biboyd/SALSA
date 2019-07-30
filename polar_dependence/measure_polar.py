@@ -245,7 +245,7 @@ def ion_p_num(ion_name):
 if __name__ == "__main__":
     import sys
     sys.path.insert(0, '/mnt/home/boydbre1/Repo/CGM/')
-    from multi_plot.center_finder import find_center
+    from multi_plot_movie.center_finder import find_center
 
     ds = argv[1]
     angle=float(argv[2])

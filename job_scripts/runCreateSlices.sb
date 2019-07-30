@@ -19,7 +19,7 @@ then
 else
 	rm -rf $outDir/*
 fi
-mpirun -np 16 python ~/Repo/CGM/multi_plot/create_slices.py \
+mpirun -np 16 python ~/Repo/CGM/multi_plot_movie/create_slices.py \
 			$dsPath $len $outDir
 
 scontrol show job $SLURM_JOB_ID
