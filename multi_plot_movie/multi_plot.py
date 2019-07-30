@@ -108,20 +108,21 @@ class multi_plot():
             self.bulk_velocity = np.dot(ray_u, bulk_velocity)
             self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
+        self.contour = contour
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
-        if spectacle_defaults is None:
-            self.defaults_dict = {
-                'bounds' :{
-                    'column_density' : (12.5, 23)
-                },
-                'fixed' : {
-                    'delta_lambda' : True,
-                    'column_density' : False
-                }
+        self.defaults_dict = {
+            'bounds' :{
+                'column_density' : (12.0, 23)
+            },
+            'fixed' : {
+                'delta_lambda' : True,
+                'column_density' : False
             }
-        else:
-            self.defaults_dict = spectacle_defaults
+        }
+        #add user defined defaults
+        if spectacle_defaults is not None:
+            self.defaults_dict.update(spectacle_defaults)
         self.redshift = redshift
         self.wavelength_width = wavelength_width
         self.resolution = resolution
@@ -473,9 +474,10 @@ class multi_plot():
         los_vel = self.ray.data['velocity_los']
         los_vel = los_vel.in_units('km/s') + self.bulk_velocity
         dl_list = self.ray.data['dl']
+
+        #convert dl's to array of lengths from begin of ray
         l_list = dl_list.copy()
         l_list = l_list.in_units('kpc')
-        #convert dl's to array of lengths from begin of ray
         num_dls = l_list.size
         for i in range(1, num_dls):
             l_list[i] += l_list[i-1]
@@ -490,32 +492,46 @@ class multi_plot():
             ax_num_dense.grid(zorder=0)
 
             #chech if min/max num dense was called
+            med = np.median(num_density)
             if (self.num_dense_min is None and self.num_dense_max is None):
-                med = np.median(num_density)
                 self.num_dense_min = med*0.01
-                self.num_dense_max = med*1000)
+                self.num_dense_max = med*1000
 
             ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
 
             #check if should plot contour intervals
             if self.contour:
                 intervals = self.get_contour_intervals()
-                for b, e in intervals:
+                lcd_list = np.empty(len(intervals))
+                
+                #check interval has high enough column density
+                lim = self.defaults_dict['bounds']['column_density'][0]
+                for i in range(len(intervals)):
+                    b, e = intervals[i]
                     #compute log col density
-                    lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+                    lcd_list[i] = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
 
-                    #check interval has high enough column density
-                    lim = self.spectacle_defaults['bounds']['column_density'][0]
-                    if lcd > lim:
+                    if lcd_list[i] > lim:
                         #plot interval and center
                         ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='red')
-                        ax_num_dense.vlines((l_list[b]+l_list[e])/2, 0.2*med, 5*med, color='black')
+                
+                #take three largest absorbers
+                max_indices = np.argsort(lcd_list)
+                max_indices = max_indices[-3:]
+                max_indices.sort()
 
+                #plot from left to right
+                colors=['tab:purple', 'tab:orange', 'tab:green']
+                for i,c in zip(max_indices, colors):
+                    b, e = intervals[i]
+                    lcd = lcd_list[i]
+                    ax_num_dense.scatter((l_list[b]+l_list[e])/2, 900*med, marker='v',color=c, label=f"logN={lcd}")
+                plt.legend(loc='lower left')
 
         if ax_los_velocity is not None:
-            #make num density plots
-            ax_los_velocity.hlines(0, dl_list[0], dl_list[-1], linestyles='dashed',alpha=0.25, zorder=2)
-            ax_los_velocity.plot(dl_list, los_vel, zorder=10)
+            #make line of sight velocity plots
+            ax_los_velocity.hlines(0, l_list[0], l_list[-1], linestyles='dashed',alpha=0.25, zorder=2)
+            ax_los_velocity.plot(l_list, los_vel, zorder=10)
             ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
             ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_los_velocity.set_ylabel("Line of Sight Velocity $(km/s)$")
@@ -583,6 +599,9 @@ class multi_plot():
         #ax4 = self.fig.add_subplot(414)
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
         self.plot_spect_vel(ax_vel=ax3)
+
+        self.slice.annotate_clear()
+        self.add_annotations()
 
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
@@ -663,7 +682,7 @@ class multi_plot():
             #constrain possible column density values
             #create line model
             line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
-                                       defaults=self.defaults_dict,fitter_args={'maxiter':5000},
+                                       defaults=self.defaults_dict,fitter_args={'maxiter':2000},
                                        threshold=0.01, output='flux', auto_fit=True)
 
             #fit data
@@ -740,11 +759,13 @@ class multi_plot():
                 feature.
         """
         #define intial region to check
-        cutoffs = {'H I':1e-14, 'O VI':1e-22}
+        cutoffs = {'H I':1e-14, 'C IV':1e-12, 'O VI':1e-22}
         init_cutoff = cutoffs[self.ion_name]
 
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
-        return intervals(num_density, init_cutoff, char_density_frac)
+        intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_frac)
+        
+        return np.array(intervals)
 
 
 if __name__ == '__main__':
