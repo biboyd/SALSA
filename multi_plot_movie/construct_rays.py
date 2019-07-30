@@ -102,7 +102,7 @@ def construct_rays( dataset,
         trident.make_simple_ray(ds,
                                 ray_begins[i],
                                 ray_ends[i],
-                                lines=line_list,
+                                lines=line_list, fields= ['density', 'metallicity'],
                                 data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
     if parallel:
         comm.Barrier()
@@ -112,7 +112,7 @@ def construct_rays( dataset,
 
 if __name__ == '__main__':
     #setup conditions
-    line_list = ['H I','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
+    line_list = ['H I','H II','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
     if len(argv) == 5:
         filename = argv[1]
         num_rays=int(argv[2])

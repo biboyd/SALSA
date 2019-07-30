@@ -6,7 +6,7 @@
 Holds code carried over from a previous analysis
 some code is borrowed/modified  
 
-## multi_plot
+## multi_plot_movie
 Holds code for a multiplot class that uses yt and trident. It's purpose is to construct a multiplot that shows a light ray traveling through a galactic simulation, it's corresponding number density along its length (for a given ion), and the resulting spectra an observer would see.  
 main file is multi_plot.py (holds relavent classe).   
 construct_rays.py holds code for making the rays used in the movie making  
