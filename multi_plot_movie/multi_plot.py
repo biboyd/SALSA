@@ -11,6 +11,9 @@ from numpy.linalg import norm
 from center_finder import find_center
 import astropy.units  as u
 
+path.insert(0, "/mnt/home/boydbre1/Repo/absorber_generation_post")
+from new_generate_contour_absorbers import identify_intervals_char_length
+
 class multi_plot():
     """
     Plots three images side by side for easy analysis. The images are:
@@ -35,6 +38,7 @@ class multi_plot():
                 use_spectacle=False,
                 plot_spectacle=False,
                 spectacle_defaults=None,
+                contour = True, 
                 num_dense_min=None,
                 num_dense_max=None,
                 markers_nd_pos=None,
@@ -469,27 +473,44 @@ class multi_plot():
         los_vel = self.ray.data['velocity_los']
         los_vel = los_vel.in_units('km/s') + self.bulk_velocity
         dl_list = self.ray.data['dl']
-        dl_list = dl_list.in_units('kpc')
-
+        l_list = dl_list.copy()
+        l_list = l_list.in_units('kpc')
         #convert dl's to array of lengths from begin of ray
-        num_dls = dl_list.size
+        num_dls = l_list.size
         for i in range(1, num_dls):
-            dl_list[i] += dl_list[i-1]
+            l_list[i] += l_list[i-1]
 
         if ax_num_dense is not None:
             #make num density plots
-            ax_num_dense.plot(dl_list, num_density, zorder=10)
+            ax_num_dense.plot(l_list, num_density, zorder=10)
             ax_num_dense.set_title(f"Number Density of {self.ion_name} Along Ray", loc='right')
             ax_num_dense.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_num_dense.set_ylabel("Number Density $(cm^{-3})$")
             ax_num_dense.set_yscale('log')
             ax_num_dense.grid(zorder=0)
+
             #chech if min/max num dense was called
-            if (self.num_dense_min == None and self.num_dense_max == None):
+            if (self.num_dense_min is None and self.num_dense_max is None):
                 med = np.median(num_density)
-                ax_num_dense.set_ylim(med*0.01, med*1000)
-            else:
-                ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
+                self.num_dense_min = med*0.01
+                self.num_dense_max = med*1000)
+
+            ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
+
+            #check if should plot contour intervals
+            if self.contour:
+                intervals = self.get_contour_intervals()
+                for b, e in intervals:
+                    #compute log col density
+                    lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+                    #check interval has high enough column density
+                    lim = self.spectacle_defaults['bounds']['column_density'][0]
+                    if lcd > lim:
+                        #plot interval and center
+                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='red')
+                        ax_num_dense.vlines((l_list[b]+l_list[e])/2, 0.2*med, 5*med, color='black')
+
 
         if ax_los_velocity is not None:
             #make num density plots
@@ -703,6 +724,27 @@ class multi_plot():
         else:
             line_text = 'logN={:04.1f}'.format(log_tot_ray)
         return sums, line_text, line_models
+
+
+    def get_contour_intervals(self, char_density_frac = 0.5):
+        """
+        get the intervals along the ray where an absorption feature is found.
+        currently write hdf5 file and read it b/c quickest implementation. Likely
+        want to smoothline this process.
+
+        Parameters:
+            char_density_frac : float < 1: Fraction used to define when to end
+                an absorption feature. Relative to maximum
+        Returns:
+            intervals : list of tuples : list of intervals containing absorption
+                feature.
+        """
+        #define intial region to check
+        cutoffs = {'H I':1e-14, 'O VI':1e-22}
+        init_cutoff = cutoffs[self.ion_name]
+
+        num_density = self.ray.data[self.ion_p_name()+'_number_density']
+        return intervals(num_density, init_cutoff, char_density_frac)
 
 
 if __name__ == '__main__':
