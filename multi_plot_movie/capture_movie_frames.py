@@ -97,9 +97,9 @@ def main():
     #broadcast the number density limits
     comm.Bcast( [num_density_range, MPI.DOUBLE] )
 
-    mp_kwargs.update({'num_dense_max': num_density_range[0],
-                      'num_dense_min': num_density_range[1],
-                      'markers_nd_pos': num_density_range[1]*5})
+    mp_kwargs.update({'num_dense_min': num_density_range[0],
+                      'num_dense_max': num_density_range[1],
+                      'markers_nd_pos': num_density_range[0]*5})
 
     #create movie frames
     create_frames(my_rays, out_dir=out_dir, multi_plot_kwargs=mp_kwargs)
