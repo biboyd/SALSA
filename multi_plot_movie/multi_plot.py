@@ -420,7 +420,7 @@ class multi_plot():
 
         if ax_spect is not None:
             #plot values for spectra
-            ax_spect.plot(wavelength[:-1], flux[:-1], zorder=10)
+            ax_spect.plot(wavelength[:-1], flux[:-1])
             ax_spect.set_ylim(0, 1.05)
             ax_spect.set_xlim(wave_min.value, wave_max.value)
             ax_spect.set_title(f"Spectrum {self.ion_name}", loc='right')
@@ -429,7 +429,7 @@ class multi_plot():
             ax_spect.grid(zorder=0)
         if ax_vel is not None:
             #plot values for velocity plot
-            ax_vel.plot(velocity[:-1], flux[:-1], zorder=10)
+            ax_vel.plot(velocity[:-1], flux[:-1])
             ax_vel.set_ylim(0, 1.05)
             ax_vel.set_xlim(vel_min.value, vel_max.value)
             ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
@@ -451,10 +451,10 @@ class multi_plot():
                     #plot centroids of largest lines
                     dv = mod.lines[0].delta_v.value
                     cd = mod.lines[0].column_density.value
-                    ax_vel.scatter(dv, 1, c=color, marker='v', zorder=2, label="logN={:04.1f}".format(cd))
+                    ax_vel.scatter(dv, 1, c=color, marker='v',zorder=1, label="logN={:04.1f}".format(cd))
                     #plott the largest lines
                     if self.plot_spectacle:
-                        ax_vel.step(vel, mod(vel), linestyle='--', zorder=10, color=color, alpha=0.75)
+                        ax_vel.step(vel, mod(vel), linestyle='--', color=color, alpha=0.75)
                 ax_vel.legend(loc='lower left')
 
 
@@ -484,16 +484,16 @@ class multi_plot():
 
         if ax_num_dense is not None:
             #make num density plots
-            ax_num_dense.plot(l_list, num_density, zorder=10)
+            ax_num_dense.plot(l_list, num_density)
             ax_num_dense.set_title(f"Number Density of {self.ion_name} Along Ray", loc='right')
             ax_num_dense.set_xlabel("Length From Start of Ray $(kpc)$")
-            ax_num_dense.set_ylabel("Number Density $(cm^{-3})$")
+            ax_num_dense.set_ylabel("Number Density \n$(cm^{-3})$")
             ax_num_dense.set_yscale('log')
             ax_num_dense.grid(zorder=0)
 
             #chech if min/max num dense was called
-            med = np.median(num_density)
             if (self.num_dense_min is None and self.num_dense_max is None):
+                med = np.median(num_density)
                 self.num_dense_min = med*0.01
                 self.num_dense_max = med*1000
 
@@ -506,35 +506,46 @@ class multi_plot():
                 
                 #check interval has high enough column density
                 lim = self.defaults_dict['bounds']['column_density'][0]
+                tot_lcd=0
                 for i in range(len(intervals)):
                     b, e = intervals[i]
                     #compute log col density
                     lcd_list[i] = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
-
                     if lcd_list[i] > lim:
-                        #plot interval and center
-                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='red')
-                
+                        #plot interval 
+                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
+                        tot_lcd += 10**lcd_list[i]
+                        #plot on los vel if axis exists
+                        if ax_los_velocity is not None:
+                            ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
+
+                tot_lcd = np.log10(tot_lcd) 
+                box_props = dict(boxstyle='square', facecolor='white')
+                ax_num_dense.text(0.8, 0.05, f"Total: {tot_lcd:.1f}", transform=ax_num_dense.transAxes, bbox = box_props)
                 #take three largest absorbers
                 max_indices = np.argsort(lcd_list)
                 max_indices = max_indices[-3:]
                 max_indices.sort()
 
                 #plot from left to right
-                colors=['tab:purple', 'tab:orange', 'tab:green']
+                colors=['black', 'magenta', 'yellow']
                 for i,c in zip(max_indices, colors):
                     b, e = intervals[i]
                     lcd = lcd_list[i]
-                    ax_num_dense.scatter((l_list[b]+l_list[e])/2, 900*med, marker='v',color=c, label=f"logN={lcd}")
-                plt.legend(loc='lower left')
+                    if lcd > lim:
+                        ax_num_dense.scatter((l_list[b]+l_list[e])/2, 0.75*self.num_dense_max, 
+                                             marker='v',color=c, edgecolors='black',
+                                             label=f"logN={lcd:.1f}", zorder=3)
+                    
+                ax_num_dense.legend(loc='lower left')
 
         if ax_los_velocity is not None:
             #make line of sight velocity plots
-            ax_los_velocity.hlines(0, l_list[0], l_list[-1], linestyles='dashed',alpha=0.25, zorder=2)
-            ax_los_velocity.plot(l_list, los_vel, zorder=10)
+            ax_los_velocity.hlines(0, l_list[0], l_list[-1], linestyles='dashed',alpha=0.25, zorder=1)
+            ax_los_velocity.plot(l_list, los_vel)
             ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
             ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
-            ax_los_velocity.set_ylabel("Line of Sight Velocity $(km/s)$")
+            ax_los_velocity.set_ylabel("Line of Sight \nVelocity $(km/s)$")
             ax_los_velocity.grid(zorder=0)
             ax_los_velocity.set_ylim(-600, 600)
 
@@ -543,14 +554,17 @@ class multi_plot():
             ys = np.zeros_like(self.mark_dist_arr)
             if ax_num_dense is not None:
                 if self.markers_nd_pos == None:
-                    ys += 0.05*med
+                    ys += 50*self.num_dense_min
                 else:
                     ys += self.markers_nd_pos
 
-                ax_num_dense.scatter(self.mark_dist_arr.value, ys,zorder=1, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
+                #ax_num_dense.scatter(self.mark_dist_arr.value, ys,zorder=1, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
             if ax_los_velocity is not None:
                 Vys = np.zeros_like(self.mark_dist_arr) - 500
-                ax_los_velocity.scatter(self.mark_dist_arr.value, Vys,zorder=1, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
+                plot_markers = {}
+                plot_markers.update(self.mark_kwargs)
+                plot_markers.update({'alpha':1})
+                ax_los_velocity.scatter(self.mark_dist_arr.value, Vys,zorder=3, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **plot_markers)
 
     def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
@@ -600,16 +614,19 @@ class multi_plot():
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
         self.plot_spect_vel(ax_vel=ax3)
 
-        self.slice.annotate_clear()
-        self.add_annotations()
-
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
         strt_pos = -0.25
-        for i in range(len(axes)):
-            axes[i].set_position( [0.0, strt_pos - i*0.225, 0.5, 0.15] )
-
-
+        ax1.set_position( [0.0, strt_pos, 0.5, 0.15] )
+        ax2.set_position( [0.0, strt_pos-0.16, 0.5, 0.15] )
+        ax3.set_position( [0.0, strt_pos-0.4, 0.5, 0.15] )
+        #for i in range(len(axes)):
+        #    axes[i].set_position( [0.0, strt_pos - i*0.225, 0.5, 0.15] )
+        #set num dense and los vel to share axis 
+        ax1.set_xlabel("")
+        ax2.set_title("", loc='right')
+        ax1.get_shared_x_axes().join(ax1, ax2)
+        ax1.set_xticklabels([])
         if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
 
@@ -759,7 +776,7 @@ class multi_plot():
                 feature.
         """
         #define intial region to check
-        cutoffs = {'H I':1e-14, 'C IV':1e-12, 'O VI':1e-22}
+        cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-12, 'Si III':1e-11}
         init_cutoff = cutoffs[self.ion_name]
 
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
