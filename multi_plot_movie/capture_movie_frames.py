@@ -102,6 +102,10 @@ def main():
                       'markers_nd_pos': num_density_range[0]*5})
 
     #create movie frames
+    print_rays = ""
+    for r in my_rays:
+        print_rays = f"{print_rays} {get_ray_num(r)}"
+    print("my rank ", comm.rank, "my rays ", print_rays)
     create_frames(my_rays, out_dir=out_dir, multi_plot_kwargs=mp_kwargs)
     print("-------------- {} finished----------------".format(comm.rank))
 
