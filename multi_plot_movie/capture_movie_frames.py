@@ -76,26 +76,42 @@ def main():
     ray_files_split = np.array_split(ray_files, comm.size)
     my_rays = ray_files_split[ comm.rank ]
 
-    #calc the number_density limits if root processor
-    if comm.rank == 0:
-        #get middle ray to represent scale
-        num_rays = len(ray_files)
-        middle_ray_file = ray_files[ int(num_rays/2) ]
-        mid_ray= yt.load(middle_ray_file)
 
-        #get median num density
-        num_density = np.array(mid_ray.data[ f"{ion_p_num(i_name)}" ], dtype=np.float64)
-        med = np.median(num_density)
+    #calc the number_density limits
+    num_density_dict = {'H I':[1e-11, 1e-6],
+                       'C IV':[1e-14, 1e-9],
+                       'O VI':[1e-12, 1e-7],
+                       'Si III':[1e-11, 1e-6]}
 
-        #estimate min max values to number dense plot. and markers positioning
-        num_density_range = np.array( [0.01*med, 1000*med] , dtype=np.float64)
+    if i_name in num_density_dict:
+        num_density_range = num_density_dict[i_name]
 
     else:
-        num_density_range = np.empty(2, dtype=np.float64)
+        #get average median value to represent scale
+        num_rays = len(my_rays)
+        med =0
+        for i in range(num_rays):
+            #load ray
+            curr_ray_file = my_rays[i]
+            curr_ray= yt.load(curr_ray_file)
 
-    comm.Barrier()
-    #broadcast the number density limits
-    comm.Bcast( [num_density_range, MPI.DOUBLE] )
+            #get median num density
+            num_density = curr_ray.data[ f"{ion_p_num(i_name)}" ]
+            med += np.median(num_density)
+
+            curr_ray.close()
+        med /= num_rays
+        med = np.array(med)
+        sum_med = np.zeros_like(med)
+
+        #sum all medians. divide by proccesors to get average
+        comm.Barrier()
+        comm.Allreduce([med, MPI.DOUBLE], [sum_med, MPI.DOUBLE], op=MPI.SUM)
+
+        avg_med = sum_med/comm.size
+
+        #estimate min max values to number dense plot. and markers positioning
+        num_density_range = np.array( [0.01*avg_med, 1000*avg_med] , dtype=np.float64)
 
     mp_kwargs.update({'num_dense_min': num_density_range[0],
                       'num_dense_max': num_density_range[1],
@@ -107,7 +123,7 @@ def main():
 
 def create_frames(rays,
                   slice_width=None,
-                  slice_height=None, 
+                  slice_height=None,
                   out_dir='./',
                   multi_plot_kwargs={}):
     """
@@ -168,4 +184,3 @@ def ion_p_num(ion_name):
 
 if __name__ == '__main__':
     main()
-

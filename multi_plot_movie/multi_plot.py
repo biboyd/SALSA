@@ -38,7 +38,7 @@ class multi_plot():
                 use_spectacle=False,
                 plot_spectacle=False,
                 spectacle_defaults=None,
-                contour = True, 
+                contour = True,
                 num_dense_min=None,
                 num_dense_max=None,
                 markers_nd_pos=None,
@@ -502,24 +502,26 @@ class multi_plot():
             #check if should plot contour intervals
             if self.contour:
                 intervals = self.get_contour_intervals()
-                lcd_list = np.empty(len(intervals))
-                
+                lcd_list =[]
+
                 #check interval has high enough column density
                 lim = self.defaults_dict['bounds']['column_density'][0]
                 tot_lcd=0
                 for i in range(len(intervals)):
                     b, e = intervals[i]
                     #compute log col density
-                    lcd_list[i] = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
-                    if lcd_list[i] > lim:
-                        #plot interval 
+                    curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+                    if curr_lcd > lim:
+                        lcd_list.append(curr_lcd)
+                        #plot interval
                         ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
-                        tot_lcd += 10**lcd_list[i]
+                        tot_lcd += 10**curr_lcd
                         #plot on los vel if axis exists
                         if ax_los_velocity is not None:
                             ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
 
-                tot_lcd = np.log10(tot_lcd) 
+                #add the total column density onto plot
+                tot_lcd = np.log10(tot_lcd)
                 box_props = dict(boxstyle='square', facecolor='white')
                 ax_num_dense.text(0.8, 0.05, f"Total: {tot_lcd:.1f}", transform=ax_num_dense.transAxes, bbox = box_props)
                 #take three largest absorbers
@@ -533,10 +535,10 @@ class multi_plot():
                     b, e = intervals[i]
                     lcd = lcd_list[i]
                     if lcd > lim:
-                        ax_num_dense.scatter((l_list[b]+l_list[e])/2, 0.75*self.num_dense_max, 
+                        ax_num_dense.scatter((l_list[b]+l_list[e])/2, 0.75*self.num_dense_max,
                                              marker='v',color=c, edgecolors='black',
                                              label=f"logN={lcd:.1f}", zorder=3)
-                    
+
                 ax_num_dense.legend(loc='lower left')
 
         if ax_los_velocity is not None:
@@ -622,7 +624,7 @@ class multi_plot():
         ax3.set_position( [0.0, strt_pos-0.4, 0.5, 0.15] )
         #for i in range(len(axes)):
         #    axes[i].set_position( [0.0, strt_pos - i*0.225, 0.5, 0.15] )
-        #set num dense and los vel to share axis 
+        #set num dense and los vel to share axis
         ax1.set_xlabel("")
         ax2.set_title("", loc='right')
         ax1.get_shared_x_axes().join(ax1, ax2)
@@ -781,7 +783,7 @@ class multi_plot():
 
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
         intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_frac)
-        
+
         return np.array(intervals)
 
 
