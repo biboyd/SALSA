@@ -503,7 +503,7 @@ class multi_plot():
             if self.contour:
                 intervals = self.get_contour_intervals()
                 lcd_list =[]
-
+                my_intervals=[]
                 #check interval has high enough column density
                 lim = self.defaults_dict['bounds']['column_density'][0]
                 tot_lcd=0
@@ -513,6 +513,7 @@ class multi_plot():
                     curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
                     if curr_lcd > lim:
                         lcd_list.append(curr_lcd)
+                        my_intervals.append((b, e))
                         #plot interval
                         ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
                         tot_lcd += 10**curr_lcd
@@ -524,22 +525,24 @@ class multi_plot():
                 tot_lcd = np.log10(tot_lcd)
                 box_props = dict(boxstyle='square', facecolor='white')
                 ax_num_dense.text(0.8, 0.05, f"Total: {tot_lcd:.1f}", transform=ax_num_dense.transAxes, bbox = box_props)
+
                 #take three largest absorbers
                 max_indices = np.argsort(lcd_list)
                 max_indices = max_indices[-3:]
                 max_indices.sort()
+                print(max_indices, lcd_list)
 
                 #plot from left to right
                 colors=['black', 'magenta', 'yellow']
                 for i,c in zip(max_indices, colors):
-                    b, e = intervals[i]
+                    b, e = my_intervals[i]
                     lcd = lcd_list[i]
-                    if lcd > lim:
-                        ax_num_dense.scatter((l_list[b]+l_list[e])/2, 0.75*self.num_dense_max,
-                                             marker='v',color=c, edgecolors='black',
-                                             label=f"logN={lcd:.1f}", zorder=3)
+                    mid_point = (l_list[b]+l_list[e])/2
+                    ax_num_dense.scatter(mid_point, 0.75*self.num_dense_max,
+                                         marker='v',color=c, edgecolors='black',
+                                         label=f"logN={lcd:.1f}", zorder=3)
 
-                ax_num_dense.legend(loc='lower left')
+                ax_num_dense.legend(loc='lower left', bbox_to_anchor=(-0.015, 0.95))
 
         if ax_los_velocity is not None:
             #make line of sight velocity plots
@@ -618,7 +621,7 @@ class multi_plot():
 
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
-        strt_pos = -0.25
+        strt_pos = -0.255
         ax1.set_position( [0.0, strt_pos, 0.5, 0.15] )
         ax2.set_position( [0.0, strt_pos-0.16, 0.5, 0.15] )
         ax3.set_position( [0.0, strt_pos-0.4, 0.5, 0.15] )
@@ -778,7 +781,7 @@ class multi_plot():
                 feature.
         """
         #define intial region to check
-        cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-12, 'Si III':1e-11}
+        cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
         init_cutoff = cutoffs[self.ion_name]
 
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
