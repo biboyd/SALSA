@@ -372,8 +372,8 @@ class multi_plot():
         #adjust wavelegnth_center for redshift
         rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
         #generate spectrum defined by inputs
-
-        while True:
+        max_iter=5
+        for _ in range(max_iter):
         #set wavelength limits for plots
             if single_line is None:
                 wave_min = rest_wavelength - self.wavelength_width/2
