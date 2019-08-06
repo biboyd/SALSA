@@ -10,6 +10,7 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 from center_finder import find_center
 import astropy.units  as u
+from scipy.ndimage import gaussian_filter
 
 path.insert(0, "/mnt/home/boydbre1/Repo/absorber_generation_post")
 from new_generate_contour_absorbers import identify_intervals_char_length
@@ -39,6 +40,7 @@ class multi_plot():
                 plot_spectacle=False,
                 spectacle_defaults=None,
                 contour = True,
+                sigma_smooth = None,
                 num_dense_min=None,
                 num_dense_max=None,
                 markers_nd_pos=None,
@@ -109,6 +111,7 @@ class multi_plot():
             self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
         self.contour = contour
+        self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
         self.defaults_dict = {
@@ -784,6 +787,10 @@ class multi_plot():
         init_cutoff = cutoffs[self.ion_name]
 
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
+
+        if self.sigma_smooth is not None:
+            num_density = gaussian_filter(num_density, sigma_smooth)
+
         intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_frac)
 
         return np.array(intervals)
