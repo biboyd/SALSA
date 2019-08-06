@@ -81,7 +81,8 @@ def main():
     num_density_dict = {'H I':[1e-11, 1e-6],
                        'C IV':[1e-14, 1e-9],
                        'O VI':[1e-12, 1e-7],
-                       'Si III':[1e-11, 1e-6]}
+                       'Si III':[1e-11, 1e-6],
+                       'Si II':[1e-11, 1e-6]}
 
     if i_name in num_density_dict:
         num_density_range = num_density_dict[i_name]

@@ -530,7 +530,6 @@ class multi_plot():
                 max_indices = np.argsort(lcd_list)
                 max_indices = max_indices[-3:]
                 max_indices.sort()
-                print(max_indices, lcd_list)
 
                 #plot from left to right
                 colors=['black', 'magenta', 'yellow']
