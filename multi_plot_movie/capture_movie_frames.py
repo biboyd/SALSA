@@ -15,12 +15,13 @@ def main():
     line_list = []#['H I', 'O VI', 'C IV']
 
     #take in arguments
-    if len(argv) == 6:
+    if len(argv) == 7:
         filename = argv[1]
         ray_dir = argv[2]
         i_name = argv[3]
         out_dir= argv[4]
         use_bv = argv[5]
+        sigma = float(argv[6])
     else:
         raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv?")
 
@@ -57,6 +58,7 @@ def main():
                                     bulk_velocity=bulk_vel,
                                     use_spectacle= True,
                                     plot_spectacle=True,
+                                    sigma_smooth= sigma,
                                     wavelength_width=20,
                                     resolution=0.1)
 
@@ -155,7 +157,7 @@ def create_frames(rays,
         #add ray and other annotations
         ray_num = get_ray_num(ray_fname)
         mp.add_annotations()
-        mp.slice.annotate_title(f"ray {ray_num}")
+        mp.slice.annotate_title(f"ray {ray_num} sigma={sigma}")
 
         #create and save frame
         outfile = f"{out_dir}/mp{ray_num}.png"
