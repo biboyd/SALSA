@@ -789,7 +789,7 @@ class multi_plot():
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
 
         if self.sigma_smooth is not None:
-            num_density = gaussian_filter(num_density, sigma_smooth)
+            num_density = gaussian_filter(num_density, self.sigma_smooth)
 
         intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_frac)
 

@@ -157,7 +157,7 @@ def create_frames(rays,
         #add ray and other annotations
         ray_num = get_ray_num(ray_fname)
         mp.add_annotations()
-        mp.slice.annotate_title(f"ray {ray_num} sigma={sigma}")
+        mp.slice.annotate_title(f"ray {ray_num} sigma={mp.sigma_smooth}")
 
         #create and save frame
         outfile = f"{out_dir}/mp{ray_num}.png"
