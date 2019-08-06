@@ -477,13 +477,8 @@ class multi_plot():
         los_vel = self.ray.data['velocity_los']
         los_vel = los_vel.in_units('km/s') + self.bulk_velocity
         dl_list = self.ray.data['dl']
+        l_list = self.ray.data['l'].in_units('kpc')
 
-        #convert dl's to array of lengths from begin of ray
-        l_list = dl_list.copy()
-        l_list = l_list.in_units('kpc')
-        num_dls = l_list.size
-        for i in range(1, num_dls):
-            l_list[i] += l_list[i-1]
 
         if ax_num_dense is not None:
             #make num density plots
