@@ -178,8 +178,7 @@ class multi_plot():
         self.lambda_array = None
         self.velocity_array = None
         self.flux_array = None
-        #optionally set position of markers on number density plot
-        self.markers_nd_pos = None
+
         self.intervals_lcd = None
 
     def add_annotations(self):
@@ -549,14 +548,6 @@ class multi_plot():
 
         #add appropriate markers to the plot
         if self.markers:
-            ys = np.zeros_like(self.mark_dist_arr)
-            if ax_num_dense is not None:
-                if self.markers_nd_pos == None:
-                    ys += 50*self.num_dense_min
-                else:
-                    ys += self.markers_nd_pos
-
-                #ax_num_dense.scatter(self.mark_dist_arr.value, ys,zorder=1, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **self.mark_kwargs)
             if ax_los_velocity is not None:
                 Vys = np.zeros_like(self.mark_dist_arr) - 500
                 plot_markers = {}

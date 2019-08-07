@@ -115,8 +115,7 @@ def main():
         num_density_range = np.array( [0.01*avg_med, 1000*avg_med] , dtype=np.float64)
 
     mp_kwargs.update({'num_dense_min': num_density_range[0],
-                      'num_dense_max': num_density_range[1],
-                      'markers_nd_pos': num_density_range[0]*5})
+                      'num_dense_max': num_density_range[1]})
 
     #create movie frames
     print_rays = ""
