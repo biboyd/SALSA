@@ -166,6 +166,9 @@ def create_frames(rays,
         mp.fig.clear()
         mp.slice.annotate_clear()
 
+        #reset contour intervals
+        mp.intervals_lcd = None
+
 
 def get_ray_num(file_path):
     filename = file_path.split('/')[-1]
