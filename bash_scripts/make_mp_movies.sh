@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #runs all make movie scripts
-mainDir=$1
-cd $mainDir
+frameDir=$1
+cd $frameDir
 
 #check for equal number of frames
-H_frames=`ls frames/movie_H_I_frames/*.png -1 | wc -l`
-C_frames=`ls frames/movie_C_IV_frames/*.png -1 | wc -l`
-O_frames=`ls frames/movie_O_VI_frames/*.png -1 | wc -l`
+H_frames=`ls movie_H_I_frames/*.png -1 | wc -l`
+C_frames=`ls movie_C_IV_frames/*.png -1 | wc -l`
+O_frames=`ls movie_O_VI_frames/*.png -1 | wc -l`
 
 if [ $H_frames == $C_frames ] && [ $C_frames == $O_frames ]
 then
@@ -22,7 +22,7 @@ fi
 #make individual movies using movie.sh
 for i in H_I C_IV O_VI Si_II Si_III Ne_VIII Mg_X
 do 
-	~/Repo/CGM/bash_scripts/movie.sh movie_${i}.mp4 5 frames/movie_${i}_frames/*.png 
+	~/Repo/CGM/bash_scripts/movie.sh movie_${i}.mp4 5 movie_${i}_frames/*.png 
 done
 
 #for i in H_I C_IV O_VI
@@ -37,7 +37,7 @@ ffmpeg  -y						 \
 	-i movie_C_IV.mp4				 \
 	-i movie_O_VI.mp4				 \
 	-filter_complex "[0:v][1:v][2:v]hstack=inputs=3" \
-	./combined_movie.mp4
+	./combined_HCO_movie.mp4
 
 #ffmpeg  -y 						 \
 #	-i movie_H_I_slow.mp4 				 \
