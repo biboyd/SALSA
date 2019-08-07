@@ -13,6 +13,7 @@ import astropy.units  as u
 from scipy.ndimage import gaussian_filter
 
 path.insert(0, "/mnt/home/boydbre1/Repo/absorber_generation_post")
+path.insert(0, "/home/bb/Repo/absorber_generation_post")
 from new_generate_contour_absorbers import identify_intervals_char_length
 
 class multi_plot():
@@ -43,7 +44,6 @@ class multi_plot():
                 sigma_smooth = None,
                 num_dense_min=None,
                 num_dense_max=None,
-                markers_nd_pos=None,
                 markers=True,
                 mark_plot_args=None,
                 figure=None):
@@ -179,7 +179,8 @@ class multi_plot():
         self.velocity_array = None
         self.flux_array = None
         #optionally set position of markers on number density plot
-        self.markers_nd_pos = markers_nd_pos
+        self.markers_nd_pos = None
+        self.intervals_lcd = None
 
     def add_annotations(self):
         """
@@ -442,9 +443,12 @@ class multi_plot():
 
 
             #annotate plot with column densities
-            sums_list, line_txt, line_models = self.compute_col_density()
+            sums, line_txt, line_models, num_fitted_lines = self.compute_col_density()
             box_props = dict(boxstyle='square', facecolor='white')
             ax_vel.text(0.8, 0.05, line_txt, transform=ax_vel.transAxes, bbox = box_props)
+
+            #annotate number of lines
+            ax_vel.text(0.9, 0.85, f"{num_fitted_lines} lines", transform=ax_vel.transAxes, bbox = box_props)
 
             colors = ['tab:purple', 'tab:orange', 'tab:green']
             vel= np.linspace(vel_min.value, vel_max.value, 1000) *u.Unit('km/s')
@@ -476,7 +480,6 @@ class multi_plot():
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
         los_vel = self.ray.data['velocity_los']
         los_vel = los_vel.in_units('km/s') + self.bulk_velocity
-        dl_list = self.ray.data['dl']
         l_list = self.ray.data['l'].in_units('kpc')
 
 
@@ -499,32 +502,25 @@ class multi_plot():
 
             #check if should plot contour intervals
             if self.contour:
-                intervals = self.get_contour_intervals()
-                lcd_list =[]
-                my_intervals=[]
-                #check interval has high enough column density
-                lim = self.defaults_dict['bounds']['column_density'][0]
+                intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0
                 for i in range(len(intervals)):
                     b, e = intervals[i]
-                    #compute log col density
-                    curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
-                    if curr_lcd > lim:
-                        lcd_list.append(curr_lcd)
-                        my_intervals.append((b, e))
-                        #plot interval
-                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
-                        tot_lcd += 10**curr_lcd
-                        #plot on los vel if axis exists
-                        if ax_los_velocity is not None:
-                            ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
+                    curr_lcd = lcd_list[i]
+
+                    #plot interval
+                    ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
+                    tot_lcd += 10**curr_lcd
+                    #plot on los vel if axis exists
+                    if ax_los_velocity is not None:
+                        ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
 
                 #add the total column density onto plot
                 tot_lcd = np.log10(tot_lcd)
                 box_props = dict(boxstyle='square', facecolor='white')
-                ax_num_dense.text(0.8, 0.05, f"Total: {tot_lcd:.1f}", transform=ax_num_dense.transAxes, bbox = box_props)
+                ax_num_dense.text(0.9, 0.85, f"{len(lcd_list)} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
 
-                #take three largest absorbers
+                #take three largest absorbers and sort by position
                 max_indices = np.argsort(lcd_list)
                 max_indices = max_indices[-3:]
                 max_indices.sort()
@@ -532,7 +528,7 @@ class multi_plot():
                 #plot from left to right
                 colors=['black', 'magenta', 'yellow']
                 for i,c in zip(max_indices, colors):
-                    b, e = my_intervals[i]
+                    b, e = intervals[i]
                     lcd = lcd_list[i]
                     mid_point = (l_list[b]+l_list[e])/2
                     ax_num_dense.scatter(mid_point, 0.75*self.num_dense_max,
@@ -682,9 +678,6 @@ class multi_plot():
         num_density = np.array(self.ray.data[self.ion_p_name()+'_number_density'])
         dl_array = np.array(self.ray.data['dl'])
 
-        #multiply num density by its dl and sum up to get column density of ray
-        tot_ray_cd= np.sum( num_density*dl_array )
-        tot_ray_cd= tot_ray_cd
 
         line_sum_cd=0
         line_models = None
@@ -730,7 +723,8 @@ class multi_plot():
 
                 # get biggest lines (max of 3)
                 num_lines = line_stats['col_dens'].size
-                if num_lines > 3: num_lines = 3
+                if num_lines > 3:
+                    num_lines = 3
 
                 line_models = []
                 indx_max = line_stats.argsort('col_dens')
@@ -741,27 +735,42 @@ class multi_plot():
                 #sort lines based on delta v
                 line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
 
-        log_line_sum = np.log10(line_sum_cd)
-        log_tot_ray = np.log10(tot_ray_cd)
-        sums = [log_line_sum, log_tot_ray]
-
-        if self.use_spectacle:
-            if line_sum_cd != 0:
-                #compute percent difference
-                diff = np.abs(line_sum_cd - tot_ray_cd)/tot_ray_cd*100
-                #create text for text box
-                line_text = "num lines: {}\n".format(tot_num_lines)+\
-                           "line sum:  {:04.1f}\n".format(log_line_sum)+\
-                           "total sum: {:04.1f}\n".format(log_tot_ray)+\
-                           "diff: {:10.2f}%".format(diff)
-            else:
-                line_text = "num lines: {}\n".format(tot_num_lines)+\
-                           "line sum:  {: >4s}\n".format('--')+\
-                           "total sum: {:04.1f}\n".format(log_tot_ray)+\
-                           "diff: {: >13s}%".format('--')
+        #get values and format text box correctly
+        #get sum for fitting method
+        fit_label = "fit_lines:"
+        if line_sum_cd == 0:
+            log_line_sum=0
+            fit_string = "{: <14s}{: >4s}\n".format(fit_label, '--')
+            #fit_string = "fit lines: {: >4s}\n".format('--')
         else:
-            line_text = 'logN={:04.1f}'.format(log_tot_ray)
-        return sums, line_text, line_models
+            log_line_sum = np.log10(line_sum_cd)
+            fit_string = "{: <14s}{:04.1f}\n".format(fit_label, log_line_sum)
+
+        #get sum from contour method
+        contour_label= "countour:"
+        interval, lcd_list = self.get_contour_intervals()
+        if lcd_list is []:
+            log_cont_sum=0
+            contour_string = "{: <11s}{: >4s}\n".format(contour_label,'--')
+        else:
+            cont_sum=0
+            for lcd in lcd_list:
+                cont_sum += 10**lcd
+            #take log if sum is non zero
+            log_cont_sum = np.log10(cont_sum)
+            contour_string = "{: <11s}{:04.1f}\n".format(contour_label,log_cont_sum)
+
+        #multiply num density by its dl and sum up to get column density proxy
+        tot_ray_cd= np.sum( num_density*dl_array )
+        log_tot_ray = np.log10(tot_ray_cd)
+        total_string="{: <14s}{:04.1f}".format("full ray:", log_tot_ray)
+
+        sums = [log_cont_sum, log_line_sum, log_tot_ray]
+
+        #combine strings
+        line_text = "Tot Sums\n"+contour_string + fit_string + total_string
+
+        return sums, line_text, line_models, tot_num_lines
 
 
     def get_contour_intervals(self, char_density_frac = 0.5):
@@ -774,21 +783,40 @@ class multi_plot():
             char_density_frac : float < 1: Fraction used to define when to end
                 an absorption feature. Relative to maximum
         Returns:
-            intervals : list of tuples : list of intervals containing absorption
-                feature.
+            tot_array: tuple of lists: first list containing interval start and stop
+                indices second list with corresponding log column densities
         """
-        #define intial region to check
-        cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
-        init_cutoff = cutoffs[self.ion_name]
+        if self.intervals_lcd is None:
+            #define intial region to check
+            cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
+            init_cutoff = cutoffs[self.ion_name]
 
-        num_density = self.ray.data[self.ion_p_name()+'_number_density']
+            num_density = self.ray.data[self.ion_p_name()+'_number_density']
+            dl_list = self.ray.data['dl']
 
-        if self.sigma_smooth is not None:
-            num_density = gaussian_filter(num_density, self.sigma_smooth)
+            if self.sigma_smooth is not None:
+                num_density = gaussian_filter(num_density, self.sigma_smooth)
 
-        intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_frac)
+            intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_frac)
 
-        return np.array(intervals)
+            lcd_list =[]
+            my_intervals=[]
+            #check interval has high enough column density
+            lim = self.defaults_dict['bounds']['column_density'][0]
+            for i in range(len(intervals)):
+                b, e = intervals[i]
+                #compute log col density
+                curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+                #check if col density is above limit
+                if curr_lcd > lim:
+                    lcd_list.append(curr_lcd)
+                    my_intervals.append([b, e])
+
+            #create empty array then fill with intervals and column densities
+            self.intervals_lcd = (my_intervals, lcd_list)
+
+        return self.intervals_lcd
 
 
 if __name__ == '__main__':
@@ -797,10 +825,10 @@ if __name__ == '__main__':
     ion = argv[3]
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
-    center, nvec, rshift, bv = find_center(data_set_fname)
+    center, nvec, rshift, bv = ([0.5, 0.5, 0.5], [0, 0, 1], 0, None)#find_center(data_set_fname)
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=bv,
+                    center_gal=center, north_vector=nvec, bulk_velocity=bv,use_spectacle=True,
                     redshift=rshift, wavelength_width = 30)
-    makedirs("multi_plot_images", exist_ok=True)
-    outfile = f"multi_plot_images/multi_plot_{ion[0]}_{num:02d}.png"
+    makedirs("mp_frames", exist_ok=True)
+    outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(outfname=outfile)
