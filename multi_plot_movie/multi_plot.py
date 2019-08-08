@@ -66,6 +66,11 @@ class multi_plot():
         redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
         bulk_velocity : array type : bulk velocity of the galaxy in km/s
         use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
+        contour : bool : choose whether to run and plot the contour method on the
+                        number density and los velcoity plots.
+        sigma_smooth : float : smoothing sigma parameter to define the width of
+                        the gaussian to smooth the number density prior to contouring. Defaults
+                        to None which will apply no smoothing
         markers :bool: whether to include markers on light ray and number density plot
         mark_plot_args : dict : set the property of markers if they are to be plotted.
                         optional settings are:
@@ -183,7 +188,7 @@ class multi_plot():
 
     def add_annotations(self):
         """
-        Adds ray annotation and marker annotations to slice plot
+        Adds ray and marker annotations to slice plot
         """
 
         #annotate ray
@@ -219,10 +224,10 @@ class multi_plot():
         Parameters:
             units : YT defined units to return arrays in. defaults to 'code length'
         Returns:
-            ray_begin : the starting coordinates of ray (YT arr)
-            ray_end : the ending coordinates of the ray (YT arr)
-            ray_length : the length of the ray (YT quan)
-            ray_unit : unit vector showing direction of the ray (YT arr)
+            ray_begin : (YT arr): the starting coordinates of ray
+            ray_end : (YT arr): the ending coordinates of the ray
+            ray_length :(YT arr): the length of the ray
+            ray_unit :(YT arr): unit vector showing direction of the ray
         """
         #get start and end points of ray. convert to defined units
         ray_begin = self.ray.light_ray_solution[0]['start']
@@ -245,7 +250,7 @@ class multi_plot():
         convert ion species name to yt style field convention
         ('H I' -> 'H_p0')
         Returns:
-        outname : Name of the ion in the yt form
+        outname : Name of the ion in the yt notation
         """
 
         ######### Deprecated, no longer needed #########3
@@ -646,6 +651,7 @@ class multi_plot():
         computes the column density along the given ray for a given ion species.
         This is done by using spectacle if use_spectacle is True. as well as
         by summing the product of the number density for a given length by that length.
+        and the contour method
 
         Parameters:
             none
@@ -659,6 +665,7 @@ class multi_plot():
                         delta_v in km/s
             line_text : string : a string of properly formatted col dense to
                         be added on to multi_plot
+            num_fitted_lines: int: Number of lines fitted by spectacle
         """
         if self.ray is None:
             self.ray = yt.load(self.ray_filename)
@@ -698,10 +705,10 @@ class multi_plot():
             #check that fit was succesful/at least one line
             if fit_spec_mod is None:
                 print('line could not be fit on ray ', self.ray)
-                tot_num_lines=0
+                num_fitted_lines=0
 
             else:
-                tot_num_lines = len(fit_spec_mod.lines)
+                num_fitted_lines = len(fit_spec_mod.lines)
                 vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
                 line_stats = fit_spec_mod.line_stats(vel_array)
 
@@ -759,21 +766,21 @@ class multi_plot():
         #combine strings
         line_text = "Tot Sums\n"+contour_string + fit_string + total_string
 
-        return sums, line_text, line_models, tot_num_lines
+        return sums, line_text, line_models, num_fitted_lines
 
 
     def get_contour_intervals(self, char_density_frac = 0.5):
         """
         get the intervals along the ray where an absorption feature is found.
-        currently write hdf5 file and read it b/c quickest implementation. Likely
-        want to smoothline this process.
+        Then compute the column density of each interval and save the intervals
+        and log column densities to self.intervals_lcd
 
         Parameters:
             char_density_frac : float < 1: Fraction used to define when to end
                 an absorption feature. Relative to maximum
         Returns:
-            tot_array: tuple of lists: first list containing interval start and stop
-                indices second list with corresponding log column densities
+            intervals_lcd: tuple of list: first list containing interval start and stop
+                indices. second list with corresponding log column densities
         """
         if self.intervals_lcd is None:
             #define intial region to check
@@ -792,15 +799,14 @@ class multi_plot():
             my_intervals=[]
             #check interval has high enough column density
             lim = self.defaults_dict['bounds']['column_density'][0]
-            for i in range(len(intervals)):
-                b, e = intervals[i]
+            for b,e in intervals:
                 #compute log col density
                 curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
 
                 #check if col density is above limit
                 if curr_lcd > lim:
                     lcd_list.append(curr_lcd)
-                    my_intervals.append([b, e])
+                    my_intervals.append( (b, e) )
 
             #create empty array then fill with intervals and column densities
             self.intervals_lcd = (my_intervals, lcd_list)
