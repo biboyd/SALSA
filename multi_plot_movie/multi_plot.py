@@ -398,7 +398,7 @@ class multi_plot():
                     break
                 #increase fit range
                 else:
-                    fit_range +=50
+                    fit_range +=300
 
         #get necessary and give correct units
         rest_wavelength = rest_wavelength*u.Unit('angstrom')
@@ -514,8 +514,6 @@ class multi_plot():
                     if ax_los_velocity is not None:
                         ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
 
-                #add the total column density onto plot
-                tot_lcd = np.log10(tot_lcd)
                 box_props = dict(boxstyle='square', facecolor='white')
                 ax_num_dense.text(0.9, 0.85, f"{len(lcd_list)} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
 

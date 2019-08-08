@@ -15,12 +15,13 @@ def main():
     line_list = []#['H I', 'O VI', 'C IV']
 
     #take in arguments
-    if len(argv) == 6:
+    if len(argv) == 7:
         filename = argv[1]
         ray_dir = argv[2]
         i_name = argv[3]
         out_dir= argv[4]
         use_bv = argv[5]
+        sigma = float(argv[6])
     else:
         raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv?")
 
@@ -57,6 +58,7 @@ def main():
                                     bulk_velocity=bulk_vel,
                                     use_spectacle= True,
                                     plot_spectacle=True,
+                                    sigma_smooth= sigma,
                                     wavelength_width=20,
                                     resolution=0.1)
 
@@ -78,11 +80,11 @@ def main():
 
 
     #calc the number_density limits
-    num_density_dict = {'H I':[1e-11, 1e-6],
-                       'C IV':[1e-14, 1e-9],
-                       'O VI':[1e-12, 1e-7],
-                       'Si III':[1e-11, 1e-6],
-                       'Si II':[1e-11, 1e-6]}
+    num_density_dict = {'H I':[1e-11, 1e-5],
+                       'C IV':[1e-12, 1e-6],
+                       'O VI':[1e-12, 1e-6],
+                       'Si III':[1e-11, 1e-5],
+                       'Si II':[1e-11, 1e-5]}
 
     if i_name in num_density_dict:
         num_density_range = num_density_dict[i_name]
@@ -154,7 +156,7 @@ def create_frames(rays,
         #add ray and other annotations
         ray_num = get_ray_num(ray_fname)
         mp.add_annotations()
-        mp.slice.annotate_title(f"ray {ray_num}")
+        mp.slice.annotate_title(f"ray {ray_num} sigma={mp.sigma_smooth}")
 
         #create and save frame
         outfile = f"{out_dir}/mp{ray_num}.png"
