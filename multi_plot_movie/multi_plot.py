@@ -41,6 +41,7 @@ class multi_plot():
                 plot_spectacle=False,
                 spectacle_defaults=None,
                 contour = True,
+                plot_contour=True,
                 sigma_smooth = None,
                 num_dense_min=None,
                 num_dense_max=None,
@@ -116,6 +117,7 @@ class multi_plot():
             self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
         self.contour = contour
+        self.plot_contour = plot_contour
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
@@ -173,7 +175,7 @@ class multi_plot():
             self.marker_spacing = self.mark_kwargs.pop('spacing')
             self.marker_cmap = self.mark_kwargs.pop('marker_cmap')
             self.marker_shape = self.mark_kwargs.pop('marker_shape')
-
+        self.mark_dist_arr = None
 
         #optionally set min/max value for number density plot
         self.num_dense_min = num_dense_min
@@ -185,14 +187,20 @@ class multi_plot():
         self.flux_array = None
 
         self.intervals_lcd = None
+   
 
-    def add_annotations(self):
+    def add_annotations(self, plot=True):
         """
         Adds ray and marker annotations to slice plot
+
+        Parameters:
+            plot : bool : Whether to annotate ray/markers to the slice plot or to just
+            calculate the marker positions for placing on los_velocity plot
         """
 
-        #annotate ray
-        self.slice.annotate_ray(self.ray, arrow=True, plot_args={'alpha':0.5, 'color':'white', 'linewidth':2})
+        if plot:
+            #annotate ray
+            self.slice.annotate_ray(self.ray, arrow=True, plot_args={'alpha':0.5, 'color':'white', 'linewidth':2})
 
         if self.markers:
             #get ray positional properties
@@ -206,16 +214,17 @@ class multi_plot():
             mrk_cmap = plt.cm.get_cmap(self.marker_cmap)
             self.colorscale = np.linspace(0, 1, mark_dist_arr.size)
 
-            #construct unit vec from ray
-            for i in range(mark_dist_arr.size):
-                #calculate the position
-                mrk_pos = ray_begin + ray_direction * self.mark_dist_arr[i]
+            if plot:
+                #construct unit vec from ray
+                for i in range(mark_dist_arr.size):
+                    #calculate the position
+                    mrk_pos = ray_begin + ray_direction * self.mark_dist_arr[i]
 
-                #choose correct color from cmap
-                mrk_kwargs = self.mark_kwargs.copy()
-                mrk_kwargs['color'] = mrk_cmap(self.colorscale[i])
+                    #choose correct color from cmap
+                    mrk_kwargs = self.mark_kwargs.copy()
+                    mrk_kwargs['color'] = mrk_cmap(self.colorscale[i])
 
-                self.slice.annotate_marker(mrk_pos, marker=self.marker_shape, plot_args=mrk_kwargs)
+                    self.slice.annotate_marker(mrk_pos, marker=self.marker_shape, plot_args=mrk_kwargs)
 
     def ray_position_prop(self, units='code_length'):
         """
@@ -451,22 +460,23 @@ class multi_plot():
             box_props = dict(boxstyle='square', facecolor='white')
             ax_vel.text(0.8, 0.05, line_txt, transform=ax_vel.transAxes, bbox = box_props)
 
-            #annotate number of lines
-            ax_vel.text(0.9, 0.85, f"{num_fitted_lines} lines", transform=ax_vel.transAxes, bbox = box_props)
+            if self.use_spectacle:
+                #annotate number of lines
+                ax_vel.text(0.9, 0.85, f"{num_fitted_lines} lines", transform=ax_vel.transAxes, bbox = box_props)
 
-            colors = ['tab:purple', 'tab:orange', 'tab:green']
-            vel= np.linspace(vel_min.value, vel_max.value, 1000) *u.Unit('km/s')
-            #plot individual column lines
-            if line_models is not None:
-                for mod, color in zip(line_models, colors):
-                    #plot centroids of largest lines
-                    dv = mod.lines[0].delta_v.value
-                    cd = mod.lines[0].column_density.value
-                    ax_vel.scatter(dv, 1, c=color, marker='v',zorder=1, label="logN={:04.1f}".format(cd))
-                    #plott the largest lines
-                    if self.plot_spectacle:
-                        ax_vel.step(vel, mod(vel), linestyle='--', color=color, alpha=0.75)
-                ax_vel.legend(loc='lower left')
+                colors = ['tab:purple', 'tab:orange', 'tab:green']
+                vel= np.linspace(vel_min.value, vel_max.value, 1000) *u.Unit('km/s')
+                #plot individual column lines
+                if line_models is not None:
+                    for mod, color in zip(line_models, colors):
+                        #plot centroids of largest lines
+                        dv = mod.lines[0].delta_v.value
+                        cd = mod.lines[0].column_density.value
+                        ax_vel.scatter(dv, 1, c=color, marker='v',zorder=5, label="logN={:04.1f}".format(cd))
+                        #plott the largest lines
+                        if self.plot_spectacle:
+                            ax_vel.step(vel, mod(vel), linestyle='--', color=color, alpha=0.75)
+                    ax_vel.legend(loc='lower left')
 
 
         return wavelength, velocity, flux
@@ -505,7 +515,7 @@ class multi_plot():
             ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
 
             #check if should plot contour intervals
-            if self.contour:
+            if self.plot_contour:
                 intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0
                 for i in range(len(intervals)):
@@ -550,13 +560,16 @@ class multi_plot():
             ax_los_velocity.set_ylim(-600, 600)
 
         #add appropriate markers to the plot
-        if self.markers:
-            if ax_los_velocity is not None:
-                Vys = np.zeros_like(self.mark_dist_arr) - 500
-                plot_markers = {}
-                plot_markers.update(self.mark_kwargs)
-                plot_markers.update({'alpha':1})
-                ax_los_velocity.scatter(self.mark_dist_arr.value, Vys,zorder=3, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **plot_markers)
+        if self.markers and ax_los_velocity is not None:
+            #check if marker distances have been defined
+            if self.mark_dist_arr is None:
+                self.add_annotations(plot=False)
+
+            Vys = np.zeros_like(self.mark_dist_arr) - 500
+            plot_markers = {}
+            plot_markers.update(self.mark_kwargs)
+            plot_markers.update({'alpha':1})
+            ax_los_velocity.scatter(self.mark_dist_arr.value, Vys,zorder=3, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **plot_markers)
 
     def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
@@ -677,8 +690,8 @@ class multi_plot():
 
         line_sum_cd=0
         line_models = None
-        #check if should try and fit with spect.
-        #don't try to fit lines with over 20 logN. Very oversaturated
+        num_fitted_lines=0
+        #check if should try to fit with spectacle
         if self.use_spectacle:
             #create spectra for a single line to fit
             wav = int( np.round(self.wavelength_center) )
@@ -705,7 +718,7 @@ class multi_plot():
             #check that fit was succesful/at least one line
             if fit_spec_mod is None:
                 print('line could not be fit on ray ', self.ray)
-                num_fitted_lines=0
+                
 
             else:
                 num_fitted_lines = len(fit_spec_mod.lines)
