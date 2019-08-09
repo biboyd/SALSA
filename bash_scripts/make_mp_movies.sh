@@ -2,6 +2,7 @@
 
 #runs all make movie scripts
 frameDir=$1
+force="$2"
 cd $frameDir
 
 #check for equal number of frames
@@ -17,7 +18,11 @@ else
 	echo "H I  has $H_frames"
 	echo "C IV has $C_frames"
 	echo "O VI has $O_frames"
-	exit 1
+        #check if force movie was called (-f)
+        if [ "$force" != "-f" ]
+	then
+		exit 1
+	fi
 fi
 #make individual movies using movie.sh
 for i in H_I C_IV O_VI Si_II Si_III Ne_VIII Mg_X
