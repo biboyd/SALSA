@@ -7,23 +7,12 @@ from multi_plot import multi_plot
 from center_finder import find_center
 from os import makedirs, listdir
 
-def main():
+def main(filename, ray_dir, i_name, out_dir, use_bv, sigma):
     #init mpi
     comm = MPI.COMM_WORLD
 
     #setup conditions
     line_list = []#['H I', 'O VI', 'C IV']
-
-    #take in arguments
-    if len(argv) == 7:
-        filename = argv[1]
-        ray_dir = argv[2]
-        i_name = argv[3]
-        out_dir= argv[4]
-        use_bv = argv[5]
-        sigma = float(argv[6])
-    else:
-        raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv?")
 
     if comm.rank == 0:
         center, nvec, rshift, bulk_vel = find_center(filename)
@@ -37,17 +26,20 @@ def main():
         rshift = np.zeros(1, dtype=np.float64)
         bulk_vel = np.zeros(3, dtype=np.float64)
 
+
+
     #broadcast information to all processes
     comm.Barrier()
     comm.Bcast([center, MPI.DOUBLE])
     comm.Bcast([nvec, MPI.DOUBLE])
     comm.Bcast([rshift, MPI.DOUBLE])
-    comm.Bcast([bulk_vel, MPI.DOUBLE])
+
+    if use_bv is True:
+        comm.Bcast([bulk_vel, MPI.DOUBLE])
+    else:
+        bulk_vel=None
     comm.Barrier()
 
-    #check to see if should use bulk velocity
-    if use_bv != 'True':
-        bulk_vel=None
 
     #set up multiplot settings
     mp_kwargs = dict(ds_filename=filename, ion_name=i_name,
@@ -59,8 +51,7 @@ def main():
                                     use_spectacle= True,
                                     plot_spectacle=True,
                                     sigma_smooth= sigma,
-                                    wavelength_width=20,
-                                    resolution=0.1)
+                                    wavelength_width=20)
 
 
     #collect only ray files in ray_dir
@@ -136,10 +127,15 @@ def create_frames(rays,
     creates a movie by combining all the plots made from the ray in ray_dir
 
     Parameters:
-        rays
-        num_dense
-        slice_width
-        slice_height
+        rays : list : list of full paths to rays
+        slice_width : float : define width of slice in multi plot. in units kpc
+        slice_height : float : define height of slice in multi plot. in units kpc
+        out_dir : string/path : path to directory where frames will be saved
+        multi_plot_kwargs : dict : dictionary of arguments to pass to the multi_plot
+                class
+
+    Returns:
+        none
     """
 
     #create initial slice
@@ -173,6 +169,14 @@ def create_frames(rays,
 
 
 def get_ray_num(file_path):
+    """
+    extract the ray's number from it's file name
+
+    Parameters:
+        file_path : string: full path to ray file
+    Returns:
+        num :string : the number corresponding to the ray
+    """
     filename = file_path.split('/')[-1]
     num = filename[3:-3]
 
@@ -192,4 +196,20 @@ def ion_p_num(ion_name):
     return outname
 
 if __name__ == '__main__':
-    main()
+    #take in arguments
+    if len(argv) == 7:
+        filename = argv[1]
+        ray_dir = argv[2]
+        i_name = argv[3]
+        out_dir= argv[4]
+        use_bv = argv[5]
+        sigma = float(argv[6])
+    else:
+        raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv? smoothin_factor")
+
+    #check to see if should use bulk velocity
+    if use_bv == 'True':
+        use_bv=True
+    else:
+        use_bv=False
+    main(filename, ray_dir, ion_name, out_dir, use_bv, sigma)
