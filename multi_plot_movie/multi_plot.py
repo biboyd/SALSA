@@ -187,7 +187,7 @@ class multi_plot():
         self.flux_array = None
 
         self.intervals_lcd = None
-   
+
 
     def add_annotations(self, plot=True):
         """
@@ -377,50 +377,41 @@ class multi_plot():
             wavelength, velocity and flux arrays created by spectrum generator
                 units are angstrom, km/s
         """
+        #set which ions to add to spectra
         if single_line is None:
             ion_list = self.ion_list
         else:
             ion_list = [single_line]
+
         # calc doppler redshift due to bulk motion
         c = yt.units.c
         beta = self.bulk_velocity/c
         z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
         z_dopp = z_dopp.value
+
         #adjust wavelegnth_center for redshift
         rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
-        #generate spectrum defined by inputs
-        max_iter=5
-        for _ in range(max_iter):
-        #set wavelength limits for plots
-            if single_line is None:
-                wave_min = rest_wavelength - self.wavelength_width/2
-                wave_max = rest_wavelength + self.wavelength_width/2
-            else:
-                fit_range = 150
-                wave_min = rest_wavelength - fit_range
-                wave_max = rest_wavelength + fit_range
+        wave_min = rest_wavelength - self.wavelength_width/2
+        wave_max = rest_wavelength + self.wavelength_width/2
 
+        if single_line is None:
+            #use wavelength_width to set the range
             spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution, line_database='my_lines.txt')
-            spect_gen.make_spectrum(self.ray, lines=ion_list)
+        else:
+            #use auto feature to capture full line
+            spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.resolution, line_database='my_lines.txt')
 
-            #increase width when doing a fit
-            if single_line is None:
-                break
-            else:
-                #check if wings are at flux of 1
-                if spect_gen.flux_field[0] >= 0.99:
-                    break
-                #increase fit range
-                else:
-                    fit_range +=300
 
-        #get necessary and give correct units
+        spect_gen.make_spectrum(self.ray, lines=ion_list)
+
+
+        #get fields from spectra and give correct units
         rest_wavelength = rest_wavelength*u.Unit('angstrom')
         wavelength = spect_gen.lambda_field * u.Unit('angstrom')
         flux = spect_gen.flux_field
 
-        wave_min = wave_min*u.Unit('angstrom')
-        wave_max = wave_max*u.Unit('angstrom')
+        wave_min *=u.Unit('angstrom')
+        wave_max *=u.Unit('angstrom')
 
 
         #calc velocity using relativistic doppler equation
@@ -718,7 +709,7 @@ class multi_plot():
             #check that fit was succesful/at least one line
             if fit_spec_mod is None:
                 print('line could not be fit on ray ', self.ray)
-                
+
 
             else:
                 num_fitted_lines = len(fit_spec_mod.lines)
