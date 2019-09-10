@@ -153,14 +153,15 @@ if __name__ == '__main__':
 
     #fields = ["C_p3_number_density", "O_p5_number_density"]
     #cmaps = ['magma', 'magma']
-    fields = ["density", "H_p0_number_density", "temperature", "metallicity"]
+    #fields = ["density", "H_p0_number_density", "temperature", "metallicity"]
     cmaps = ["magma", "magma", "thermal", "haline"]
+    fields = ['density', 'H_p0_number_density', 'Si_p1_number_density', 'Si_p2_number_density', 'Si_p3_number_density', 'C_p1_number_density', 'C_p3_number_density', 'O_p5_number_density']
     c, n, r, bv = find_center(dsname)
     makedirs(out_dir, exist_ok=True)
     for f in fields:
         makedirs(f"{out_dir}/{f}", exist_ok=True)
 
-    names=['cold', 'cool', 'warm', 'hot']
-    for f in names:
-        makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
-    create_proj_frames(dsname, c, n, ccwh_gas=True,fields=fields, color_maps=cmaps, num_frames=frms, offset=offset, out_dir=out_dir)
+    #names=['cold', 'cool', 'warm', 'hot']
+    #for f in names:
+    #    makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
+    create_proj_frames(dsname, c, n, ccwh_gas=False,fields=fields, color_maps=cmaps, num_frames=frms, offset=offset, out_dir=out_dir)
