@@ -80,6 +80,10 @@ def create_proj_frames(ds_fname,
                     temperature=[1e29, 1e31],
                     metallicity=[1e22, 1e24],
                     H_p0_number_density=[1e15, 1e22],
+                    Si_p1_number_density=[1e7, 1e19],
+                    Si_p2_number_density=[1e9, 1e16],
+                    Si_p3_number_density=[1e9, 1e15],
+                    C_p1_number_density=[1e11, 1e16],
                     C_p3_number_density=[1e10, 1e16],
                     O_p5_number_density=[1e12, 1e16],
                     cold=[1e-5, 1e-1],
@@ -88,7 +92,7 @@ def create_proj_frames(ds_fname,
                     hot=[1e-8, 1e-4])
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
-    trident.add_ion_fields(ds, ['C IV', 'O VI'])
+    trident.add_ion_fields(ds, ['Si II', 'Si III','Si IV', 'C II', 'C IV', 'O VI'])
     sph = ds.sphere(center, (width, 'kpc'))
     pad = int(np.ceil( np.log10(num_frames)))
     for i in my_rot_nums:
@@ -110,6 +114,7 @@ def create_proj_frames(ds_fname,
             prj.set_zlim(fld, lim_lb, lim_ub)
             prj.set_unit('density', 'Msun/pc**2')
             prj.set_cmap(field=fld, cmap=cmap)
+            prj.set_background_color(field=fld, cmap=cmap)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
 
         if ccwh_gas:
@@ -154,8 +159,9 @@ if __name__ == '__main__':
     #fields = ["C_p3_number_density", "O_p5_number_density"]
     #cmaps = ['magma', 'magma']
     #fields = ["density", "H_p0_number_density", "temperature", "metallicity"]
-    cmaps = ["magma", "magma", "thermal", "haline"]
+    #cmaps = ["magma", "magma", "thermal", "haline"]
     fields = ['density', 'H_p0_number_density', 'Si_p1_number_density', 'Si_p2_number_density', 'Si_p3_number_density', 'C_p1_number_density', 'C_p3_number_density', 'O_p5_number_density']
+    cmaps= ["magma"] *len(fields) 
     c, n, r, bv = find_center(dsname)
     makedirs(out_dir, exist_ok=True)
     for f in fields:
