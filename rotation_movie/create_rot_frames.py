@@ -4,6 +4,7 @@ import numpy as np
 from mpi4py import MPI
 from scipy.spatial.transform import Rotation
 from os import makedirs
+import seaborn as sns
 
 def create_proj_frames(ds_fname,
                        center,
@@ -76,20 +77,29 @@ def create_proj_frames(ds_fname,
     my_rot_nums = split_rot_nums[comm.rank]
 
     #limits dictionary to fix colobar scale
-    lim_dict = dict(density=[1e-6, 1e0],
+    lim_dict = dict(density=[5e-2, 1e4], #in msun/pc^2
                     temperature=[1e29, 1e31],
                     metallicity=[1e22, 1e24],
-                    H_p0_number_density=[1e15, 1e22],
-                    Si_p1_number_density=[1e7, 1e19],
-                    Si_p2_number_density=[1e9, 1e16],
-                    Si_p3_number_density=[1e9, 1e15],
+                    H_p0_number_density=[1e12, 1e24],
+                    Si_p1_number_density=[1e10, 1e17],
+                    Si_p2_number_density=[1e11, 1e16],
+                    Si_p3_number_density=[1e11, 1e16],
                     C_p1_number_density=[1e11, 1e16],
-                    C_p3_number_density=[1e10, 1e16],
-                    O_p5_number_density=[1e12, 1e16],
+                    C_p3_number_density=[1e11, 1e16],
+                    O_p5_number_density=[1e11, 1e15],
                     cold=[1e-5, 1e-1],
                     cool=[1e-6, 1e-2],
                     warm=[1e-7, 1e-3],
                     hot=[1e-8, 1e-4])
+
+    titles = dict(density="Density",temperature="Temperature", metallicity="Metallicity", H_p0_number_density="H I",
+                    Si_p1_number_density="Si II",
+                    Si_p2_number_density="Si III",
+                    Si_p3_number_density="Si IV",
+                    C_p1_number_density="C II",
+                    C_p3_number_density="C IV",
+                    O_p5_number_density="O VI")
+
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
     trident.add_ion_fields(ds, ['Si II', 'Si III','Si IV', 'C II', 'C IV', 'O VI'])
@@ -108,13 +118,13 @@ def create_proj_frames(ds_fname,
                                            data_source=sph)
             # set color bar and color map to be consistent on all proj
             lim_lb, lim_ub = lim_dict[fld]
-            if fld == 'density':
-                lim_lb = ds.quan(lim_lb, 'g/cm**2').in_units('Msun/pc**2')
-                lim_ub = ds.quan(lim_ub, 'g/cm**2').in_units('Msun/pc**2')
-            prj.set_zlim(fld, lim_lb, lim_ub)
             prj.set_unit('density', 'Msun/pc**2')
+            prj.set_zlim(fld, lim_lb, lim_ub)
             prj.set_cmap(field=fld, cmap=cmap)
-            prj.set_background_color(field=fld, cmap=cmap)
+            prj.set_background_color(field=fld)
+            prj.annotate_title(titles[fld])
+            prj.annotate_scale()
+            prj.hide_axes(draw_frame=True)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
 
         if ccwh_gas:
@@ -154,14 +164,19 @@ if __name__ == '__main__':
     dsname = sys.argv[1]
     frms = int(sys.argv[2])
     offset=float(sys.argv[3])
-    out_dir = sys.argv[4]
+    width=float(sys.argv[4])
+    out_dir = sys.argv[5]
 
     #fields = ["C_p3_number_density", "O_p5_number_density"]
     #cmaps = ['magma', 'magma']
     #fields = ["density", "H_p0_number_density", "temperature", "metallicity"]
     #cmaps = ["magma", "magma", "thermal", "haline"]
     fields = ['density', 'H_p0_number_density', 'Si_p1_number_density', 'Si_p2_number_density', 'Si_p3_number_density', 'C_p1_number_density', 'C_p3_number_density', 'O_p5_number_density']
-    cmaps= ["magma"] *len(fields) 
+    h1_cmap = sns.blend_palette(("white", "#ababab", "#565656", "black",
+                                  "#4575b4", "#984ea3", "#d73027",
+                                  "darkorange", "#ffe34d"), as_cmap=True)
+    cmaps = ['magma', h1_cmap, 'ice', 'ice', 'ice', 'cividis', 'cividis', 'haline']
+    #cmaps= ["magma"] *len(fields) 
     c, n, r, bv = find_center(dsname)
     makedirs(out_dir, exist_ok=True)
     for f in fields:
@@ -170,4 +185,4 @@ if __name__ == '__main__':
     #names=['cold', 'cool', 'warm', 'hot']
     #for f in names:
     #    makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
-    create_proj_frames(dsname, c, n, ccwh_gas=False,fields=fields, color_maps=cmaps, num_frames=frms, offset=offset, out_dir=out_dir)
+    create_proj_frames(dsname, c, n, ccwh_gas=False,fields=fields, color_maps=cmaps, num_frames=frms, width=width,offset=offset, out_dir=out_dir)

@@ -9,16 +9,17 @@
 dsName=$1
 nFrames=$2
 off=$3
+width=$4
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/rotate_projection/$dsName/offset${off}/frames"
+outDir="$scratch/rotate_projection/$dsName/offset${off}_width${width}/frames_same_scale"
 if ! [ -d $outDir ]
 then
 	mkdir -p $outDir
 fi
 
-mpirun -np 32							\
+mpirun -np 64							\
 	python ~/Repo/CGM/rotation_movie/create_rot_frames.py\
-		$inFile $nFrames $off $outDir
+		$inFile $nFrames $off $width $outDir
 scontrol show job $SLURM_JOB_ID
 
