@@ -28,3 +28,10 @@ ffmpeg	-y 						\
 	./combined_ions.mp4
 
 rm tmp_top.mp4 tmp_bottom.mp4
+
+#pad and annotate name
+
+ffmpeg -i combined_ions.mp4 -vf "pad=width=4154:height=1894:x=40:y=75:color=white" padded_ions.mp4
+
+#ffmpeg -i padded_ions.mp4 -vf drawtext="fontsize=30:font=/usr/share/fonts/truetype/freefont/FreeMono.ttf:text='FOGGIE - B. Boyd(MSU)':x=(w-text_w)/1.01:y=(h-text_h)/1.01" final_ions.mp4
+

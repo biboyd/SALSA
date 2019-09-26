@@ -114,6 +114,7 @@ def create_proj_frames(ds_fname,
             prj = yt.OffAxisProjectionPlot(ds, proj_vec, fld,
                                            center=center, width=(width, 'kpc'),
                                            north_vector=normal_vec,
+                                           fontsize=24,
                                            weight_field=weight,
                                            data_source=sph)
             # set color bar and color map to be consistent on all proj
@@ -123,7 +124,7 @@ def create_proj_frames(ds_fname,
             prj.set_cmap(field=fld, cmap=cmap)
             prj.set_background_color(field=fld)
             prj.annotate_title(titles[fld])
-            prj.annotate_scale()
+            prj.annotate_scale(coeff=0.1*width, unit='kpc')
             prj.hide_axes(draw_frame=True)
             prj.save(f"{out_dir}/{fld}/proj{i:0{pad}d}.png")
 
@@ -152,7 +153,7 @@ def create_proj_frames(ds_fname,
                 prj.set_cmap(field='density', cmap='magma')
                 prj.set_background_color('density')
                 prj.annotate_title(label)
-                prj.annotate_scale()
+                prj.annotate_scale(coeff=0.1*width, unit='kpc')
                 prj.hide_axes(draw_frame=True)
                 prj.save(f"{out_dir}/{name}_gas/proj{i:0{pad}d}.png")
 
@@ -175,8 +176,10 @@ if __name__ == '__main__':
     h1_cmap = sns.blend_palette(("white", "#ababab", "#565656", "black",
                                   "#4575b4", "#984ea3", "#d73027",
                                   "darkorange", "#ffe34d"), as_cmap=True)
-    cmaps = ['magma', h1_cmap, 'ice', 'ice', 'ice', 'cividis', 'cividis', 'haline']
-    #cmaps= ["magma"] *len(fields) 
+    density_cmap = sns.blend_palette(("black", "#4575b4", "#4daf4a", "#ffe34d", "darkorange"), as_cmap=True)
+    cmaps = ['magma', h1_cmap, 'ice', 'ice', 'ice', 'cividis', 'cividis', 'plasma']
+    #cmaps = [density_cmap, h1_cmap,'plasma', 'magma', 'inferno', 'plasma', 'inferno', 'magma']
+
     c, n, r, bv = find_center(dsname)
     makedirs(out_dir, exist_ok=True)
     for f in fields:

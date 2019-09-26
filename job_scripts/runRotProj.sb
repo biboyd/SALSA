@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --ntasks=64
+#SBATCH --ntasks=128
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=2G
-#SBATCH -t 03:00:00
+#SBATCH -t 06:00:00
 #SBATCH -o slurm_logs/slurm-%j.out
 
 dsName=$1
@@ -12,13 +12,13 @@ off=$3
 width=$4
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/rotate_projection/$dsName/offset${off}_width${width}/frames_same_scale"
+outDir="$scratch/rotate_projection/$dsName/offset${off}_width${width}/frames"
 if ! [ -d $outDir ]
 then
 	mkdir -p $outDir
 fi
 
-mpirun -np 64							\
+mpirun -np 128							\
 	python ~/Repo/CGM/rotation_movie/create_rot_frames.py\
 		$inFile $nFrames $off $width $outDir
 scontrol show job $SLURM_JOB_ID
