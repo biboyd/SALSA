@@ -14,7 +14,7 @@ from scipy.ndimage import gaussian_filter
 
 path.insert(0, "/mnt/home/boydbre1/Repo/absorber_generation_post")
 path.insert(0, "/home/bb/Repo/absorber_generation_post")
-from new_generate_contour_absorbers import identify_intervals_char_length
+from new_generate_contour_absorbers import identify_intervals_char_length, identify_intervals
 
 class multi_plot():
     """
@@ -40,8 +40,8 @@ class multi_plot():
                 use_spectacle=False,
                 plot_spectacle=False,
                 spectacle_defaults=None,
-                contour = True,
-                plot_contour=True,
+                contour = False,
+                plot_contour=False,
                 sigma_smooth = None,
                 num_dense_min=None,
                 num_dense_max=None,
@@ -817,6 +817,39 @@ class multi_plot():
 
         return self.intervals_lcd
 
+    def get_cloud_intervals(self, coldens_fraction=0.85):
+        """
+        Etract features from number density using a cloud technique
+        create by Jason Tumlinson
+        """
+        num_density = self.ray.data[self.ion_p_name()+'_number_density']
+        dl_list = self.ray.data['dl']
+
+        cut = 0.999
+        total = np.sum(num_density)
+        ratio = 0.001
+        while ratio < coldens_fraction:
+            part = np.sum(num_density[num_density > cut * np.max(num_density)])
+            ratio = part / total
+            cut = cut - 0.001
+
+        threshold = cut * np.max(num_density)
+
+        intervals = identify_intervals(num_density, threshold)
+
+        my_intervals=[]
+        lcd_list=[]
+        lim = self.defaults_dict['bounds']['column_density'][0]
+        for b,e in intervals:
+            #compute log col density
+            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+            #check if col density is above limit
+            if curr_lcd > lim:
+                lcd_list.append(curr_lcd)
+                my_intervals.append( (b, e) )
+
+        return my_intervals, lcd_list
 
 if __name__ == '__main__':
     data_set_fname = argv[1]
