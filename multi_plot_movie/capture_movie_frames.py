@@ -200,7 +200,7 @@ if __name__ == '__main__':
     if len(argv) == 7:
         filename = argv[1]
         ray_dir = argv[2]
-        i_name = argv[3]
+        ion_name = argv[3]
         out_dir= argv[4]
         use_bv = argv[5]
 
