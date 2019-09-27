@@ -31,7 +31,7 @@ def main_compare(ds_filename, ray_filename, ion_list, out_dir="./"):
         none
     """
     makedirs(out_dir, exist_ok=True)
-    redshift=0#center, nvec, redshift, bv = find_center(ds_filename)
+    center, nvec, redshift, bv = find_center(ds_filename)
     for ion in ion_list:
         mp = multi_plot(ds_filename, ray_filename,
                         ion_name=ion,
