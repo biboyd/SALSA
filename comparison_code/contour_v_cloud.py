@@ -8,6 +8,7 @@ import numpy as np
 import yt
 import trident
 from matplotlib.patches import Patch
+from functools import reduce
 from os import makedirs
 import sys
 sys.path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie")
@@ -72,8 +73,38 @@ def plot_intervals(ax, l_list, intervals, lcd_list, plot_args=dict(color='tab:gr
         tot_lcd += 10**curr_lcd
     return np.log10(tot_lcd)
 
+def get_info(ds_fname, ray_fname, ion):
+    c, n, r, bv = find_center(ds_fname)
+
+    mp = multi_plot(ds_fname, ray_fname, ion_name=ion, redshift=r)
+
+    ctour_intervals, ctour_lcd = mp.get_contour_intervals()
+    cloud_intervals, cloud_lcd = mp.get_cloud_intervals()
+
+    n_contour = len(ctour_intervals)
+    n_cloud = len(cloud_intervals)
+
+    #check for overlaps
+    length_arr = np.array(mp.ray.data["l"])
+    ctour_arrs=np.array([])
+    cloud_arrs=np.array([])
+    for i, f in ctour_intervals:
+        ctour_arrs = np.concatenate((ctour_arrs,length_arr[i:f]), 0)
+    for i, f in cloud_intervals:
+        cloud_arrs = np.concatenate((cloud_arrs,length_arr[i:f]), 0)
+
+    intersect_arr = np.intersect1d(ctour_arrs, cloud_arrs)
+    num_intersect = len(intersect_arr)
+    num_covered = len(ctour_arrs) + len(cloud_arrs)
+    percent_intersect = num_intersect/num_covered * 100
+
+    print(f"percent intersect {percent_intersect: .2f}%")
+    return n_contour, n_cloud, ctour_lcd, cloud_lcd, percent_intersect
+
+
 if __name__ == '__main__':
     ds =sys.argv[1]
     ray = sys.argv[2]
     ion = ['H I']
     main_compare(ds, ray, ion)
+    get_info(ds, ray, ion[0])
