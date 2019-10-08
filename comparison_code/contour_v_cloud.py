@@ -18,23 +18,23 @@ from multi_plot import multi_plot
 from center_finder import find_center
 
 
-def main_compare(ds_filename, ray_filename, ion_list, out_dir="./"):
+def plot_compare(ds_fname, ray_fname, ion_list, out_dir="./", fname=None, char_frac=0.5, dense_frac=0.85):
     """
     plot the intervals of the two methods of extraction on top of
     a number density plot vs ray length
 
     Parameters:
-        ds_filename :string: path to dataset
-        ray_filename :string: path to the light ray file
+        ds_fname :string: path to dataset
+        ray_fname :string: path to the light ray file
         ion_list :list: List of ion names to look at (ie "H I" "C IV"...)
         out_dir :string: directory in which to save the plots
     Returns:
         none
     """
     makedirs(out_dir, exist_ok=True)
-    center, nvec, redshift, bv = find_center(ds_filename)
+    center, nvec, redshift, bv = find_center(ds_fname)
     for ion in ion_list:
-        mp = multi_plot(ds_filename, ray_filename,
+        mp = multi_plot(ds_fname, ray_fname,
                         ion_name=ion,
                         redshift=redshift)
 
@@ -43,8 +43,8 @@ def main_compare(ds_filename, ray_filename, ion_list, out_dir="./"):
         mp.plot_num_dense_los_vel(ax_num_dense=ax)
 
         #extract features using two methods
-        ctour_intervals, ctour_lcd = mp.get_contour_intervals()
-        cloud_intervals, cloud_lcd = mp.get_cloud_intervals()
+        ctour_intervals, ctour_lcd = mp.get_contour_intervals(char_density_frac=char_frac)
+        cloud_intervals, cloud_lcd = mp.get_cloud_intervals(coldens_fraction=dense_frac)
         l_list = mp.ray.data['l'].in_units('kpc')
 
         #plot methods
@@ -59,7 +59,10 @@ def main_compare(ds_filename, ray_filename, ion_list, out_dir="./"):
 
         ax.legend(handles=[ctour_patch, cloud_patch])
 
-        outfile=f"{mp.ion_p_name():}_feature_comp.png"
+        if fname is None:
+            outfile=f"{mp.ion_p_name():}_feature_comp.png"
+        else:
+            outfile = fname
         fig.savefig(f"{out_dir}/{outfile}")
 
 def plot_intervals(ax, l_list, intervals, lcd_list, plot_args=dict(color='tab:grey', alpha=0.5)):
@@ -73,17 +76,22 @@ def plot_intervals(ax, l_list, intervals, lcd_list, plot_args=dict(color='tab:gr
         tot_lcd += 10**curr_lcd
     return np.log10(tot_lcd)
 
-def get_info(ds_fname, ray_fname, ion):
+def get_info(ds_fname, ray_fname, ion, char_frac=0.5, dense_frac=0.85):
     c, n, r, bv = find_center(ds_fname)
 
     mp = multi_plot(ds_fname, ray_fname, ion_name=ion, redshift=r)
 
-    ctour_intervals, ctour_lcd = mp.get_contour_intervals()
-    cloud_intervals, cloud_lcd = mp.get_cloud_intervals()
+    ctour_intervals, ctour_lcd = mp.get_contour_intervals(char_density_frac=char_frac)
+    cloud_intervals, cloud_lcd = mp.get_cloud_intervals(coldens_fraction=dense_frac)
 
+    tot_ctour_lcd = np.sum(ctour_lcd)
+    tot_cloud_lcd = np.sum(cloud_lcd)
     n_contour = len(ctour_intervals)
     n_cloud = len(cloud_intervals)
 
+    """
+    ADD A SIMILAR THING THAT CHECKS FOR PERCENT OF NUMBER DENSITY THEY OVERLAP
+    """
     #check for overlaps
     length_arr = np.array(mp.ray.data["l"])
     ctour_arrs=np.array([])
@@ -99,12 +107,40 @@ def get_info(ds_fname, ray_fname, ion):
     percent_intersect = num_intersect/num_covered * 100
 
     print(f"percent intersect {percent_intersect: .2f}%")
-    return n_contour, n_cloud, ctour_lcd, cloud_lcd, percent_intersect
+    return (n_contour, n_cloud, tot_ctour_lcd, tot_cloud_lcd, percent_intersect)
 
+
+def parameter_sweep(ds_fname, ray_fname, ion, steps=25, out_dir='./', char_bound=[0.1, 0.9],dense_bound=[0.5, 0.95]):
+    dense_frac_array=np.linspace(dense_bound[0], dense_bound[1], steps)
+    char_frac_array= np.linspace(char_bound[0], char_bound[1], steps)
+
+    all_info_array = np.empty((25**2, 7))
+    for i in range(steps):
+        char_frac = char_frac_array[i]
+        for j in range(steps):
+            dense_frac = dense_frac_array[j]
+
+            #create plots
+            out_fname = f"char_{char_frac:0.2f}_dense_{dense_frac:0.2f}_comp.png"
+            plot_compare(ds_fname, ray_fname, [ion], out_dir=out_dir, fname=out_fname, char_frac=char_frac, dense_frac=dense_frac)
+            #get info on overlap
+            curr_info = get_info(ds_fname, ray_fname, ion, char_frac=char_frac, dense_frac=dense_frac)
+            #fill info into array
+            all_info_array[25*i + j, 0] = char_frac
+            all_info_array[25*i + j, 1] = dense_frac
+            #print(curr_info)
+            #print(all_info_array[25*i + j, 2:])
+            all_info_array[25*i + j, 2:] = curr_info
+
+    np.save(f"{out_dir}/all_info.npy", all_info_array)
 
 if __name__ == '__main__':
     ds =sys.argv[1]
     ray = sys.argv[2]
-    ion = ['H I']
-    main_compare(ds, ray, ion)
-    get_info(ds, ray, ion[0])
+    out_dir = sys.argv[3]
+    ion = 'H I'
+    #remove path and ".h5" from ray
+    ray_name = ray.split("/")[-1]
+    ray_name = ray_name.split('.')[0]
+    out_dir = f"{out_dir}/{ray_name}_{ion[0]}_{ion[-1]}"
+    parameter_sweep(ds, ray, ion, steps=25, out_dir=out_dir)
