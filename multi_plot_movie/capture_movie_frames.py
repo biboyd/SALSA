@@ -196,10 +196,10 @@ def ion_p_num(ion_name):
 
 if __name__ == '__main__':
     #take in arguments
-    if len(argv) == 7:
+    if len(argv) == 6:
         filename = argv[1]
         ray_dir = argv[2]
-        i_name = argv[3]
+        ion_name = argv[3]
         out_dir= argv[4]
         use_bv = argv[5]
         frac = float(argv[6])
