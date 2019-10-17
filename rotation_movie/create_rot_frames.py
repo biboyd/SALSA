@@ -81,28 +81,33 @@ def create_proj_frames(ds_fname,
                     temperature=[1e29, 1e31],
                     metallicity=[1e22, 1e24],
                     H_p0_number_density=[1e12, 1e24],
+                    Mg_p1_number_density=[1e10, 1e17],
                     Si_p1_number_density=[1e10, 1e17],
                     Si_p2_number_density=[1e11, 1e16],
                     Si_p3_number_density=[1e11, 1e16],
-                    C_p1_number_density=[1e11, 1e16],
+                    C_p1_number_density=[1e10, 1e17],
                     C_p3_number_density=[1e11, 1e16],
                     O_p5_number_density=[1e11, 1e15],
+                    Ne_p7_number_density=[1e11, 1e15],
                     cold=[1e-5, 1e-1],
                     cool=[1e-6, 1e-2],
                     warm=[1e-7, 1e-3],
                     hot=[1e-8, 1e-4])
 
     titles = dict(density="Density",temperature="Temperature", metallicity="Metallicity", H_p0_number_density="H I",
+                    Mg_p1_number_density="Mg II",
                     Si_p1_number_density="Si II",
                     Si_p2_number_density="Si III",
                     Si_p3_number_density="Si IV",
                     C_p1_number_density="C II",
                     C_p3_number_density="C IV",
-                    O_p5_number_density="O VI")
+                    O_p5_number_density="O VI",
+                    Ne_p7_number_density="Ne VIII")
+
 
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
-    trident.add_ion_fields(ds, ['Si II', 'Si III','Si IV', 'C II', 'C IV', 'O VI'])
+    trident.add_ion_fields(ds, ['Mg II', 'Si II', 'Si III','Si IV', 'C II', 'C IV', 'O VI', 'Ne VIII'])
     sph = ds.sphere(center, (width, 'kpc'))
     pad = int(np.ceil( np.log10(num_frames)))
     for i in my_rot_nums:
@@ -163,29 +168,46 @@ if __name__ == '__main__':
     from multi_plot_movie.center_finder import find_center
 
     dsname = sys.argv[1]
-    frms = int(sys.argv[2])
-    offset=float(sys.argv[3])
-    width=float(sys.argv[4])
-    out_dir = sys.argv[5]
+    field=sys.argv[2]
+    frms = int(sys.argv[3])
+    offset=float(sys.argv[4])
+    width=float(sys.argv[5])
+    out_dir = sys.argv[6]
 
     #fields = ["C_p3_number_density", "O_p5_number_density"]
     #cmaps = ['magma', 'magma']
     #fields = ["density", "H_p0_number_density", "temperature", "metallicity"]
     #cmaps = ["magma", "magma", "thermal", "haline"]
-    fields = ['density', 'H_p0_number_density', 'Si_p1_number_density', 'Si_p2_number_density', 'Si_p3_number_density', 'C_p1_number_density', 'C_p3_number_density', 'O_p5_number_density']
+    #fields = ['density', 'H_p0_number_density', 'Si_p1_number_density', 'Si_p2_number_density', 'Si_p3_number_density', 'C_p1_number_density', 'C_p3_number_density', 'O_p5_number_density']
     h1_cmap = sns.blend_palette(("white", "#ababab", "#565656", "black",
                                   "#4575b4", "#984ea3", "#d73027",
                                   "darkorange", "#ffe34d"), as_cmap=True)
     density_cmap = sns.blend_palette(("black", "#4575b4", "#4daf4a", "#ffe34d", "darkorange"), as_cmap=True)
-    cmaps = ['magma', h1_cmap, 'ice', 'ice', 'ice', 'cividis', 'cividis', 'plasma']
+    #cmaps = ['magma', h1_cmap, 'ice', 'ice', 'ice', 'cividis', 'cividis', 'plasma']
     #cmaps = [density_cmap, h1_cmap,'plasma', 'magma', 'inferno', 'plasma', 'inferno', 'magma']
+    #fields=['Mg_p1_number_density', 'Ne_p7_number_density']
 
+    cmaps={'density' :density_cmap,
+           'H_p0_number_density' : h1_cmap,
+           'Mg_p1_number_density':'plasma',
+           'Si_p1_number_density' : 'plasma',
+           'Si_p2_number_density' : 'magma',
+           'Si_p3_number_density' : 'inferno',
+           'C_p1_number_density' : 'plasma',
+           'C_p3_number_density' : 'inferno',
+           'O_p5_number_density' : 'magma', 
+           'Ne_p7_number_density':'magma',
+           'temperature': 'thermal',
+           'metallicity' :'haline'}
     c, n, r, bv = find_center(dsname)
     makedirs(out_dir, exist_ok=True)
-    for f in fields:
-        makedirs(f"{out_dir}/{f}", exist_ok=True)
+    makedirs(f"{out_dir}/{field}", exist_ok=True)
 
     #names=['cold', 'cool', 'warm', 'hot']
     #for f in names:
     #    makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
-    create_proj_frames(dsname, c, n, ccwh_gas=False,fields=fields, color_maps=cmaps, num_frames=frms, width=width,offset=offset, out_dir=out_dir)
+    import time 
+    start = time.time()
+    create_proj_frames(dsname, c, n, ccwh_gas=False,fields=[field], color_maps=[cmaps[field]], num_frames=frms, width=width,offset=offset, out_dir=out_dir)
+    completion = (time.time() - start)/60 #in minutes
+    print(completion, " minutes to finish")
