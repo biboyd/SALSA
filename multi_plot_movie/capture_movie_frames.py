@@ -48,6 +48,7 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, sigma):
                                     north_vector = nvec,
                                     redshift=rshift[0],
                                     bulk_velocity=bulk_vel,
+                                    plot_cloud=True,
                                     use_spectacle= True,
                                     plot_spectacle=True,
                                     sigma_smooth= sigma,

@@ -1,3 +1,5 @@
+import matplotlib as mpl
+mpl.use('Agg')
 import yt
 import trident
 import numpy as np
@@ -860,7 +862,7 @@ if __name__ == '__main__':
     absorbers = [ion] #['H I', 'O VI']
     center, nvec, rshift, bv = ([0.5, 0.5, 0.5], [0, 0, 1], 0, None)#find_center(data_set_fname)
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=bv,use_spectacle=True,
+                    center_gal=center, north_vector=nvec, bulk_velocity=bv,plot_cloud=True,use_spectacle=True,
                     redshift=rshift, wavelength_width = 30)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
