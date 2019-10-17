@@ -144,7 +144,7 @@ class multi_plot():
         #for ion name. Use tridents line database to search for correct wavelength
         if wavelength_center is None:
             #open up tridents default line database
-            lbd = trident.LineDatabase()
+            lbd = trident.LineDatabase('lines.txt')
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
             #take one with largest f_value
@@ -512,7 +512,7 @@ class multi_plot():
             #check if should plot contour intervals
             if self.plot_contour or self.plot_cloud:
                 if self.plot_cloud:
-                    intervals, lcd_list = self.get_iterative_cloud(col_dens=0.8, min_logN=13)
+                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
                 else:
                     intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0
