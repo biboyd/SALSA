@@ -202,6 +202,7 @@ if __name__ == '__main__':
         i_name = argv[3]
         out_dir= argv[4]
         use_bv = argv[5]
+        frac = float(argv[6])
     else:
         raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv? ")
 
