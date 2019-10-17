@@ -42,6 +42,7 @@ class multi_plot():
                 spectacle_defaults=None,
                 contour = False,
                 plot_contour=False,
+                plot_cloud=False,
                 sigma_smooth = None,
                 num_dense_min=None,
                 num_dense_max=None,
@@ -118,6 +119,7 @@ class multi_plot():
 
         self.contour = contour
         self.plot_contour = plot_contour
+        self.plot_cloud = plot_cloud
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
@@ -140,7 +142,7 @@ class multi_plot():
         #for ion name. Use tridents line database to search for correct wavelength
         if wavelength_center is None:
             #open up tridents default line database
-            lbd = trident.LineDatabase("my_lines.txt")
+            lbd = trident.LineDatabase()
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
             #take one with largest f_value
@@ -396,10 +398,10 @@ class multi_plot():
 
         if single_line is None:
             #use wavelength_width to set the range
-            spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution, line_database='my_lines.txt')
+            spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
         else:
             #use auto feature to capture full line
-            spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.resolution, line_database='my_lines.txt')
+            spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.resolution)
 
 
         spect_gen.make_spectrum(self.ray, lines=ion_list)
@@ -506,8 +508,11 @@ class multi_plot():
             ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
 
             #check if should plot contour intervals
-            if self.plot_contour:
-                intervals, lcd_list = self.get_contour_intervals()
+            if self.plot_contour or self.plot_cloud:
+                if self.plot_cloud:
+                    intervals, lcd_list = self.get_iterative_cloud(col_dens=0.8, min_logN=13)
+                else:
+                    intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0
                 for i in range(len(intervals)):
                     b, e = intervals[i]
@@ -817,6 +822,20 @@ class multi_plot():
 
         return self.intervals_lcd
 
+    def _cloud_method(self, num_density_arr, coldens_fraction=0.85):
+
+        cut = 0.999
+        total = np.sum(num_density_arr)
+        ratio = 0.001
+        while ratio < coldens_fraction:
+            part = np.sum(num_density_arr[num_density_arr > cut * np.max(num_density_arr)])
+            ratio = part / total
+            cut = cut - 0.001
+
+        threshold = cut * np.max(num_density_arr)
+
+        return threshold
+
     def get_cloud_intervals(self, coldens_fraction=0.85):
         """
         Etract features from number density using a cloud technique
@@ -825,15 +844,7 @@ class multi_plot():
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
         dl_list = self.ray.data['dl']
 
-        cut = 0.999
-        total = np.sum(num_density)
-        ratio = 0.001
-        while ratio < coldens_fraction:
-            part = np.sum(num_density[num_density > cut * np.max(num_density)])
-            ratio = part / total
-            cut = cut - 0.001
-
-        threshold = cut * np.max(num_density)
+        threshold = self._cloud_method(num_density, coldens_fraction=coldens_fraction)
 
         intervals = identify_intervals(num_density, threshold)
 
@@ -851,6 +862,75 @@ class multi_plot():
 
         return my_intervals, lcd_list
 
+    def get_iterative_cloud(self, coldens_fraction=0.85, min_logN=12):
+        """
+        iteratively do the cloud method to extract all features
+        """
+        num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
+        dl_list = self.ray.data['dl'].in_units('cm')
+
+        all_intervals=[]
+        lcd_list=[]
+        curr_num_density = num_density.copy()
+        curr_col_density = np.sum(num_density*dl_list)
+        min_col_density = 10**min_logN
+        count=0
+        lim = self.defaults_dict['bounds']['column_density'][0]
+        while curr_col_density > min_col_density:
+            #calc threshold to get fraction from current num density
+            curr_thresh = self._cloud_method(curr_num_density, coldens_fraction=coldens_fraction)
+
+            #extract intervals this would cover
+            intervals = identify_intervals(num_density, curr_thresh)
+            for b,e in intervals:
+                #compute log col density
+                curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+                #check if col density is above limit
+                if curr_lcd > lim:
+                    all_intervals.append( (b, e) )
+
+
+            #mask density array above threshold and apply mask to dl
+            curr_num_density = np.ma.masked_greater_equal(num_density, curr_thresh)
+            curr_dl =  np.ma.masked_array(dl_list, curr_num_density.mask)
+            #calc leftover column density
+
+            curr_col_density = np.sum(curr_num_density*curr_dl)
+            count+=1
+        print(count)
+
+        #cleanup
+        cleaned_intervals = self._cleanup(all_intervals)
+        for b, e in cleaned_intervals:
+            lcd = np.log10(np.sum(dl_list[b:e]*num_density[b:e]))
+            lcd_list.append(lcd)
+        print(len(all_intervals) - len(cleaned_intervals), "cleaned out")
+        return cleaned_intervals, lcd_list
+
+    def _cleanup(self, intervals):
+        """
+        clean up the intervals to combine small ones and take biggest spread
+        and remove unnecessary ones.
+        """
+
+        """l = mp.ray.data['l'].in_units('kpc')
+        # first order intervals by first
+        real_intervals = [ l[b:e] for b, e in intervals ]
+        #combine those that are overlapping
+
+        final_intervals=[]
+
+        for b, e in intervals:
+            for btest, etest in intervals:"""
+        b=[]
+        for begin,end in sorted(intervals):
+            if b and b[-1][1] >= begin - 1:
+                b[-1][1] = max(b[-1][1], end)
+            else:
+                b.append([begin, end])
+
+        return b
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
