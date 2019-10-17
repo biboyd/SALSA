@@ -773,7 +773,7 @@ class multi_plot():
         return sums, line_text, line_models, num_fitted_lines
 
 
-    def get_contour_intervals(self, char_density_frac = 0.5):
+    def get_contour_intervals(self, char_density_frac = 0.5, force=False):
         """
         get the intervals along the ray where an absorption feature is found.
         Then compute the column density of each interval and save the intervals
@@ -782,11 +782,12 @@ class multi_plot():
         Parameters:
             char_density_frac : float < 1: Fraction used to define when to end
                 an absorption feature. Relative to maximum
+            force : bool : Force a re-calculation of the interval
         Returns:
             intervals_lcd: tuple of list: first list containing interval start and stop
                 indices. second list with corresponding log column densities
         """
-        if self.intervals_lcd is None:
+        if self.intervals_lcd is None or force:
             #define intial region to check
             cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
             init_cutoff = cutoffs[self.ion_name]
@@ -797,7 +798,7 @@ class multi_plot():
             if self.sigma_smooth is not None:
                 num_density = gaussian_filter(num_density, self.sigma_smooth)
 
-            intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_frac)
+            intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_fraction=char_density_frac)
 
             lcd_list =[]
             my_intervals=[]
