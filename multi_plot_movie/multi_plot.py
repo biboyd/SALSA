@@ -857,7 +857,7 @@ class multi_plot():
             curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
 
             #check if col density is above limit
-            if curr_lcd > lim:
+            if True:# curr_lcd > lim:
                 lcd_list.append(curr_lcd)
                 my_intervals.append( (b, e) )
 
@@ -899,14 +899,12 @@ class multi_plot():
 
             curr_col_density = np.sum(curr_num_density*curr_dl)
             count+=1
-        print(count)
 
         #cleanup
         cleaned_intervals = self._cleanup(all_intervals)
         for b, e in cleaned_intervals:
             lcd = np.log10(np.sum(dl_list[b:e]*num_density[b:e]))
             lcd_list.append(lcd)
-        print(len(all_intervals) - len(cleaned_intervals), "cleaned out")
         return cleaned_intervals, lcd_list
 
     def _cleanup(self, intervals):
@@ -932,6 +930,50 @@ class multi_plot():
                 b.append([begin, end])
 
         return b
+
+    def _bottoms_up(self, num_density_arr, dl_arr, min_logN=12):
+        n=100000
+        step = 0.01
+        cut = 1.0
+        part = 10000
+
+        thresh_range = np.linspace(np.min(num_density_arr), np.median(num_density_arr)*100, n)
+
+        for curr_thresh in thresh_range:
+
+            #mask arrays
+            m_number_density_arr = np.ma.masked_greater_equal(num_density_arr, curr_thresh)
+            m_dl = np.ma.masked_array(dl_arr, m_number_density_arr.mask)
+
+            #calc part column density
+            part = np.log10(np.sum(m_number_density_arr*m_dl))
+            #print(cut, part)
+            if part >= min_logN:
+                return curr_thresh
+
+    def get_bottom(self, min_logN=12):
+        num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
+        dl_list = self.ray.data['dl'].in_units('cm')
+
+        all_intervals=[]
+        lcd_list=[]
+        #find threshold
+        thresh = self._bottoms_up(num_density, dl_list, min_logN)
+        lim = self.defaults_dict['bounds']['column_density'][0]
+
+        #get intervals and throw out low col dense ones
+        intervals = identify_intervals(num_density, thresh)
+        intervals = self._cleanup(intervals)
+        for b,e in intervals:
+            #compute log col density
+            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+            #check if col density is above limit
+            if curr_lcd > lim:
+                all_intervals.append( (b, e) )
+                lcd_list.append(curr_lcd)
+
+        return all_intervals, lcd_list
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
