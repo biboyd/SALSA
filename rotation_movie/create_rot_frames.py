@@ -203,11 +203,9 @@ if __name__ == '__main__':
     makedirs(out_dir, exist_ok=True)
     makedirs(f"{out_dir}/{field}", exist_ok=True)
 
-    #names=['cold', 'cool', 'warm', 'hot']
-    #for f in names:
-    #    makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
-    import time 
-    start = time.time()
-    create_proj_frames(dsname, c, n, ccwh_gas=False,fields=[field], color_maps=[cmaps[field]], num_frames=frms, width=width,offset=offset, out_dir=out_dir)
-    completion = (time.time() - start)/60 #in minutes
-    print(completion, " minutes to finish")
+    names=['cold', 'cool', 'warm', 'hot']
+    for f in names:
+        makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
+    fld='density'
+    fld_cmap='magma'
+    create_proj_frames(dsname, c, n, ccwh_gas=True,fields=[fld], color_maps=[fld_cmap], num_frames=frms, width=width,offset=offset, out_dir=out_dir)

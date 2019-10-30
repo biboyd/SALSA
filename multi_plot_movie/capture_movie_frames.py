@@ -7,7 +7,7 @@ from multi_plot import multi_plot
 from center_finder import find_center
 from os import makedirs, listdir
 
-def main(filename, ray_dir, i_name, out_dir, use_bv):
+def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
     #init mpi
     comm = MPI.COMM_WORLD
 
@@ -47,6 +47,7 @@ def main(filename, ray_dir, i_name, out_dir, use_bv):
                                     center_gal = center,
                                     north_vector = nvec,
                                     redshift=rshift[0],
+                                    frac = frac,
                                     bulk_velocity=bulk_vel,
                                     plot_cloud=True,
                                     use_spectacle= True,
@@ -152,6 +153,7 @@ def create_frames(rays,
         #add ray and other annotations
         ray_num = get_ray_num(ray_fname)
         mp.add_annotations()
+        mp.slice.annotate_title(f"ray {ray_num}")
 
         #create and save frame
         outfile = f"{out_dir}/mp{ray_num}.png"
@@ -196,7 +198,7 @@ def ion_p_num(ion_name):
 
 if __name__ == '__main__':
     #take in arguments
-    if len(argv) == 6:
+    if len(argv) == 7:
         filename = argv[1]
         ray_dir = argv[2]
         ion_name = argv[3]
@@ -211,4 +213,4 @@ if __name__ == '__main__':
         use_bv=True
     else:
         use_bv=False
-    main(filename, ray_dir, ion_name, out_dir, use_bv)
+    main(filename, ray_dir, ion_name, out_dir, use_bv, frac)

@@ -24,7 +24,6 @@ ffmpeg  -y						\
 	-i tmp_h.mp4					\
 	-filter_complex "[0:v][1:v]vstack=inputs=2"     \
 	./combined_gas.mp4
-#loop the movie 10 times
-ffmpeg -i combined_gas.mp4 -filter_complex loop=9:128:0 looped_gas.mp4
+
 
 rm tmp_?.mp4
