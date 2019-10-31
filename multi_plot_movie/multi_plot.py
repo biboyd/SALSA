@@ -46,7 +46,7 @@ class multi_plot():
                 spectacle_defaults=None,
                 contour = False,
                 plot_contour=False,
-                plot_cloud=False,
+                plot_bottom=False,
                 sigma_smooth = None,
                 num_dense_min=None,
                 num_dense_max=None,
@@ -124,10 +124,11 @@ class multi_plot():
 
         self.contour = contour
         self.plot_contour = plot_contour
-        self.plot_cloud = plot_cloud
+        self.plot_bottom = plot_bottom
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
+        self.spect_res = 10 #km/s
         self.defaults_dict = {
             'bounds' :{
                 'column_density' : (12.0, 23)
@@ -542,9 +543,10 @@ class multi_plot():
             ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
 
             #check if should plot contour intervals
-            if self.plot_contour or self.plot_cloud:
-                if self.plot_cloud:
-                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
+            if self.plot_contour or self.plot_bottom:
+                if self.plot_bottom:
+                    #intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
+                    intervals, lcd_list = self.get_bottom()
                 else:
                     intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0
@@ -734,7 +736,7 @@ class multi_plot():
             #create line model
             line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
                                        defaults=self.defaults_dict,fitter_args={'maxiter':2000},
-                                       threshold=0.01, output='flux', auto_fit=True)
+                                       threshold=0.01, output='flux', min_distance=self.spect_res, auto_fit=True)
 
             #fit data
             try:
@@ -786,28 +788,28 @@ class multi_plot():
             fit_string = "{: <14s}{:04.1f}\n".format(fit_label, log_line_sum)
 
         #get sum from contour method
-        contour_label= "countour:"
-        interval, lcd_list = self.get_contour_intervals()
+        bottom_label="bottoms_up"#contour_label= "countour:"
+        interval, lcd_list = self.get_bottom()#interval, lcd_list = self.get_contour_intervals()
         if lcd_list is []:
-            log_cont_sum=0
-            contour_string = "{: <11s}{: >4s}\n".format(contour_label,'--')
+            log_bot_sum=0
+            bottom_string = "{: <11s}{: >4s}\n".format(bottom_label,'--')
         else:
-            cont_sum=0
+            bot_sum=0
             for lcd in lcd_list:
-                cont_sum += 10**lcd
+                bot_sum += 10**lcd
             #take log if sum is non zero
-            log_cont_sum = np.log10(cont_sum)
-            contour_string = "{: <11s}{:04.1f}\n".format(contour_label,log_cont_sum)
+            log_bot_sum = np.log10(bot_sum)
+            bottom_string = "{: <11s}{:04.1f}\n".format(bottom_label,log_bot_sum)
 
         #multiply num density by its dl and sum up to get column density proxy
         tot_ray_cd= np.sum( num_density*dl_array )
         log_tot_ray = np.log10(tot_ray_cd)
         total_string="{: <14s}{:04.1f}".format("full ray:", log_tot_ray)
 
-        sums = [log_cont_sum, log_line_sum, log_tot_ray]
+        sums = [log_bot_sum, log_line_sum, log_tot_ray]
 
         #combine strings
-        line_text = "Tot Sums\n"+contour_string + fit_string + total_string
+        line_text = "Tot Sums\n"+bottom_string + fit_string + total_string
 
         return sums, line_text, line_models, num_fitted_lines
 
@@ -965,7 +967,7 @@ class multi_plot():
 
         return b
 
-    def _bottoms_up(self, num_density_arr, dl_arr, min_logN=12):
+    def _bottoms_up(self, num_density_arr, dl_arr, min_logN):
         n=100000
         step = 0.01
         cut = 1.0
@@ -985,9 +987,28 @@ class multi_plot():
             if part >= min_logN:
                 return curr_thresh
 
-    def get_bottom(self, min_logN=12):
+    def _sensible_division(self, vel, intervals):
+        new_intervals=[]
+
+        del_v = self.spect_res *u.Unit('km/s')
+        for inter in intervals:
+            start, end = inter
+            for index in np.arange(start, end+1):
+                #check if velocity difference is greater than spectacle res
+                if abs(vel[index] - vel[index+1]) > del_v:
+                    new_intervals.append([start, index])
+                    #update start to new index
+                    start = index+1
+        return new_intervals
+    def get_bottom(self, min_logN=None):
+        #set min logN to default unless specified
+        if min_logN is None:
+            min_dict = {'H I': 13, 'C IV' :13, 'O VI':13.5}
+            min_logN = min_dict[self.ion_name]
+
         num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
         dl_list = self.ray.data['dl'].in_units('cm')
+        los_vel = self.ray.data['velocity_los'].in_units('km/s')
 
         all_intervals=[]
         lcd_list=[]
@@ -997,7 +1018,8 @@ class multi_plot():
 
         #get intervals and throw out low col dense ones
         intervals = identify_intervals(num_density, thresh)
-        intervals = self._cleanup(intervals)
+        intervals = self._sensible_division(los_vel, intervals)
+
         for b,e in intervals:
             #compute log col density
             curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
@@ -1016,7 +1038,7 @@ if __name__ == '__main__':
     absorbers = [ion] #['H I', 'O VI']
     center, nvec, rshift, bv = find_center(data_set_fname)
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,
+                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_bottom=True,use_spectacle=True,
                     redshift=rshift, wavelength_width = 30)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
