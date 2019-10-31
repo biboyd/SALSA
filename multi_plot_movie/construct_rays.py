@@ -15,6 +15,7 @@ def construct_rays( dataset,
                     n_rays=100,
                     norm_vector=[0, 0, 1],
                     angle=0,
+                    off_angle=45,
                     bulk_vel = 0,
                     max_impact_param=200,
                     center=None,
@@ -30,6 +31,7 @@ def construct_rays( dataset,
         n_rays: the number of rays to construct
         norm_vector: normal vector of galaxy. (perpendiuclar to disk)
         angle: The azimuthal angle around the direction. in degrees
+        offset: Polar angle to normal_vector. in degrees.
         max_impact_param: sets range to construct rays. in kpc from center of galaxy
         center : array/list. Coordinates to center ray creation. Defaults to dataset/s center. in kpc
         parallel : boolean. If parallelization is being used set to true.
@@ -72,6 +74,19 @@ def construct_rays( dataset,
         rot = Rotation.from_rotvec(rot_vector)
         ray_unit = rot.apply(ray_unit)
 
+    if off_angle != 0:
+        #create rot vector perpendicular to normal and ray unit vec
+        rot_vector = np.cross(ray_unit, norm_vector)
+
+        #convert degree to rad and scale rot_vector
+        offset_rad = np.deg2rad(off_angle)
+        rot_vector *= offset_rad/np.linalg.norm(rot_vector)
+
+        #apply rotation to ray unit and norm vectors
+        rot= Rotation.from_rotvec(rot_vector)
+        ray_unit = rot.apply(ray_unit)
+        norm_vector = rot.apply(norm_vector)
+
     if center is None:
         center = ds.domain_center.in_units('code_length')
     else:
@@ -109,6 +124,8 @@ def construct_rays( dataset,
         if comm.rank == 0:
              print("-----all finished------")
 
+    return norm_vector
+
 
 if __name__ == '__main__':
     #setup conditions
@@ -123,7 +140,7 @@ if __name__ == '__main__':
 
     center, n_vec, rshift, bv = find_center(filename)
     #divide rays evenly
-    construct_rays(filename, line_list,
+    new_n_vec = construct_rays(filename, line_list,
                     n_rays=num_rays,
                     norm_vector = n_vec,
                     bulk_vel = bv,
@@ -132,3 +149,4 @@ if __name__ == '__main__':
                     center = center,
                     out_dir=out_dir,
                     parallel = True)
+    np.save(f"{out_dir}/norm_vec.npy", new_n_vec)

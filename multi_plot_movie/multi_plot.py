@@ -1,3 +1,5 @@
+import matplotlib as mpl
+mpl.use('Agg')
 import yt
 import trident
 import numpy as np
@@ -14,7 +16,7 @@ from scipy.ndimage import gaussian_filter
 
 path.insert(0, "/mnt/home/boydbre1/Repo/absorber_generation_post")
 path.insert(0, "/home/bb/Repo/absorber_generation_post")
-from new_generate_contour_absorbers import identify_intervals_char_length
+from new_generate_contour_absorbers import identify_intervals_char_length, identify_intervals
 
 class multi_plot():
     """
@@ -42,8 +44,9 @@ class multi_plot():
                 use_spectacle=False,
                 plot_spectacle=False,
                 spectacle_defaults=None,
-                contour = True,
-                plot_contour=True,
+                contour = False,
+                plot_contour=False,
+                plot_cloud=False,
                 sigma_smooth = None,
                 num_dense_min=None,
                 num_dense_max=None,
@@ -121,6 +124,7 @@ class multi_plot():
 
         self.contour = contour
         self.plot_contour = plot_contour
+        self.plot_cloud = plot_cloud
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
@@ -145,7 +149,7 @@ class multi_plot():
         #for ion name. Use tridents line database to search for correct wavelength
         if wavelength_center is None:
             #open up tridents default line database
-            lbd = trident.LineDatabase("my_lines.txt")
+            lbd = trident.LineDatabase('lines.txt')
             #find all lines that match ion
             lines = lbd.parse_subset(subsets= [self.ion_name])
             #take one with largest f_value
@@ -397,10 +401,12 @@ class multi_plot():
 
         if single_line is None:
             #use wavelength_width to set the range
-            spect_gen = trident.SpectrumGenerator(lambda_min=vel_min, lambda_max=vel_max, dlambda = self.velocity_res, line_database='my_lines.txt', bin_space="velocity")
+
+            spect_gen = trident.SpectrumGenerator(lambda_min=vel_min, lambda_max=vel_max, dlambda = self.velocity_res, bin_space="velocity")
         else:
             #use auto feature to capture full line
-            spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, line_database='my_lines.txt', bin_space="velocity")
+            spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, bin_space="velocity")
+
 
 
         spect_gen.make_spectrum(self.ray, lines=ion_list, observing_redshift=z_tot)
@@ -536,8 +542,11 @@ class multi_plot():
             ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
 
             #check if should plot contour intervals
-            if self.plot_contour:
-                intervals, lcd_list = self.get_contour_intervals()
+            if self.plot_contour or self.plot_cloud:
+                if self.plot_cloud:
+                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
+                else:
+                    intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0
                 for i in range(len(intervals)):
                     b, e = intervals[i]
@@ -803,7 +812,7 @@ class multi_plot():
         return sums, line_text, line_models, num_fitted_lines
 
 
-    def get_contour_intervals(self, char_density_frac = 0.5):
+    def get_contour_intervals(self, char_density_frac = 0.5, force=False):
         """
         get the intervals along the ray where an absorption feature is found.
         Then compute the column density of each interval and save the intervals
@@ -812,11 +821,12 @@ class multi_plot():
         Parameters:
             char_density_frac : float < 1: Fraction used to define when to end
                 an absorption feature. Relative to maximum
+            force : bool : Force a re-calculation of the interval
         Returns:
             intervals_lcd: tuple of list: first list containing interval start and stop
                 indices. second list with corresponding log column densities
         """
-        if self.intervals_lcd is None:
+        if self.intervals_lcd is None or force:
             #define intial region to check
             cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
             init_cutoff = cutoffs[self.ion_name]
@@ -827,7 +837,7 @@ class multi_plot():
             if self.sigma_smooth is not None:
                 num_density = gaussian_filter(num_density, self.sigma_smooth)
 
-            intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_frac)
+            intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_fraction=char_density_frac)
 
             lcd_list =[]
             my_intervals=[]
@@ -847,16 +857,166 @@ class multi_plot():
 
         return self.intervals_lcd
 
+    def _cloud_method(self, num_density_arr, coldens_fraction=0.85):
 
+        cut = 0.999
+        total = np.sum(num_density_arr)
+        ratio = 0.001
+        while ratio < coldens_fraction:
+            part = np.sum(num_density_arr[num_density_arr > cut * np.max(num_density_arr)])
+            ratio = part / total
+            cut = cut - 0.001
+
+        threshold = cut * np.max(num_density_arr)
+
+        return threshold
+
+    def get_cloud_intervals(self, coldens_fraction=0.85):
+        """
+        Etract features from number density using a cloud technique
+        create by Jason Tumlinson
+        """
+        num_density = self.ray.data[self.ion_p_name()+'_number_density']
+        dl_list = self.ray.data['dl']
+
+        threshold = self._cloud_method(num_density, coldens_fraction=coldens_fraction)
+
+        intervals = identify_intervals(num_density, threshold)
+
+        my_intervals=[]
+        lcd_list=[]
+        lim = self.defaults_dict['bounds']['column_density'][0]
+        for b,e in intervals:
+            #compute log col density
+            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+            #check if col density is above limit
+            if True:# curr_lcd > lim:
+                lcd_list.append(curr_lcd)
+                my_intervals.append( (b, e) )
+
+        return my_intervals, lcd_list
+
+    def get_iterative_cloud(self, coldens_fraction=0.85, min_logN=12):
+        """
+        iteratively do the cloud method to extract all features
+        """
+        num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
+        dl_list = self.ray.data['dl'].in_units('cm')
+
+        all_intervals=[]
+        lcd_list=[]
+        curr_num_density = num_density.copy()
+        curr_col_density = np.sum(num_density*dl_list)
+        min_col_density = 10**min_logN
+        count=0
+        lim = self.defaults_dict['bounds']['column_density'][0]
+        while curr_col_density > min_col_density:
+            #calc threshold to get fraction from current num density
+            curr_thresh = self._cloud_method(curr_num_density, coldens_fraction=coldens_fraction)
+
+            #extract intervals this would cover
+            intervals = identify_intervals(num_density, curr_thresh)
+            for b,e in intervals:
+                #compute log col density
+                curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+                #check if col density is above limit
+                if curr_lcd > lim:
+                    all_intervals.append( (b, e) )
+
+
+            #mask density array above threshold and apply mask to dl
+            curr_num_density = np.ma.masked_greater_equal(num_density, curr_thresh)
+            curr_dl =  np.ma.masked_array(dl_list, curr_num_density.mask)
+            #calc leftover column density
+
+            curr_col_density = np.sum(curr_num_density*curr_dl)
+            count+=1
+
+        #cleanup
+        cleaned_intervals = self._cleanup(all_intervals)
+        for b, e in cleaned_intervals:
+            lcd = np.log10(np.sum(dl_list[b:e]*num_density[b:e]))
+            lcd_list.append(lcd)
+        return cleaned_intervals, lcd_list
+
+    def _cleanup(self, intervals):
+        """
+        clean up the intervals to combine small ones and take biggest spread
+        and remove unnecessary ones.
+        """
+
+        """l = mp.ray.data['l'].in_units('kpc')
+        # first order intervals by first
+        real_intervals = [ l[b:e] for b, e in intervals ]
+        #combine those that are overlapping
+
+        final_intervals=[]
+
+        for b, e in intervals:
+            for btest, etest in intervals:"""
+        b=[]
+        for begin,end in sorted(intervals):
+            if b and b[-1][1] >= begin - 1:
+                b[-1][1] = max(b[-1][1], end)
+            else:
+                b.append([begin, end])
+
+        return b
+
+    def _bottoms_up(self, num_density_arr, dl_arr, min_logN=12):
+        n=100000
+        step = 0.01
+        cut = 1.0
+        part = 10000
+
+        thresh_range = np.linspace(np.min(num_density_arr), np.median(num_density_arr)*100, n)
+
+        for curr_thresh in thresh_range:
+
+            #mask arrays
+            m_number_density_arr = np.ma.masked_greater_equal(num_density_arr, curr_thresh)
+            m_dl = np.ma.masked_array(dl_arr, m_number_density_arr.mask)
+
+            #calc part column density
+            part = np.log10(np.sum(m_number_density_arr*m_dl))
+            #print(cut, part)
+            if part >= min_logN:
+                return curr_thresh
+
+    def get_bottom(self, min_logN=12):
+        num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
+        dl_list = self.ray.data['dl'].in_units('cm')
+
+        all_intervals=[]
+        lcd_list=[]
+        #find threshold
+        thresh = self._bottoms_up(num_density, dl_list, min_logN)
+        lim = self.defaults_dict['bounds']['column_density'][0]
+
+        #get intervals and throw out low col dense ones
+        intervals = identify_intervals(num_density, thresh)
+        intervals = self._cleanup(intervals)
+        for b,e in intervals:
+            #compute log col density
+            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+            #check if col density is above limit
+            if curr_lcd > lim:
+                all_intervals.append( (b, e) )
+                lcd_list.append(curr_lcd)
+
+        return all_intervals, lcd_list
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
     ion = argv[3]
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
-    center, nvec, rshift, bv = ([0.5, 0.5, 0.5], [0, 0, 1], 0, None)#find_center(data_set_fname)
+    center, nvec, rshift, bv = find_center(data_set_fname)
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=bv,use_spectacle=True,
+                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,
                     redshift=rshift, wavelength_width = 30)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"

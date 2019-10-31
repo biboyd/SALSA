@@ -7,7 +7,7 @@ from multi_plot import multi_plot
 from center_finder import find_center
 from os import makedirs, listdir
 
-def main(filename, ray_dir, i_name, out_dir, use_bv, sigma):
+def main(filename, ray_dir, i_name, out_dir, use_bv):
     #init mpi
     comm = MPI.COMM_WORLD
 
@@ -48,9 +48,9 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, sigma):
                                     north_vector = nvec,
                                     redshift=rshift[0],
                                     bulk_velocity=bulk_vel,
+                                    plot_cloud=True,
                                     use_spectacle= True,
                                     plot_spectacle=True,
-                                    sigma_smooth= sigma,
                                     wavelength_width=20)
 
 
@@ -61,6 +61,10 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, sigma):
         if (f[-3:] == ".h5"):
             full_name ="/".join((ray_dir, f))
             ray_files.append(full_name)
+        elif f == 'norm_vec.npy':
+            full_name = "/".join((ray_dir, f))
+            normal_vector = np.load(full_name)
+            mp_kwargs['north_vector'] = normal_vector
 
     #sort the rays
     #ray_files = sorted(ray_files)
@@ -140,7 +144,7 @@ def create_frames(rays,
 
     #create initial slice
     mp = multi_plot(ray_filename=rays[0], **multi_plot_kwargs)
-    mp.create_slice()
+    mp.create_slice(cmap='cividis')
 
     #clear annotations
     mp.slice.annotate_clear()
@@ -152,7 +156,6 @@ def create_frames(rays,
         #add ray and other annotations
         ray_num = get_ray_num(ray_fname)
         mp.add_annotations()
-        mp.slice.annotate_title(f"ray {ray_num} sigma={mp.sigma_smooth}")
 
         #create and save frame
         outfile = f"{out_dir}/mp{ray_num}.png"
@@ -197,23 +200,19 @@ def ion_p_num(ion_name):
 
 if __name__ == '__main__':
     #take in arguments
-    if len(argv) == 7:
+    if len(argv) == 6:
         filename = argv[1]
         ray_dir = argv[2]
         ion_name = argv[3]
         out_dir= argv[4]
         use_bv = argv[5]
 
-        if argv[6] == "None":
-            sigma = None
-        else:
-            sigma = float(argv[6])
     else:
-        raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv? smoothin_factor")
+        raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv? ")
 
     #check to see if should use bulk velocity
     if use_bv == 'True':
         use_bv=True
     else:
         use_bv=False
-    main(filename, ray_dir, ion_name, out_dir, use_bv, sigma)
+    main(filename, ray_dir, ion_name, out_dir, use_bv)
