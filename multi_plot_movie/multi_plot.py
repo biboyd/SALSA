@@ -48,6 +48,7 @@ class multi_plot():
                 plot_contour=False,
                 plot_cloud=False,
                 sigma_smooth = None,
+                frac=0.8,
                 num_dense_min=None,
                 num_dense_max=None,
                 markers=True,
@@ -95,7 +96,7 @@ class multi_plot():
         self.ds_filename = ds_filename
         self.ray_filename = ray_filename
         self.ion_name = ion_name
-
+        self.frac = frac
         #open up the dataset and ray files
         self.ds = yt.load(self.ds_filename)
         self.ray = yt.load(self.ray_filename)
@@ -545,8 +546,8 @@ class multi_plot():
             #check if should plot contour intervals
             if self.plot_contour or self.plot_cloud:
                 if self.plot_cloud:
-                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
-                    #intervals, lcd_list = self.get_bottom()
+                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=self.frac, min_logN=13)
+
                 else:
                     intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0

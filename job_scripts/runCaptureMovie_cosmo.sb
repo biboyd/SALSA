@@ -9,13 +9,14 @@
 dsName=$1
 ionName=$2
 rayDist=$3
+frac=$4
 s="/mnt/gs18/scratch/users/boydbre1"
 dataFile="$s/cosmological/foggie/$dsName/$dsName"
 mainDir="$s/multiplot_movie/foggie/$dsName/movie_${rayDist}kpc"
 rayDir="$mainDir/rays"
 #label outdir but split ion into element and number
 ionLabel=${ionName% *}_${ionName#* }
-outDir="$mainDir/frames/movie_${ionLabel}_frames"
+outDir="$mainDir/frames$frac/movie_${ionLabel}_frames"
 
 if ! [ -d $outDir ];
 then
@@ -25,5 +26,5 @@ else
 fi
 mpirun -np 32							\
 	python ~/Repo/CGM/multi_plot_movie/capture_movie_frames.py	\
-		$dataFile $rayDir "$ionName" $outDir False 
+		$dataFile $rayDir "$ionName" $outDir False $frac 
 scontrol show job $SLURM_JOB_ID
