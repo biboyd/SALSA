@@ -46,7 +46,7 @@ class multi_plot():
                 spectacle_defaults=None,
                 contour = False,
                 plot_contour=False,
-                plot_bottom=False,
+                plot_cloud=False,
                 sigma_smooth = None,
                 num_dense_min=None,
                 num_dense_max=None,
@@ -124,7 +124,7 @@ class multi_plot():
 
         self.contour = contour
         self.plot_contour = plot_contour
-        self.plot_bottom = plot_bottom
+        self.plot_cloud = plot_cloud
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
@@ -543,10 +543,10 @@ class multi_plot():
             ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
 
             #check if should plot contour intervals
-            if self.plot_contour or self.plot_bottom:
-                if self.plot_bottom:
-                    #intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
-                    intervals, lcd_list = self.get_bottom()
+            if self.plot_contour or self.plot_cloud:
+                if self.plot_cloud:
+                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
+                    #intervals, lcd_list = self.get_bottom()
                 else:
                     intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0
@@ -788,18 +788,18 @@ class multi_plot():
             fit_string = "{: <14s}{:04.1f}\n".format(fit_label, log_line_sum)
 
         #get sum from contour method
-        bottom_label="bottoms_up"#contour_label= "countour:"
-        interval, lcd_list = self.get_bottom()#interval, lcd_list = self.get_contour_intervals()
+        cloud_label="cloud:"#contour_label= "countour:"
+        interval, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
         if lcd_list is []:
             log_bot_sum=0
-            bottom_string = "{: <11s}{: >4s}\n".format(bottom_label,'--')
+            cloud_string = "{: <11s}{: >4s}\n".format(cloud_label,'--')
         else:
             bot_sum=0
             for lcd in lcd_list:
                 bot_sum += 10**lcd
             #take log if sum is non zero
             log_bot_sum = np.log10(bot_sum)
-            bottom_string = "{: <11s}{:04.1f}\n".format(bottom_label,log_bot_sum)
+            cloud_string = "{: <11s}{:04.1f}\n".format(cloud_label,log_bot_sum)
 
         #multiply num density by its dl and sum up to get column density proxy
         tot_ray_cd= np.sum( num_density*dl_array )
@@ -809,7 +809,7 @@ class multi_plot():
         sums = [log_bot_sum, log_line_sum, log_tot_ray]
 
         #combine strings
-        line_text = "Tot Sums\n"+bottom_string + fit_string + total_string
+        line_text = "Tot Sums\n"+cloud_string + fit_string + total_string
 
         return sums, line_text, line_models, num_fitted_lines
 
@@ -1038,7 +1038,7 @@ if __name__ == '__main__':
     absorbers = [ion] #['H I', 'O VI']
     center, nvec, rshift, bv = find_center(data_set_fname)
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_bottom=True,use_spectacle=True,
+                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,
                     redshift=rshift, wavelength_width = 30)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
