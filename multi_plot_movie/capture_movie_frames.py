@@ -62,6 +62,10 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
         if (f[-3:] == ".h5"):
             full_name ="/".join((ray_dir, f))
             ray_files.append(full_name)
+        elif f == 'norm_vec.npy':
+            full_name = "/".join((ray_dir, f))
+            normal_vector = np.load(full_name)
+            mp_kwargs['north_vector'] = normal_vector
 
     #sort the rays
     #ray_files = sorted(ray_files)
@@ -141,7 +145,7 @@ def create_frames(rays,
 
     #create initial slice
     mp = multi_plot(ray_filename=rays[0], **multi_plot_kwargs)
-    mp.create_slice()
+    mp.create_slice(cmap='cividis')
 
     #clear annotations
     mp.slice.annotate_clear()
@@ -205,6 +209,7 @@ if __name__ == '__main__':
         out_dir= argv[4]
         use_bv = argv[5]
         frac = float(argv[6])
+
     else:
         raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv? ")
 

@@ -36,7 +36,9 @@ class multi_plot():
                 center_gal = None,
                 wavelength_center=None,
                 wavelength_width = 300,
-                resolution = 0.1,
+                velocity_width = 3000,
+                wavelength_res = 0.1,
+                velocity_res = 10,
                 redshift = 0,
                 bulk_velocity=None,
                 use_spectacle=False,
@@ -67,7 +69,9 @@ class multi_plot():
                         known spectral line of ion_name. in units of Angstrom
         wavelength_width :float: sets the wavelength range of the spectrum plot. defaults
                         to 300 Angstroms
-        resolution :float: width of wavelength bins in spectrum plot. default 0.1 Angstrom
+        velocity_width :float: sets the velocity range in spectrum plot in units of km/s
+        wavelegnth_res :float: width of wavelength bins in spectrum plot. default 0.1 Angstrom
+        velocity_res :float: width of velocity bins in spectrum plot. default 10 km/s
         redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
         bulk_velocity : array type : bulk velocity of the galaxy in km/s
         use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
@@ -98,8 +102,7 @@ class multi_plot():
         self.ray = yt.load(self.ray_filename)
 
         #add ion name to list of all ions to be plotted
-        absorber_fields.append(ion_name)
-        self.ion_list = absorber_fields
+        self.ion_list = [ion_name] + absorber_fields
 
         #set a value for slice
         self.slice = None
@@ -114,7 +117,7 @@ class multi_plot():
 
         # set bulk velocity
         if bulk_velocity is None:
-            self.bulk_velocity = 0
+            self.bulk_velocity = None
         else:
             ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
             self.bulk_velocity = np.dot(ray_u, bulk_velocity)
@@ -126,6 +129,7 @@ class multi_plot():
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
+        self.spect_res = 10 #km/s
         self.defaults_dict = {
             'bounds' :{
                 'column_density' : (12.0, 23)
@@ -140,7 +144,9 @@ class multi_plot():
             self.defaults_dict.update(spectacle_defaults)
         self.redshift = redshift
         self.wavelength_width = wavelength_width
-        self.resolution = resolution
+        self.wavelegnth_res = wavelength_res
+        self.velocity_width = velocity_width
+        self.velocity_res = velocity_res
         #default set the wavelength center to one of the known spectral lines
         #for ion name. Use tridents line database to search for correct wavelength
         if wavelength_center is None:
@@ -185,11 +191,6 @@ class multi_plot():
         #optionally set min/max value for number density plot
         self.num_dense_min = num_dense_min
         self.num_dense_max = num_dense_max
-
-        #arrays storing spectra
-        self.lambda_array = None
-        self.velocity_array = None
-        self.flux_array = None
 
         self.intervals_lcd = None
 
@@ -367,15 +368,13 @@ class multi_plot():
 
         return self.slice
 
-    def plot_spect_vel(self, ax_spect=None, ax_vel=None, single_line=None):
+    def plot_vel_space(self, ax=None, single_line=None):
         """
-        Use trident to plot the absorption spectrum of the ray. Then
-        convert wavelength to line of sight velocity and plot versus flux.
-        Uses wavelength_center to calculate the velocity.
+        Use trident to plot the absorption spectrum of the ray in velocity
+        space. Compute column densities with spectacle fits.
 
         Parameters:
-            ax_spect : a matplotlib axis in which to draw the spectra plot
-            ax_vel : a matplotlib axis in which to draw the velocity plot
+            ax : a matplotlib axis in which to draw the velocity plot
             single_line : str : option to plot a single line ie "HI1216" for
                     fitting purposes.
         Returns:
@@ -389,25 +388,107 @@ class multi_plot():
             ion_list = [single_line]
 
         # calc doppler redshift due to bulk motion
-        c = yt.units.c
-        beta = self.bulk_velocity/c
-        z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
-        z_dopp = z_dopp.value
+        if self.bulk_velocity is None:
+            z_tot=self.redshift
+        else:
+            c = yt.units.c
+            beta = self.bulk_velocity/c
+            z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
+            z_dopp = z_dopp.value
+            z_tot = (1+self.redshift)*(1+z_dopp) - 1
 
         #adjust wavelegnth_center for redshift
-        rest_wavelength = self.wavelength_center*(1+self.redshift)*(1+z_dopp)
-        wave_min = rest_wavelength - self.wavelength_width/2
-        wave_max = rest_wavelength + self.wavelength_width/2
+        vel_min = -self.velocity_width/2
+        vel_max = self.velocity_width/2
 
         if single_line is None:
             #use wavelength_width to set the range
-            spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.resolution)
+
+            spect_gen = trident.SpectrumGenerator(lambda_min=vel_min, lambda_max=vel_max, dlambda = self.velocity_res, bin_space="velocity")
         else:
             #use auto feature to capture full line
-            spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.resolution)
+            spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, bin_space="velocity")
 
 
-        spect_gen.make_spectrum(self.ray, lines=ion_list)
+
+        spect_gen.make_spectrum(self.ray, lines=ion_list, observing_redshift=z_tot)
+
+
+        #get fields from spectra and give correct units
+        flux = spect_gen.flux_field
+        velocity = spect_gen.lambda_field
+
+        if ax is not None:
+            #plot values for velocity plot
+            ax.plot(velocity[:-1], flux[:-1])
+            ax.set_ylim(0, 1.05)
+            ax.set_xlim(vel_min, vel_max)
+            ax.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
+            ax.set_xlabel("Delta_v (km/s)")
+            ax.set_ylabel("Flux")
+            ax.grid(zorder=0)
+
+
+            #annotate plot with column densities
+            sums, line_txt, line_models, num_fitted_lines = self.compute_col_density()
+            box_props = dict(boxstyle='square', facecolor='white')
+            ax.text(0.8, 0.05, line_txt, transform=ax.transAxes, bbox = box_props)
+
+            if self.use_spectacle:
+                #annotate number of lines
+                ax.text(0.9, 0.85, f"{num_fitted_lines} lines", transform=ax.transAxes, bbox = box_props)
+
+                colors = ['tab:purple', 'tab:orange', 'tab:green']
+                vel= np.linspace(vel_min, vel_max, 1000) *u.Unit('km/s')
+                #plot individual column lines
+                if line_models is not None:
+                    for mod, color in zip(line_models, colors):
+                        #plot centroids of largest lines
+                        dv = mod.lines[0].delta_v.value
+                        cd = mod.lines[0].column_density.value
+                        ax.scatter(dv, 1, c=color, marker='v',zorder=5, label="logN={:04.1f}".format(cd))
+                        #plott the largest lines
+                        if self.plot_spectacle:
+                            ax.step(vel, mod(vel), linestyle='--', color=color, alpha=0.75)
+                    ax.legend(loc='lower left')
+
+
+        return velocity, flux
+
+    def plot_lambda_space(self, ax=None):
+        """
+        Use trident to plot the absorption spectrum of the ray. Plot in
+        wavelegnth (lambda) space. Not formatted to be used in spectacle fitting
+
+        Parameters:
+            ax : a matplotlib axis in which to draw the spectra plot
+
+        Returns:
+            wavelength, flux arrays created by spectrum generator
+                units are angstrom and flux is normalized to continuum=1
+        """
+        #set which ions to add to spectra
+        ion_list = self.ion_list
+
+        # calc doppler redshift due to bulk motion
+        if self.bulk_velocity is None:
+            z_tot = self.redshift
+        else:
+            c = yt.units.c
+            beta = self.bulk_velocity/c
+            z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
+            z_dopp = z_dopp.value
+            #total redshift that takes in account bulk motion if specified
+            z_tot = (1+self.redshift)*(1+z_dopp) -1
+
+        #adjust wavelegnth_center for redshift
+        rest_wavelength = self.wavelength_center*(1+z_tot)
+        wave_min = rest_wavelength - self.wavelength_width/2
+        wave_max = rest_wavelength + self.wavelength_width/2
+
+        #use wavelength_width to set the range
+        spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.wavelegnth_res, line_database='my_lines.txt')
+        spect_gen.make_spectrum(self.ray, lines=ion_list, observing_redshift=z_tot)
 
 
         #get fields from spectra and give correct units
@@ -415,67 +496,17 @@ class multi_plot():
         wavelength = spect_gen.lambda_field * u.Unit('angstrom')
         flux = spect_gen.flux_field
 
-        wave_min *=u.Unit('angstrom')
-        wave_max *=u.Unit('angstrom')
-
-
-        #calc velocity using relativistic doppler equation
-        doppler_equiv = u.equivalencies.doppler_relativistic(rest_wavelength)
-        velocity = wavelength.to('km/s', equivalencies=doppler_equiv)
-        vel_min = wave_min.to('km/s', equivalencies=doppler_equiv)
-        vel_max = wave_max.to('km/s', equivalencies=doppler_equiv)
-
-        #save arrays so they can be acessed
-        if single_line is None:
-            self.lambda_array = wavelength
-            self.velocity_array = velocity
-            self.flux_array = flux
-
-        if ax_spect is not None:
+        if ax is not None:
             #plot values for spectra
-            ax_spect.plot(wavelength[:-1], flux[:-1])
-            ax_spect.set_ylim(0, 1.05)
-            ax_spect.set_xlim(wave_min.value, wave_max.value)
-            ax_spect.set_title(f"Spectrum {self.ion_name}", loc='right')
-            ax_spect.set_xlabel("Wavelength $\AA$")
-            ax_spect.set_ylabel("Flux")
-            ax_spect.grid(zorder=0)
-        if ax_vel is not None:
-            #plot values for velocity plot
-            ax_vel.plot(velocity[:-1], flux[:-1])
-            ax_vel.set_ylim(0, 1.05)
-            ax_vel.set_xlim(vel_min.value, vel_max.value)
-            ax_vel.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
-            ax_vel.set_xlabel("Delta_v (km/s)")
-            ax_vel.set_ylabel("Flux")
-            ax_vel.grid(zorder=0)
+            ax.plot(wavelength[:-1], flux[:-1])
+            ax.set_ylim(0, 1.05)
+            ax.set_xlim(wave_min.value, wave_max.value)
+            ax.set_title(f"Spectrum {self.ion_name}", loc='right')
+            ax.set_xlabel("Wavelength $\AA$")
+            ax.set_ylabel("Flux")
+            ax.grid(zorder=0)
 
-
-            #annotate plot with column densities
-            sums, line_txt, line_models, num_fitted_lines = self.compute_col_density()
-            box_props = dict(boxstyle='square', facecolor='white')
-            ax_vel.text(0.8, 0.05, line_txt, transform=ax_vel.transAxes, bbox = box_props)
-
-            if self.use_spectacle:
-                #annotate number of lines
-                ax_vel.text(0.9, 0.85, f"{num_fitted_lines} lines", transform=ax_vel.transAxes, bbox = box_props)
-
-                colors = ['tab:purple', 'tab:orange', 'tab:green']
-                vel= np.linspace(vel_min.value, vel_max.value, 1000) *u.Unit('km/s')
-                #plot individual column lines
-                if line_models is not None:
-                    for mod, color in zip(line_models, colors):
-                        #plot centroids of largest lines
-                        dv = mod.lines[0].delta_v.value
-                        cd = mod.lines[0].column_density.value
-                        ax_vel.scatter(dv, 1, c=color, marker='v',zorder=5, label="logN={:04.1f}".format(cd))
-                        #plott the largest lines
-                        if self.plot_spectacle:
-                            ax_vel.step(vel, mod(vel), linestyle='--', color=color, alpha=0.75)
-                    ax_vel.legend(loc='lower left')
-
-
-        return wavelength, velocity, flux
+        return wavelength, flux
 
     def plot_num_dense_los_vel(self, ax_num_dense=None, ax_los_velocity=None):
         """
@@ -488,8 +519,10 @@ class multi_plot():
         """
         #get list of num density  los velocity and corresponding lengths
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
-        los_vel = self.ray.data['velocity_los']
-        los_vel = los_vel.in_units('km/s') + self.bulk_velocity
+        los_vel = self.ray.data['velocity_los'].in_units('km/s')
+        if self.bulk_velocity is not None:
+            los_vel = los_vel.in_units('km/s') + self.bulk_velocity
+
         l_list = self.ray.data['l'].in_units('kpc')
 
 
@@ -514,6 +547,7 @@ class multi_plot():
             if self.plot_contour or self.plot_cloud:
                 if self.plot_cloud:
                     intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=self.frac, min_logN=13)
+
                 else:
                     intervals, lcd_list = self.get_contour_intervals()
                 tot_lcd=0
@@ -616,7 +650,7 @@ class multi_plot():
         ax3 = self.fig.add_subplot(413)
         #ax4 = self.fig.add_subplot(414)
         self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
-        self.plot_spect_vel(ax_vel=ax3)
+        self.plot_vel_space(ax=ax3)
 
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath
@@ -695,7 +729,7 @@ class multi_plot():
             #create spectra for a single line to fit
             wav = int( np.round(self.wavelength_center) )
             line = f"{self.ion_name} {wav}"
-            true_wav, true_vel, true_flux=self.plot_spect_vel(single_line=line)
+            true_vel, true_flux=self.plot_vel_space(single_line=line)
             #format ion correctly to fit
             ion_wav= "".join(line.split())
 
@@ -703,11 +737,11 @@ class multi_plot():
             #create line model
             line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
                                        defaults=self.defaults_dict,fitter_args={'maxiter':2000},
-                                       threshold=0.01, output='flux', auto_fit=True)
+                                       threshold=0.01, output='flux', min_distance=self.spect_res, auto_fit=True)
 
             #fit data
             try:
-                fit_spec_mod = line_finder(true_vel, true_flux)
+                fit_spec_mod = line_finder(true_vel*u.Unit('km/s'), true_flux)
             except RuntimeError:
                 print('fit failed(prolly hit max iterations)', self.ray)
                 fit_spec_mod = None
@@ -755,28 +789,28 @@ class multi_plot():
             fit_string = "{: <14s}{:04.1f}\n".format(fit_label, log_line_sum)
 
         #get sum from contour method
-        contour_label= "countour:"
-        interval, lcd_list = self.get_contour_intervals()
+        cloud_label="cloud:"#contour_label= "countour:"
+        interval, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
         if lcd_list is []:
-            log_cont_sum=0
-            contour_string = "{: <11s}{: >4s}\n".format(contour_label,'--')
+            log_bot_sum=0
+            cloud_string = "{: <11s}{: >4s}\n".format(cloud_label,'--')
         else:
-            cont_sum=0
+            bot_sum=0
             for lcd in lcd_list:
-                cont_sum += 10**lcd
+                bot_sum += 10**lcd
             #take log if sum is non zero
-            log_cont_sum = np.log10(cont_sum)
-            contour_string = "{: <11s}{:04.1f}\n".format(contour_label,log_cont_sum)
+            log_bot_sum = np.log10(bot_sum)
+            cloud_string = "{: <11s}{:04.1f}\n".format(cloud_label,log_bot_sum)
 
         #multiply num density by its dl and sum up to get column density proxy
         tot_ray_cd= np.sum( num_density*dl_array )
         log_tot_ray = np.log10(tot_ray_cd)
         total_string="{: <14s}{:04.1f}".format("full ray:", log_tot_ray)
 
-        sums = [log_cont_sum, log_line_sum, log_tot_ray]
+        sums = [log_bot_sum, log_line_sum, log_tot_ray]
 
         #combine strings
-        line_text = "Tot Sums\n"+contour_string + fit_string + total_string
+        line_text = "Tot Sums\n"+cloud_string + fit_string + total_string
 
         return sums, line_text, line_models, num_fitted_lines
 
@@ -860,7 +894,7 @@ class multi_plot():
             curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
 
             #check if col density is above limit
-            if curr_lcd > lim:
+            if True:# curr_lcd > lim:
                 lcd_list.append(curr_lcd)
                 my_intervals.append( (b, e) )
 
@@ -902,14 +936,12 @@ class multi_plot():
 
             curr_col_density = np.sum(curr_num_density*curr_dl)
             count+=1
-        print(count)
 
         #cleanup
         cleaned_intervals = self._cleanup(all_intervals)
         for b, e in cleaned_intervals:
             lcd = np.log10(np.sum(dl_list[b:e]*num_density[b:e]))
             lcd_list.append(lcd)
-        print(len(all_intervals) - len(cleaned_intervals), "cleaned out")
         return cleaned_intervals, lcd_list
 
     def _cleanup(self, intervals):
@@ -935,6 +967,70 @@ class multi_plot():
                 b.append([begin, end])
 
         return b
+
+    def _bottoms_up(self, num_density_arr, dl_arr, min_logN):
+        n=100000
+        step = 0.01
+        cut = 1.0
+        part = 10000
+
+        thresh_range = np.linspace(np.min(num_density_arr), np.median(num_density_arr)*100, n)
+
+        for curr_thresh in thresh_range:
+
+            #mask arrays
+            m_number_density_arr = np.ma.masked_greater_equal(num_density_arr, curr_thresh)
+            m_dl = np.ma.masked_array(dl_arr, m_number_density_arr.mask)
+
+            #calc part column density
+            part = np.log10(np.sum(m_number_density_arr*m_dl))
+            #print(cut, part)
+            if part >= min_logN:
+                return curr_thresh
+
+    def _sensible_division(self, vel, intervals):
+        new_intervals=[]
+
+        del_v = self.spect_res *u.Unit('km/s')
+        for inter in intervals:
+            start, end = inter
+            for index in np.arange(start, end+1):
+                #check if velocity difference is greater than spectacle res
+                if abs(vel[index] - vel[index+1]) > del_v:
+                    new_intervals.append([start, index])
+                    #update start to new index
+                    start = index+1
+        return new_intervals
+    def get_bottom(self, min_logN=None):
+        #set min logN to default unless specified
+        if min_logN is None:
+            min_dict = {'H I': 13, 'C IV' :13, 'O VI':13.5}
+            min_logN = min_dict[self.ion_name]
+
+        num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
+        dl_list = self.ray.data['dl'].in_units('cm')
+        los_vel = self.ray.data['velocity_los'].in_units('km/s')
+
+        all_intervals=[]
+        lcd_list=[]
+        #find threshold
+        thresh = self._bottoms_up(num_density, dl_list, min_logN)
+        lim = self.defaults_dict['bounds']['column_density'][0]
+
+        #get intervals and throw out low col dense ones
+        intervals = identify_intervals(num_density, thresh)
+        intervals = self._sensible_division(los_vel, intervals)
+
+        for b,e in intervals:
+            #compute log col density
+            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+
+            #check if col density is above limit
+            if curr_lcd > lim:
+                all_intervals.append( (b, e) )
+                lcd_list.append(curr_lcd)
+
+        return all_intervals, lcd_list
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
