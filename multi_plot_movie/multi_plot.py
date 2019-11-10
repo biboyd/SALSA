@@ -550,20 +550,32 @@ class multi_plot():
 
                 else:
                     intervals, lcd_list = self.get_contour_intervals()
+
+                #vspan_cmap = plt.cm.get_cmap(self.marker_cmap)
                 tot_lcd=0
                 for i in range(len(intervals)):
                     b, e = intervals[i]
                     curr_lcd = lcd_list[i]
 
                     #plot interval
-                    ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
+                    ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
                     tot_lcd += 10**curr_lcd
                     #plot on los vel if axis exists
                     if ax_los_velocity is not None:
-                        ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
+                        ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
 
+                #plot number of intervals found
                 box_props = dict(boxstyle='square', facecolor='white')
                 ax_num_dense.text(0.9, 0.85, f"{len(lcd_list)} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
+
+                #plot colorbar for intervals
+                #mapp=plt.cm.ScalarMappable(cmap=self.marker_cmap)
+                #mapp.set_array(np.linspace(12, 23, 100))
+                #if ax_los_velocity is None:
+                #   cb = plt.colorbar(mapp,ax=ax_num_dense, alpha=0.5)
+                #else:
+                #    cb = plt.colorbar(mapp,ax=(ax_num_dense, ax_los_velocity), alpha=0.5)
+
 
                 #take three largest absorbers and sort by position
                 max_indices = np.argsort(lcd_list)
@@ -581,6 +593,7 @@ class multi_plot():
                                          label=f"logN={lcd:.1f}", zorder=3)
 
                 ax_num_dense.legend(loc='lower left', bbox_to_anchor=(-0.015, 0.95))
+
 
         if ax_los_velocity is not None:
             #make line of sight velocity plots
@@ -907,6 +920,7 @@ class multi_plot():
         num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
         dl_list = self.ray.data['dl'].in_units('cm')
         vel_los = self.ray.data['velocity_los'].in_units('km/s')
+        density_array = self.ray.data[('gas', 'density')]
 
         all_intervals=[]
         lcd_list=[]
@@ -922,17 +936,17 @@ class multi_plot():
 
             #extract intervals this would cover
             curr_intervals = identify_intervals(num_density, curr_thresh)
-            print(curr_intervals)
-            new_intervals = self._sensible_combination(all_intervals, curr_intervals, vel_los)
+            #print(curr_intervals)
+            new_intervals = self._sensible_combination(all_intervals, curr_intervals, vel_los, dl_list, density_array)
             all_intervals = new_intervals.copy()
             #mask density array above threshold and apply mask to dl
             curr_num_density = np.ma.masked_greater_equal(num_density, curr_thresh)
             curr_dl =  np.ma.masked_array(dl_list, curr_num_density.mask)
             #calc leftover column density
             curr_col_density = np.sum(curr_num_density*curr_dl)
-            print(curr_thresh)
+            #print(curr_thresh)
             count+=1
-            print("coutn", count)
+            #print("coutn", count)
 
         #cleanup
         #cleaned_intervals = self._cleanup(all_intervals)
@@ -945,7 +959,7 @@ class multi_plot():
                 lcd_list.append(lcd)
         return final_intervals, lcd_list
 
-    def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array):
+    def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array, dl_array, density_array):
         """
         adds new intervals by taking into account the velocities when combining them
 
@@ -953,6 +967,9 @@ class multi_plot():
             prev_intervals : list : the intervals already calculated
             curr_intervals : list : the intervals that need to be added/combined
             velocity_array : array : array of the line of sight velocity along ray
+            dl_array : array : cell lengths along the ray's path.
+            density_array : array : array of gas density. used to weight avg velocity
+                        for a given interval.
         Returns:
             new_intervals : list : a final list of intervals where prev and curr are
                         properly combined.
@@ -966,9 +983,9 @@ class multi_plot():
 
         #loop through current intervals
         for curr_b, curr_e in curr_intervals:
-            print("all the current intervals", curr_intervals)
-            print("all the new intervals", new_intervals)
-            print("current interval ", curr_b, curr_e)
+            #print("all the current intervals", curr_intervals)
+            #print("all the new intervals", new_intervals)
+            #print("current interval ", curr_b, curr_e)
             overlap_intervals=[]
             #loop through all previous intervals
             for b,e in new_intervals:
@@ -1002,7 +1019,7 @@ class multi_plot():
             else:
                 points = [curr_b]
                 for b, e in overlap_intervals:
-                    print(f"curr {curr_b, curr_e} ovelaps {b, e}")
+                    #print(f"curr {curr_b, curr_e} ovelaps {b, e}")
                     new_intervals.remove((b, e))
                     points.append(b)
                     points.append(e)
@@ -1010,7 +1027,9 @@ class multi_plot():
                 avg_v=[]
                 for i in range(len(points)-1):
                     pnt1, pnt2 = points[i], points[i+1]
-                    vel = np.mean(velocity_array[pnt1:pnt2])
+                    #find weighted avg velocity
+                    vel = np.sum(density_array[pnt1:pnt2]*dl_array[pnt1:pnt2]*velocity_array[pnt1:pnt2]) \
+                          /np.sum(density_array[pnt1:pnt2]*dl_array[pnt1:pnt2])
                     avg_v.append((vel, pnt1, pnt2))
 
                 start_b = curr_b
@@ -1045,7 +1064,7 @@ class multi_plot():
             dif_r= abs(center_vel_avg - right_vel_avg)
 
         #find difference and compare to threshold
-        print(dif_l, dif_r)
+        #print(dif_l, dif_r)
         if dif_l <= del_v:
             if dif_r <= del_v:
                 #add one large
