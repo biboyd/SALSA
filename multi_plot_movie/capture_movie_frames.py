@@ -6,6 +6,7 @@ import trident
 from multi_plot import multi_plot
 from center_finder import find_center
 from os import makedirs, listdir
+import h5py
 
 def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
     #init mpi
@@ -150,6 +151,17 @@ def create_frames(rays,
     #clear annotations
     mp.slice.annotate_clear()
 
+    absorber_head=np.array(['ray_num',
+                            'start_interval',
+                            'end_intervals',
+                            'col density',
+                            'x_location',
+                            'y_location',
+                            'z_location',
+                            'avg metallicity',
+                            'avg velocity',
+                            'avg_temperature'])
+    np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load in new ray
         mp.ray = yt.load(ray_fname)
@@ -169,9 +181,42 @@ def create_frames(rays,
         mp.fig.clear()
         mp.slice.annotate_clear()
 
-        #reset contour intervals
-        mp.intervals_lcd = None
+        #save interval information
+        interval_list, lcd_list = mp.get_iterative_cloud(coldens_fraction=mp.frac, min_logN=mp.cloud_min)
+        abs_num=0
+        for interval, lcd in zip(interval_list, lcd_list):
+            #Create np array to store absorber data
+            absorber_info = np.empty(len(absorber_head), dtype=np.float64)
+            absorber_info[0] = ray_num
+            absorber_info[1] = interval[0]
+            absorber_info[2] = interval[1]
+            absorber_info[3] = lcd
 
+            absorber_info[4:] = calc_absorber_props(mp.ray, interval[0], interval[1])
+
+            np.save(f"{out_dir}/ray{ray_num}_absorber{abs_num:02d}.npy", absorber_info)
+            abs_num+=1
+def calc_absorber_props(ray, start, end):
+    """
+    Calculate the weighted average of a list of absorber properties
+    using the total gas column density as the weight.
+
+    Parameters:
+        ray : yt.ray : lightray with the fields
+        start : int: beginning of interval along light ray
+        end : end: end of the intervals along the light ray
+    """
+    dl = ray.data['dl'][start:end]
+    density = ray.data[('gas', 'density')][start:end]
+    col_dense = np.sum(dl*density)
+    props = ('x', 'y', 'z', 'metallicity', 'velocity_los', 'temperature')
+    avg_props = []
+    for prop in props:
+        #compute weighted sum of property
+        avg = np.sum(dl*density*ray.data[prop][start:end])/col_dense
+        avg_props.append(avg)
+
+    return avg_props
 
 def get_ray_num(file_path):
     """
