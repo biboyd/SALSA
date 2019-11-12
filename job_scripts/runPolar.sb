@@ -23,7 +23,7 @@ else
 	rm -rf $outDir/*
 fi
 
-mpirun -np 32					     \
+srun -n 32					     \
 	python ~/Repo/CGM/polar_dependence/sample_polar.py\
 		$inFile "$ion" $b $n_a $n_r $outDir
 srun python ~/Repo/CGM/polar_dependence/analyze.py\

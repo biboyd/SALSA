@@ -21,7 +21,7 @@ else
 	rm -f $outDir/*
 fi
 
-mpirun -np 16							\
+srun -n 16							\
 	python ~/Repo/CGM/multi_plot_movie/construct_rays.py	\
 		$inFile $nRays $rayDist $outDir
 scontrol show job $SLURM_JOB_ID

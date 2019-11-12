@@ -24,7 +24,7 @@ then
 else
 	rm -rf $outDir/*
 fi
-mpirun -np 32							\
+srun -n 32							\
 	python ~/Repo/CGM/multi_plot_movie/capture_movie_frames.py	\
 		$dataFile $rayDir "$ionName" $outDir False $frac 
 scontrol show job $SLURM_JOB_ID
