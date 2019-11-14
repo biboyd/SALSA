@@ -37,28 +37,34 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
 
 
     #take sqrt so that impact param is uniform in projected area space
-    impact_param = np.sqrt(np.random.uniform(min_impact_param.value, max_impact_param.value, num_sightlines))
+    impact_param = np.sqrt(np.random.uniform(min_impact_param.value**2, max_impact_param.value**2, num_sightlines))
     #theta represents polar angle. phi represents azimuthal
     theta = np.random.uniform(0, np.pi, num_sightlines)
     phi = np.random.uniform(0, 2*np.pi, num_sightlines)
 
-    sightline_centers = np.empty((num_sightlines, 3))
-    sightline_centers[:, 0] = impact_param*np.cos(phi)*np.sin(theta)
-    sightline_centers[:, 1] = impact_param*np.sin(phi)*np.sin(theta)
-    sightline_centers[:, 2] = impact_param*np.cos(theta)
+    rad_vec= np.empty((num_sightlines, 3))
+    rad_vec[:, 0] = impact_param*np.cos(phi)*np.sin(theta)
+    rad_vec[:, 1] = impact_param*np.sin(phi)*np.sin(theta)
+    rad_vec[:, 2] = impact_param*np.cos(theta)
 
     #shift to be centered at galaxy
-    sightline_centers += center
+    sightline_centers = rad_vec +np.array(center)
 
     #define vector along sightline (perpendicular to radial vector)
     perp_vec = np.empty_like(sightline_centers)
-    perp_vec[:, 0] = sightline_centers[:, 1]
-    perp_vec[:, 1] = -1*sightline_centers[:, 0]
+    perp_vec[:, 0] = rad_vec[:, 1]
+    perp_vec[:, 1] = -1*rad_vec[:, 0]
     perp_vec[:, 2] = 0.
 
     #normalize
+    alpha=np.random.uniform(0., 2*np.pi, num_sightlines)
     for i in range(num_sightlines):
+        #normalize perpendicular vector
         perp_vec[i, :] =  perp_vec[i, :]/np.sqrt(perp_vec[i, 0]**2 + perp_vec[i, 1]**2)
+        #rotate around radial vector by random amount
+        rot_vec = alpha[i] *rad_vec[i, :]/np.linalg.norm(rad_vec[i, :])
+        rot = Rotation.from_rotvec(rot_vec)
+        perp_vec[i, :] = rot.apply(perp_vec[i, :])
 
 
     #find ending and start points for each sightline
@@ -74,6 +80,7 @@ def random_rays(dsname, center,
                 line_list=['H I', 'C IV', 'O VI'],
                 other_fields=['density', 'metallicity'],
                 out_dir='./',
+                parallel=True,
                 seed=None):
     """
 
