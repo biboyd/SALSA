@@ -4,10 +4,11 @@ from sys import argv
 import yt
 import trident
 from multi_plot import multi_plot
-from center_finder import find_center
 from os import makedirs, listdir
 import h5py
-
+path.insert(0, "/mnt/home/boydbre1/Repo/CGM")
+path.insert(0, "/home/bb/Repo/CGM")
+from mutli_plot_movie.center_finder import find_center
 def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
     #init mpi
     comm = MPI.COMM_WORLD

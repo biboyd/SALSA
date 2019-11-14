@@ -1,13 +1,16 @@
 import yt
 import trident
 import numpy as np
-from center_finder import find_center
+
 from mpi4py import MPI
 from sys import argv
 from os import makedirs
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
-
+from sys import path
+path.insert(0, "/mnt/home/boydbre1/Repo/CGM")
+path.insert(0, "/home/bb/Repo/CGM")
+from multi_plot_movie.center_finder import find_center
 #sample impact param
 
 def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
@@ -47,16 +50,13 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
     rad_vec[:, 1] = impact_param*np.sin(phi)*np.sin(theta)
     rad_vec[:, 2] = impact_param*np.cos(theta)
 
-    #shift to be centered at galaxy
-    sightline_centers = rad_vec +np.array(center)
-
     #define vector along sightline (perpendicular to radial vector)
-    perp_vec = np.empty_like(sightline_centers)
+    perp_vec = np.empty_like(rad_vec)
     perp_vec[:, 0] = rad_vec[:, 1]
     perp_vec[:, 1] = -1*rad_vec[:, 0]
     perp_vec[:, 2] = 0.
 
-    #normalize
+    #randomly rotate perp_vec around rad vec
     alpha=np.random.uniform(0., 2*np.pi, num_sightlines)
     for i in range(num_sightlines):
         #normalize perpendicular vector
@@ -67,6 +67,8 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
         perp_vec[i, :] = rot.apply(perp_vec[i, :])
 
 
+    #shift to be centered at galaxy
+    sightline_centers = rad_vec +np.array(center)
     #find ending and start points for each sightline
     end_point = sightline_centers + length/2 *perp_vec
     start_point = sightline_centers - length/2 *perp_vec
@@ -126,4 +128,3 @@ if __name__ == '__main__':
 
     center, n_vec, rshift, bv = find_center(filename)
     random_rays(filename, center, num_rays, 30, line_list=line_list, length=ray_length, out_dir=out_dir)
-    
