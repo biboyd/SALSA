@@ -1,0 +1,122 @@
+import yt
+import trident
+import numpy as np
+from center_finder import find_center
+from mpi4py import MPI
+from sys import argv
+from os import makedirs
+from scipy.spatial.transform import Rotation
+import matplotlib.pyplot as plt
+
+#sample impact param
+
+def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
+    """
+    randomly sample impact parameter to get random sightlines from a give galaxy
+
+    Parameters:
+        center : arr: coordinates of the center of the galaxy
+        num_sightlines : int : number of sightlines to return
+        max_impact_param : float : maximum impact param to sample from in kpc
+        min_impact_param : float : minimum impact param to sample from in kpc
+        length : float : length of the sightline in kpc
+
+    Returns :
+        start_points : array : 2d array of the startpoints for
+                    each sightline
+        end_points : array : 2d array of the endpoints for
+                    each sightline
+    """
+
+    np.random.seed(seed)
+    ds = yt.load(dsname)
+    length = ds.quan(length, 'kpc').in_units('code_length')
+    length = length.value
+    min_impact_param = ds.quan(min_impact_param, 'kpc').in_units('code_length')
+    max_impact_param = ds.quan(max_impact_param, 'kpc').in_units('code_length')
+
+
+    #take sqrt so that impact param is uniform in projected area space
+    impact_param = np.sqrt(np.random.uniform(min_impact_param.value, max_impact_param.value, num_sightlines))
+    #theta represents polar angle. phi represents azimuthal
+    theta = np.random.uniform(0, np.pi, num_sightlines)
+    phi = np.random.uniform(0, 2*np.pi, num_sightlines)
+
+    sightline_centers = np.empty((num_sightlines, 3))
+    sightline_centers[:, 0] = impact_param*np.cos(phi)*np.sin(theta)
+    sightline_centers[:, 1] = impact_param*np.sin(phi)*np.sin(theta)
+    sightline_centers[:, 2] = impact_param*np.cos(theta)
+
+    #shift to be centered at galaxy
+    sightline_centers += center
+
+    #define vector along sightline (perpendicular to radial vector)
+    perp_vec = np.empty_like(sightline_centers)
+    perp_vec[:, 0] = sightline_centers[:, 1]
+    perp_vec[:, 1] = -1*sightline_centers[:, 0]
+    perp_vec[:, 2] = 0.
+
+    #normalize
+    for i in range(num_sightlines):
+        perp_vec[i, :] =  perp_vec[i, :]/np.sqrt(perp_vec[i, 0]**2 + perp_vec[i, 1]**2)
+
+
+    #find ending and start points for each sightline
+    end_point = sightline_centers + length/2 *perp_vec
+    start_point = sightline_centers - length/2 *perp_vec
+
+    return start_point, end_point
+
+def random_rays(dsname, center,
+                n_rays, max_impact,
+                min_impact=0.,
+                length=200,
+                line_list=['H I', 'C IV', 'O VI'],
+                other_fields=['density', 'metallicity'],
+                out_dir='./',
+                seed=None):
+    """
+
+    """
+    #stuff
+    if parallel:
+        comm = MPI.COMM_WORLD
+
+    ds = yt.load(dsname)
+    start_points, end_points = random_sightlines(dsname, center,
+                                                 n_rays,
+                                                 max_impact,
+                                                 min_impact_param=min_impact,
+                                                 length=length,
+                                                 seed=seed)
+
+    #set padding for filenames
+    pad = np.floor( np.log10(n_rays) )
+    pad = int(pad) + 1
+
+    my_ray_nums = np.arange(n_rays)
+    if parallel:
+        #split ray numbers then take a portion based on rank
+        split_ray_nums = np.array_split(my_ray_nums, comm.size)
+        my_ray_nums = split_ray_nums[ comm.rank]
+    for i in my_ray_nums:
+        #construct ray
+        trident.make_simple_ray(ds,
+                                start_points[i],
+                                end_points[i],
+                                lines=line_list, fields=other_fields,
+                                data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
+if __name__ == '__main__':
+    #setup conditions
+    line_list = ['H I','H II','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
+    if len(argv) == 5:
+        filename = argv[1]
+        num_rays=int(argv[2])
+        ray_length=int(argv[3])
+        out_dir = argv[4]
+    else:
+        raise RuntimeError("Takes in 4 Arguments. Dataset_filename num_rays ray_lenght out_directory")
+
+    center, n_vec, rshift, bv = find_center(filename)
+    random_rays(filename, center, num_rays, 30, line_list=line_list, length=ray_length, out_dir=out_dir)
+    
