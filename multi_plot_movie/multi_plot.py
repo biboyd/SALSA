@@ -705,6 +705,7 @@ class multi_plot():
 
         self.ds.close()
         self.ray.close()
+        plt.close(self.fig)
 
     def compute_col_density(self):
         """
