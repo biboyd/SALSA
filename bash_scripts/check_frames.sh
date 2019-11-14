@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #runs all make movie scripts
-mainDir=$1
+frameDir=$1
 cd $mainDir
 
 shopt -s nullglob
-for dir in frames/movie_*_frames;
+for dir in movie_*_frames;
 do
 	num_frames=0
 	for f in $dir/*.png

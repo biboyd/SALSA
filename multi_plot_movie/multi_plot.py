@@ -550,20 +550,32 @@ class multi_plot():
 
                 else:
                     intervals, lcd_list = self.get_contour_intervals()
+
+                #vspan_cmap = plt.cm.get_cmap(self.marker_cmap)
                 tot_lcd=0
                 for i in range(len(intervals)):
                     b, e = intervals[i]
                     curr_lcd = lcd_list[i]
 
                     #plot interval
-                    ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
+                    ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
                     tot_lcd += 10**curr_lcd
                     #plot on los vel if axis exists
                     if ax_los_velocity is not None:
-                        ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, color='tab:grey')
+                        ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
 
+                #plot number of intervals found
                 box_props = dict(boxstyle='square', facecolor='white')
                 ax_num_dense.text(0.9, 0.85, f"{len(lcd_list)} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
+
+                #plot colorbar for intervals
+                #mapp=plt.cm.ScalarMappable(cmap=self.marker_cmap)
+                #mapp.set_array(np.linspace(12, 23, 100))
+                #if ax_los_velocity is None:
+                #   cb = plt.colorbar(mapp,ax=ax_num_dense, alpha=0.5)
+                #else:
+                #    cb = plt.colorbar(mapp,ax=(ax_num_dense, ax_los_velocity), alpha=0.5)
+
 
                 #take three largest absorbers and sort by position
                 max_indices = np.argsort(lcd_list)
@@ -581,6 +593,7 @@ class multi_plot():
                                          label=f"logN={lcd:.1f}", zorder=3)
 
                 ax_num_dense.legend(loc='lower left', bbox_to_anchor=(-0.015, 0.95))
+
 
         if ax_los_velocity is not None:
             #make line of sight velocity plots
@@ -906,6 +919,8 @@ class multi_plot():
         """
         num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
         dl_list = self.ray.data['dl'].in_units('cm')
+        vel_los = self.ray.data['velocity_los'].in_units('km/s')
+        density_array = self.ray.data[('gas', 'density')]
 
         all_intervals=[]
         lcd_list=[]
@@ -914,35 +929,161 @@ class multi_plot():
         min_col_density = 10**min_logN
         count=0
         lim = self.defaults_dict['bounds']['column_density'][0]
+
         while curr_col_density > min_col_density:
             #calc threshold to get fraction from current num density
             curr_thresh = self._cloud_method(curr_num_density, coldens_fraction=coldens_fraction)
 
             #extract intervals this would cover
-            intervals = identify_intervals(num_density, curr_thresh)
-            for b,e in intervals:
-                #compute log col density
-                curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
-
-                #check if col density is above limit
-                if curr_lcd > lim:
-                    all_intervals.append( (b, e) )
-
-
+            curr_intervals = identify_intervals(num_density, curr_thresh)
+            #print(curr_intervals)
+            new_intervals = self._sensible_combination(all_intervals, curr_intervals, vel_los, dl_list, density_array)
+            all_intervals = new_intervals.copy()
             #mask density array above threshold and apply mask to dl
             curr_num_density = np.ma.masked_greater_equal(num_density, curr_thresh)
             curr_dl =  np.ma.masked_array(dl_list, curr_num_density.mask)
             #calc leftover column density
-
             curr_col_density = np.sum(curr_num_density*curr_dl)
+            #print(curr_thresh)
             count+=1
+            #print("coutn", count)
 
         #cleanup
-        cleaned_intervals = self._cleanup(all_intervals)
-        for b, e in cleaned_intervals:
+        #cleaned_intervals = self._cleanup(all_intervals)
+        #make sure intervals have high enough col density
+        final_intervals=[]
+        for b, e in all_intervals:
             lcd = np.log10(np.sum(dl_list[b:e]*num_density[b:e]))
-            lcd_list.append(lcd)
-        return cleaned_intervals, lcd_list
+            if lcd > lim:
+                final_intervals.append((b, e))
+                lcd_list.append(lcd)
+        return final_intervals, lcd_list
+
+    def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array, dl_array, density_array):
+        """
+        adds new intervals by taking into account the velocities when combining them
+
+        Parameters:
+            prev_intervals : list : the intervals already calculated
+            curr_intervals : list : the intervals that need to be added/combined
+            velocity_array : array : array of the line of sight velocity along ray
+            dl_array : array : cell lengths along the ray's path.
+            density_array : array : array of gas density. used to weight avg velocity
+                        for a given interval.
+        Returns:
+            new_intervals : list : a final list of intervals where prev and curr are
+                        properly combined.
+        """
+        #check if there are any previous intervals to combine with
+        if prev_intervals == []:
+            return curr_intervals
+        #import pdb; pdb.set_trace()
+        new_intervals=prev_intervals.copy()
+        del_v = self.ds.quan(self.spect_res, 'km/s')
+
+        #loop through current intervals
+        for curr_b, curr_e in curr_intervals:
+            #print("all the current intervals", curr_intervals)
+            #print("all the new intervals", new_intervals)
+            #print("current interval ", curr_b, curr_e)
+            overlap_intervals=[]
+            #loop through all previous intervals
+            for b,e in new_intervals:
+                #check if previous interval is nested in curr interval
+                if curr_b <= b and curr_e >= b:
+                    #print(f"interval ({curr_b}, {curr_e}) overlap with ", b, e)
+                    if curr_b <= e and curr_e >= e:
+                        overlap_intervals.append((b, e))
+
+                    #check if just beginning point enclose
+                    else:
+                        err_file = open("error_file.txt", 'a')
+                        err_file.write(f"{self.ray_filename} had an intersection taht wasn't complete :/")
+                        err_file.close()
+                #check if just endpoint enclosed
+                elif curr_b <= e and curr_e >= e:
+                    err_file = open("error_file.txt", 'a')
+                    err_file.write(f"{self.ray_filename} had an intersection taht wasn't complete :/")
+                    err_file.close()
+
+            #
+            #
+            #This is such a mess below but it works
+            #hopefully I'll think of a much cleaner way to do this
+            #but for now this is it
+            #
+            #
+
+            if overlap_intervals == []:
+                new_intervals.append((curr_b, curr_e))
+            else:
+                points = [curr_b]
+                for b, e in overlap_intervals:
+                    #print(f"curr {curr_b, curr_e} ovelaps {b, e}")
+                    new_intervals.remove((b, e))
+                    points.append(b)
+                    points.append(e)
+                points.append(curr_e)
+                avg_v=[]
+                for i in range(len(points)-1):
+                    pnt1, pnt2 = points[i], points[i+1]
+                    #find weighted avg velocity
+                    vel = np.sum(density_array[pnt1:pnt2]*dl_array[pnt1:pnt2]*velocity_array[pnt1:pnt2]) \
+                          /np.sum(density_array[pnt1:pnt2]*dl_array[pnt1:pnt2])
+                    avg_v.append((vel, pnt1, pnt2))
+
+                start_b = curr_b
+                for i in range(len(avg_v)-1):
+                    #if velocity difference is greater than threshold
+                    if abs(avg_v[i][0] - avg_v[i+1][0]) > del_v:
+                        #create new interval
+                        new_intervals.append((start_b, avg_v[i][2]))
+                        #change start of next interval
+                        start_b = avg_v[i][2]
+                    #check if this is the last two intervals to check
+                    elif i == len(avg_v) -2:
+                        new_intervals.append((start_b, curr_e))
+
+
+        return new_intervals
+
+    def foo(self, bar):
+        #find avg velocity of each interval
+        center_vel_avg = np.mean(velocity_array[b:e])
+
+        if curr_b == b:
+            dif_l = 0.
+        else:
+            left_vel_avg = np.mean(velocity_array[curr_b:b])
+            dif_l = abs(left_vel_avg - center_vel_avg)
+
+        if curr_e == e:
+            dif_r = 0.0
+        else:
+            right_vel_avg = np.mean(velocity_array[e:curr_e])
+            dif_r= abs(center_vel_avg - right_vel_avg)
+
+        #find difference and compare to threshold
+        #print(dif_l, dif_r)
+        if dif_l <= del_v:
+            if dif_r <= del_v:
+                #add one large
+                new_intervals.remove((b, e))
+                new_intervals.append((curr_b, curr_e))
+            else:
+                #add large left small right
+                new_intervals.remove((b, e))
+                new_intervals.append((curr_b, e))
+                new_intervals.append((e, curr_e))
+        elif dif_r <= del_v:
+            #add large right small left
+                new_intervals.remove((b, e))
+                new_intervals.append((curr_b, b))
+                new_intervals.append((b, curr_e))
+        else:
+            #add all three intervals
+            new_intervals.append((curr_b, b))
+            new_intervals.append((e, curr_e))
 
     def _cleanup(self, intervals):
         """
@@ -959,12 +1100,7 @@ class multi_plot():
 
         for b, e in intervals:
             for btest, etest in intervals:"""
-        b=[]
-        for begin,end in sorted(intervals):
-            if b and b[-1][1] >= begin - 1:
-                b[-1][1] = max(b[-1][1], end)
-            else:
-                b.append([begin, end])
+
 
         return b
 
@@ -991,7 +1127,7 @@ class multi_plot():
     def _sensible_division(self, vel, intervals):
         new_intervals=[]
 
-        del_v = self.spect_res *u.Unit('km/s')
+        del_v = self.ds.quan(self.spect_res, 'km/s')
         for inter in intervals:
             start, end = inter
             for index in np.arange(start, end+1):
