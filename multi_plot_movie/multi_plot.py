@@ -47,6 +47,7 @@ class multi_plot():
                 contour = False,
                 plot_contour=False,
                 plot_cloud=False,
+                cloud_min=13,
                 sigma_smooth = None,
                 frac=0.8,
                 num_dense_min=None,
@@ -126,6 +127,7 @@ class multi_plot():
         self.contour = contour
         self.plot_contour = plot_contour
         self.plot_cloud = plot_cloud
+        self.cloud_min = cloud_min
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
@@ -192,7 +194,6 @@ class multi_plot():
         self.num_dense_min = num_dense_min
         self.num_dense_max = num_dense_max
 
-        self.intervals_lcd = None
 
 
     def add_annotations(self, plot=True):
@@ -546,7 +547,7 @@ class multi_plot():
             #check if should plot contour intervals
             if self.plot_contour or self.plot_cloud:
                 if self.plot_cloud:
-                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=self.frac, min_logN=13)
+                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=self.frac, min_logN=self.cloud_min)
 
                 else:
                     intervals, lcd_list = self.get_contour_intervals()
@@ -704,6 +705,7 @@ class multi_plot():
 
         self.ds.close()
         self.ray.close()
+        plt.close(self.fig)
 
     def compute_col_density(self):
         """
@@ -803,7 +805,7 @@ class multi_plot():
 
         #get sum from contour method
         cloud_label="cloud:"#contour_label= "countour:"
-        interval, lcd_list = self.get_iterative_cloud(coldens_fraction=0.8, min_logN=13)
+        interval, lcd_list = self.get_iterative_cloud(coldens_fraction=self.frac, min_logN=self.cloud_min)
         if lcd_list is []:
             log_bot_sum=0
             cloud_string = "{: <11s}{: >4s}\n".format(cloud_label,'--')
@@ -828,52 +830,47 @@ class multi_plot():
         return sums, line_text, line_models, num_fitted_lines
 
 
-    def get_contour_intervals(self, char_density_frac = 0.5, force=False):
+    def get_contour_intervals(self, char_density_frac = 0.5):
         """
         get the intervals along the ray where an absorption feature is found.
-        Then compute the column density of each interval and save the intervals
-        and log column densities to self.intervals_lcd
+        Then compute the column density of each interval and return them
 
         Parameters:
             char_density_frac : float < 1: Fraction used to define when to end
                 an absorption feature. Relative to maximum
-            force : bool : Force a re-calculation of the interval
         Returns:
             intervals_lcd: tuple of list: first list containing interval start and stop
                 indices. second list with corresponding log column densities
         """
-        if self.intervals_lcd is None or force:
-            #define intial region to check
-            cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
-            init_cutoff = cutoffs[self.ion_name]
+        #define intial region to check
+        cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
+        init_cutoff = cutoffs[self.ion_name]
 
-            num_density = self.ray.data[self.ion_p_name()+'_number_density']
-            dl_list = self.ray.data['dl']
+        num_density = self.ray.data[self.ion_p_name()+'_number_density']
+        dl_list = self.ray.data['dl']
 
-            if self.sigma_smooth is not None:
-                num_density = gaussian_filter(num_density, self.sigma_smooth)
+        if self.sigma_smooth is not None:
+            num_density = gaussian_filter(num_density, self.sigma_smooth)
 
-            intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_fraction=char_density_frac)
+        intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_fraction=char_density_frac)
 
-            lcd_list =[]
-            my_intervals=[]
-            #check interval has high enough column density
-            lim = self.defaults_dict['bounds']['column_density'][0]
-            for b,e in intervals:
-                #compute log col density
-                curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
+        lcd_list =[]
+        my_intervals=[]
+        #check interval has high enough column density
+        lim = self.defaults_dict['bounds']['column_density'][0]
+        for b,e in intervals:
+            #compute log col density
+            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
 
-                #check if col density is above limit
-                if curr_lcd > lim:
-                    lcd_list.append(curr_lcd)
-                    my_intervals.append( (b, e) )
+            #check if col density is above limit
+            if curr_lcd > lim:
+                lcd_list.append(curr_lcd)
+                my_intervals.append( (b, e) )
 
-            #create empty array then fill with intervals and column densities
-            self.intervals_lcd = (my_intervals, lcd_list)
+        #create empty array then fill with intervals and column densities
+        return (my_intervals, lcd_list)
 
-        return self.intervals_lcd
-
-    def _cloud_method(self, num_density_arr, coldens_fraction=0.85):
+    def _cloud_method(self, num_density_arr, coldens_fraction):
 
         cut = 0.999
         total = np.sum(num_density_arr)

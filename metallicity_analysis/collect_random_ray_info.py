@@ -125,6 +125,7 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
     print("-------------- {} finished----------------".format(comm.rank))
 
 def create_frames(rays,
+                  save_multi_plot=False,
                   slice_width=None,
                   slice_height=None,
                   out_dir='./',
@@ -144,9 +145,7 @@ def create_frames(rays,
         none
     """
 
-    #create initial slice
-    mp = multi_plot(ray_filename=rays[0], **multi_plot_kwargs)
-    mp.create_slice(cmap='cividis')
+
 
     #clear annotations
     mp.slice.annotate_clear()
@@ -163,23 +162,22 @@ def create_frames(rays,
                             'avg_temperature'])
     np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
-        #load in new ray
+        #load new multi plot and ray
+        mp = multi_plot(ray_filename=ray_fname, **multi_plot_kwargs)
         mp.ray = yt.load(ray_fname)
+        if save_multi_plot:
+            #create slice
+            mp.create_slice(cmap='cividis')
 
-        #add ray and other annotations
-        ray_num = get_ray_num(ray_fname)
-        mp.add_annotations()
-        mp.slice.annotate_title(f"ray {ray_num}")
+            #add ray to title
+            ray_num = get_ray_num(ray_fname)
+            mp.slice.annotate_title(f"ray {ray_num}")
 
-        #create and save frame
-        outfile = f"{out_dir}/mp{ray_num}.png"
-        mp.create_multi_plot(outfile)
+            #create and save frame
+            mp.create_multi_plot(f"{out_dir}/mp{ray_num}.png")
 
-        #close ray files and clear axes/annoations
-        mp.ray.close()
-
-        mp.fig.clear()
-        mp.slice.annotate_clear()
+            #close files/figures
+            mp.close()
 
         #save interval information
         interval_list, lcd_list = mp.get_iterative_cloud(coldens_fraction=mp.frac, min_logN=mp.cloud_min)
