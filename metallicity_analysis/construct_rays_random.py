@@ -8,9 +8,9 @@ from os import makedirs
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 from sys import path
-path.insert(0, "/mnt/home/boydbre1/Repo/CGM")
-path.insert(0, "/home/bb/Repo/CGM")
-from multi_plot_movie.center_finder import find_center
+path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie")
+path.insert(0, "/home/bb/Repo/CGM/multi_plot_movie")
+from center_finder import find_center
 #sample impact param
 
 def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
@@ -118,13 +118,14 @@ def random_rays(dsname, center,
 if __name__ == '__main__':
     #setup conditions
     line_list = ['H I','H II','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
-    if len(argv) == 5:
+    if len(argv) == 6:
         filename = argv[1]
         num_rays=int(argv[2])
         ray_length=int(argv[3])
-        out_dir = argv[4]
+        max_impact=int(argv[4])
+        out_dir = argv[5]
     else:
-        raise RuntimeError("Takes in 4 Arguments. Dataset_filename num_rays ray_lenght out_directory")
+        raise RuntimeError("Takes in 5 Arguments. Dataset_filename num_rays ray_lenght max_impact_param out_directory")
 
     center, n_vec, rshift, bv = find_center(filename)
-    random_rays(filename, center, num_rays, 30, line_list=line_list, length=ray_length, out_dir=out_dir)
+    random_rays(filename, center, num_rays, max_impact, line_list=line_list, length=ray_length, out_dir=out_dir)

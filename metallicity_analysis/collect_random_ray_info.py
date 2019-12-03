@@ -1,15 +1,16 @@
 from mpi4py import MPI
 import numpy as np
-from sys import argv
+from sys import argv, path
 import yt
 import trident
-from multi_plot import multi_plot
 from os import makedirs, listdir
 import h5py
-path.insert(0, "/mnt/home/boydbre1/Repo/CGM")
-path.insert(0, "/home/bb/Repo/CGM")
-from mutli_plot_movie.center_finder import find_center
-def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
+
+path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie")
+path.insert(0, "/home/bb/Repo/CGM/multi_plot_movie")
+from center_finder import find_center
+from multi_plot import multi_plot
+def main(filename, ray_dir, i_name, out_dir, frac):
     #init mpi
     comm = MPI.COMM_WORLD
 
@@ -36,6 +37,7 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
     comm.Bcast([nvec, MPI.DOUBLE])
     comm.Bcast([rshift, MPI.DOUBLE])
 
+    use_bv=False
     if use_bv is True:
         comm.Bcast([bulk_vel, MPI.DOUBLE])
     else:
@@ -126,7 +128,7 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
     print("-------------- {} finished----------------".format(comm.rank))
 
 def create_frames(rays,
-                  save_multi_plot=False,
+                  save_multi_plot=True,
                   slice_width=None,
                   slice_height=None,
                   out_dir='./',
@@ -147,9 +149,6 @@ def create_frames(rays,
     """
 
 
-
-    #clear annotations
-    mp.slice.annotate_clear()
 
     absorber_head=np.array(['ray_num',
                             'start_interval',
@@ -246,20 +245,15 @@ def ion_p_num(ion_name):
 
 if __name__ == '__main__':
     #take in arguments
-    if len(argv) == 7:
+    if len(argv) == 6:
         filename = argv[1]
         ray_dir = argv[2]
         ion_name = argv[3]
         out_dir= argv[4]
-        use_bv = argv[5]
-        frac = float(argv[6])
+        frac = float(argv[5])
 
     else:
-        raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv? ")
+        raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory frac ")
 
     #check to see if should use bulk velocity
-    if use_bv == 'True':
-        use_bv=True
-    else:
-        use_bv=False
-    main(filename, ray_dir, ion_name, out_dir, use_bv, frac)
+    main(filename, ray_dir, ion_name, out_dir, frac)
