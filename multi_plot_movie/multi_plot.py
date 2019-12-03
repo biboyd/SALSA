@@ -509,7 +509,7 @@ class multi_plot():
 
         return wavelength, flux
 
-    def plot_num_dense_los_vel(self, ax_num_dense=None, ax_los_velocity=None):
+    def plot_num_density(self, ax_num_dense=None, ax_prop2=None, prop2_name='velocity_los', prop2_units=None):
         """
         Plots the number density at different lengths along the ray
 
@@ -520,9 +520,16 @@ class multi_plot():
         """
         #get list of num density  los velocity and corresponding lengths
         num_density = self.ray.data[self.ion_p_name()+'_number_density']
-        los_vel = self.ray.data['velocity_los'].in_units('km/s')
-        if self.bulk_velocity is not None:
-            los_vel = los_vel.in_units('km/s') + self.bulk_velocity
+        prop2 = self.ray.data[prop2_name]
+        #convert to specified units
+        if prop2_units is None:
+            prop2_units = str(prop2.units)
+        else:
+            prop2 = prop2.in_units(prop2_units)
+
+        #add bulk velocity if wanted
+        if self.bulk_velocity is not None and prop2_name == 'velocity_los':
+            prop2 += self.bulk_velocity
 
         l_list = self.ray.data['l'].in_units('kpc')
 
@@ -561,22 +568,13 @@ class multi_plot():
                     #plot interval
                     ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
                     tot_lcd += 10**curr_lcd
-                    #plot on los vel if axis exists
-                    if ax_los_velocity is not None:
-                        ax_los_velocity.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
+                    #plot on 2nd prop if axis exists
+                    if ax_prop2 is not None:
+                        ax_prop2.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
 
                 #plot number of intervals found
                 box_props = dict(boxstyle='square', facecolor='white')
                 ax_num_dense.text(0.9, 0.85, f"{len(lcd_list)} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
-
-                #plot colorbar for intervals
-                #mapp=plt.cm.ScalarMappable(cmap=self.marker_cmap)
-                #mapp.set_array(np.linspace(12, 23, 100))
-                #if ax_los_velocity is None:
-                #   cb = plt.colorbar(mapp,ax=ax_num_dense, alpha=0.5)
-                #else:
-                #    cb = plt.colorbar(mapp,ax=(ax_num_dense, ax_los_velocity), alpha=0.5)
-
 
                 #take three largest absorbers and sort by position
                 max_indices = np.argsort(lcd_list)
@@ -596,18 +594,18 @@ class multi_plot():
                 ax_num_dense.legend(loc='lower left', bbox_to_anchor=(-0.015, 0.95))
 
 
-        if ax_los_velocity is not None:
+        if ax_prop2 is not None:
             #make line of sight velocity plots
-            ax_los_velocity.hlines(0, l_list[0], l_list[-1], linestyles='dashed',alpha=0.25, zorder=1)
-            ax_los_velocity.plot(l_list, los_vel)
-            ax_los_velocity.set_title("LOS Velocity Along Ray", loc='right')
-            ax_los_velocity.set_xlabel("Length From Start of Ray $(kpc)$")
-            ax_los_velocity.set_ylabel("Line of Sight \nVelocity $(km/s)$")
-            ax_los_velocity.grid(zorder=0)
-            ax_los_velocity.set_ylim(-600, 600)
+            ax_prop2.hlines(0, l_list[0], l_list[-1], linestyles='dashed',alpha=0.25, zorder=1)
+            ax_prop2.plot(l_list, prop2)
+            ax_prop2.set_title(f"{prop2_name} Along Ray", loc='right')
+            ax_prop2.set_xlabel("Length From Start of Ray $(kpc)$")
+            ax_prop2.set_ylabel(f"{prop2_name} $({prop2_units})$")
+            ax_prop2.grid(zorder=0)
+            ax_prop2.set_ylim(-600, 600)
 
         #add appropriate markers to the plot
-        if self.markers and ax_los_velocity is not None:
+        if self.markers and ax_prop2 is not None:
             #check if marker distances have been defined
             if self.mark_dist_arr is None:
                 self.add_annotations(plot=False)
@@ -616,7 +614,7 @@ class multi_plot():
             plot_markers = {}
             plot_markers.update(self.mark_kwargs)
             plot_markers.update({'alpha':1})
-            ax_los_velocity.scatter(self.mark_dist_arr.value, Vys,zorder=3, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **plot_markers)
+            ax_prop2.scatter(self.mark_dist_arr.value, Vys,zorder=3, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **plot_markers)
 
     def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
         """
@@ -663,7 +661,7 @@ class multi_plot():
         ax2 = self.fig.add_subplot(412)
         ax3 = self.fig.add_subplot(413)
         #ax4 = self.fig.add_subplot(414)
-        self.plot_num_dense_los_vel(ax_num_dense=ax1, ax_los_velocity=ax2)
+        self.plot_num_density(ax_num_dense=ax1, ax_prop2=ax2)
         self.plot_vel_space(ax=ax3)
 
         axes= [ax1, ax2, ax3]
