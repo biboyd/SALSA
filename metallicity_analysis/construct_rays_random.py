@@ -77,7 +77,7 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
 
 def random_rays(dsname, center,
                 n_rays, max_impact,
-                min_impact=0.,
+                min_impact_param=0.,
                 length=200,
                 line_list=['H I', 'C IV', 'O VI'],
                 other_fields=['density', 'metallicity'],
@@ -95,7 +95,7 @@ def random_rays(dsname, center,
     start_points, end_points = random_sightlines(dsname, center,
                                                  n_rays,
                                                  max_impact,
-                                                 min_impact_param=min_impact,
+                                                 min_impact_param=min_impact_param,
                                                  length=length,
                                                  seed=seed)
 
@@ -118,14 +118,15 @@ def random_rays(dsname, center,
 if __name__ == '__main__':
     #setup conditions
     line_list = ['H I','H II','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
-    if len(argv) == 6:
+    if len(argv) == 7:
         filename = argv[1]
         num_rays=int(argv[2])
         ray_length=int(argv[3])
-        max_impact=int(argv[4])
-        out_dir = argv[5]
+        min_impact= int(argv[4])
+        max_impact=int(argv[5])
+        out_dir = argv[6]
     else:
         raise RuntimeError("Takes in 5 Arguments. Dataset_filename num_rays ray_lenght max_impact_param out_directory")
 
     center, n_vec, rshift, bv = find_center(filename)
-    random_rays(filename, center, num_rays, max_impact, line_list=line_list, length=ray_length, out_dir=out_dir)
+    random_rays(filename, center, num_rays, max_impact, min_impact_param=min_impact, line_list=line_list, length=ray_length, out_dir=out_dir)
