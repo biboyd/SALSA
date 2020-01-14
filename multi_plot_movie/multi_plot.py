@@ -48,6 +48,7 @@ class multi_plot():
                 plot_contour=False,
                 plot_cloud=False,
                 cloud_min=13,
+                spectra_resolution=10,
                 sigma_smooth = None,
                 frac=0.8,
                 num_dense_min=None,
@@ -131,7 +132,7 @@ class multi_plot():
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
-        self.spect_res = 10 #km/s
+        self.spect_res = spectra_resolution #km/s
         self.defaults_dict = {
             'bounds' :{
                 'column_density' : (12.0, 23)
