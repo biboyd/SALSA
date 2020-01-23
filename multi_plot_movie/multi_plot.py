@@ -413,7 +413,7 @@ class multi_plot():
 
 
 
-        spect_gen.make_spectrum(self.ray, lines=ion_list, observing_redshift=z_tot)
+        spect_gen.make_spectrum(self.ray, lines=ion_list)
 
 
         #get fields from spectra and give correct units
@@ -484,7 +484,7 @@ class multi_plot():
             z_tot = (1+self.redshift)*(1+z_dopp) -1
 
         #adjust wavelegnth_center for redshift
-        rest_wavelength = self.wavelength_center*(1+z_tot)
+        rest_wavelength = self.wavelength_center
         wave_min = rest_wavelength - self.wavelength_width/2
         wave_max = rest_wavelength + self.wavelength_width/2
 
@@ -502,7 +502,7 @@ class multi_plot():
             #plot values for spectra
             ax.plot(wavelength[:-1], flux[:-1])
             ax.set_ylim(0, 1.05)
-            ax.set_xlim(wave_min.value, wave_max.value)
+            ax.set_xlim(wave_min, wave_max)
             ax.set_title(f"Spectrum {self.ion_name}", loc='right')
             ax.set_xlabel("Wavelength $\AA$")
             ax.set_ylabel("Flux")
@@ -524,7 +524,13 @@ class multi_plot():
         prop2 = self.ray.data[prop2_name]
         #convert to specified units
         if prop2_units is None:
-            prop2_units = str(prop2.units)
+            #check if personal default
+            default_units = dict(velocity_los='km/s', metallicity='Zsun')
+            if prop2_name in default_units.keys():
+                prop2_units = default_units[prop2_name] 
+                prop2 = prop2.in_units(prop2_units)
+            else:
+                prop2_units = str(prop2.units)
         else:
             prop2 = prop2.in_units(prop2_units)
 
