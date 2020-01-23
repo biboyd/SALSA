@@ -66,13 +66,12 @@ def main(filename, ray_dir, i_name, out_dir, frac):
         if (f[-3:] == ".h5"):
             full_name ="/".join((ray_dir, f))
             ray_files.append(full_name)
+
+        #use normal_vector if saved in directory
         elif f == 'norm_vec.npy':
             full_name = "/".join((ray_dir, f))
             normal_vector = np.load(full_name)
             mp_kwargs['north_vector'] = normal_vector
-
-    #sort the rays
-    #ray_files = sorted(ray_files)
 
     #split up rays betweeen proccesors
     ray_files_split = np.array_split(ray_files, comm.size)
@@ -80,52 +79,20 @@ def main(filename, ray_dir, i_name, out_dir, frac):
 
 
     #calc the number_density limits
-    num_density_dict = {'H I':[1e-11, 1e-5],
-                       'C IV':[1e-12, 1e-6],
-                       'O VI':[1e-12, 1e-6],
-                       'Si III':[1e-11, 1e-5],
-                       'Si II':[1e-11, 1e-5]}
-
-    if i_name in num_density_dict:
-        num_density_range = num_density_dict[i_name]
-
-    else:
-        #get average median value to represent scale
-        num_rays = len(my_rays)
-        med =0
-        for i in range(num_rays):
-            #load ray
-            curr_ray_file = my_rays[i]
-            curr_ray= yt.load(curr_ray_file)
-
-            #get median num density
-            num_density = curr_ray.data[ f"{ion_p_num(i_name)}" ]
-            med += np.median(num_density)
-
-            curr_ray.close()
-        med /= num_rays
-        med = np.array(med)
-        sum_med = np.zeros_like(med)
-
-        #sum all medians. divide by proccesors to get average
-        comm.Barrier()
-        comm.Allreduce([med, MPI.DOUBLE], [sum_med, MPI.DOUBLE], op=MPI.SUM)
-
-        avg_med = sum_med/comm.size
-
-        #estimate min max values to number dense plot. and markers positioning
-        num_density_range = np.array( [0.01*avg_med, 1000*avg_med] , dtype=np.float64)
-
+    num_density_range = get_num_density_range(i_name, comm, my_rays)
     mp_kwargs.update({'num_dense_min': num_density_range[0],
                       'num_dense_max': num_density_range[1]})
 
-    #create movie frames
+    #Log info for debugging
     print_rays = ""
     for r in my_rays:
         print_rays = f"{print_rays} {get_ray_num(r)}"
     print("my rank ", comm.rank, "my rays ", print_rays)
+
+    #construct the frames
     create_frames(my_rays, out_dir=out_dir, multi_plot_kwargs=mp_kwargs)
-    print("-------------- {} finished----------------".format(comm.rank))
+    print(f"-------------- {comm.rank} finished----------------")
+
 
 def create_frames(rays,
                   save_multi_plot=True,
@@ -194,6 +161,7 @@ def create_frames(rays,
 
             np.save(f"{out_dir}/ray{ray_num}_absorber{abs_num:02d}.npy", absorber_info)
             abs_num+=1
+
 def calc_absorber_props(ray, start, end):
     """
     Calculate the weighted average of a list of absorber properties
@@ -243,6 +211,58 @@ def ion_p_num(ion_name):
     outname = f"{ion_split[0]}_p{num}_number_density"
     return outname
 
+def get_num_density_range(ion_name, comm, my_rays, use_defaults=True):
+    """
+    Calculates the number density limits to be used for plotting. Either takes
+    predefined limits, or calculates them by taking the limits to be:
+     median/100 to median*1000
+
+    Parameters:
+        ion_name : string: name of the ion (ie H I, C IV)
+        comm : MPI thing : the comm controller for the parallezation
+        my_rays : list : the list of ray file paths
+        use_defaults :bool : if set to True, then defaults will be used (see dict)
+            instead of calculating the median value.
+    Returns:
+        num_density_range : numpy array: minimum and maximum limits of number density
+    """
+    num_density_dict = {'H I':[1e-11, 1e-5],
+                       'C IV':[1e-12, 1e-6],
+                       'O VI':[1e-12, 1e-6],
+                       'Si III':[1e-11, 1e-5],
+                       'Si II':[1e-11, 1e-5]}
+
+    if ion_name in num_density_dict and use_defaults=True:
+        num_density_range = num_density_dict[ion_name]
+
+    else:
+        #get average median value to represent scale
+        num_rays = len(my_rays)
+        med =0
+        for i in range(num_rays):
+            #load ray
+            curr_ray_file = my_rays[i]
+            curr_ray= yt.load(curr_ray_file)
+
+            #get median num density
+            num_density = curr_ray.data[ f"{ion_p_num(ion_name)}" ]
+            med += np.median(num_density)
+
+            curr_ray.close()
+        med /= num_rays
+        med = np.array(med)
+        sum_med = np.zeros_like(med)
+
+        #sum all medians. divide by proccesors to get average
+        comm.Barrier()
+        comm.Allreduce([med, MPI.DOUBLE], [sum_med, MPI.DOUBLE], op=MPI.SUM)
+
+        avg_med = sum_med/comm.size
+
+        #estimate min max values to number dense plot. and markers positioning
+        num_density_range = np.array( [0.01*avg_med, 1000*avg_med] , dtype=np.float64)
+
+    return num_density_range
 if __name__ == '__main__':
     #take in arguments
     if len(argv) == 6:

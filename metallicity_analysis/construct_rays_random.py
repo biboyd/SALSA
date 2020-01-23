@@ -15,7 +15,7 @@ from center_finder import find_center
 
 def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
     """
-    randomly sample impact parameter to get random sightlines from a give galaxy
+    randomly sample impact parameter to get random sightlines from a given galaxy center 
 
     Parameters:
         center : arr: coordinates of the center of the galaxy
@@ -30,7 +30,7 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
         end_points : array : 2d array of the endpoints for
                     each sightline
     """
-
+    # define random seed, put length properties in code_length
     np.random.seed(seed)
     ds = yt.load(dsname)
     length = ds.quan(length, 'kpc').in_units('code_length')
@@ -39,12 +39,15 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
     max_impact_param = ds.quan(max_impact_param, 'kpc').in_units('code_length')
 
 
+    #randomly select angle and distance from center of gal
     #take sqrt so that impact param is uniform in projected area space
     impact_param = np.sqrt(np.random.uniform(min_impact_param.value**2, max_impact_param.value**2, num_sightlines))
+
     #theta represents polar angle. phi represents azimuthal
     theta = np.random.uniform(0, np.pi, num_sightlines)
     phi = np.random.uniform(0, 2*np.pi, num_sightlines)
 
+    #construct vector from gal_center to sightline midpoint
     rad_vec= np.empty((num_sightlines, 3))
     rad_vec[:, 0] = impact_param*np.cos(phi)*np.sin(theta)
     rad_vec[:, 1] = impact_param*np.sin(phi)*np.sin(theta)
@@ -69,6 +72,7 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
 
     #shift to be centered at galaxy
     sightline_centers = rad_vec +np.array(center)
+
     #find ending and start points for each sightline
     end_point = sightline_centers + length/2 *perp_vec
     start_point = sightline_centers - length/2 *perp_vec
@@ -76,7 +80,7 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
     return start_point, end_point
 
 def random_rays(dsname, center,
-                n_rays, max_impact,
+                n_rays, max_impact_param,
                 min_impact_param=0.,
                 length=200,
                 line_list=['H I', 'C IV', 'O VI'],
@@ -86,15 +90,32 @@ def random_rays(dsname, center,
                 seed=None):
     """
 
+    Parameters:
+        dsname : string : path to dataset
+        center : arr: coordinates of the center of the galaxy
+        n_rays : int : number of light rays to construct
+        max_impact_param : float : maximum impact param to sample from in kpc
+        min_impact_param : float : minimum impact param to sample from in kpc
+        length : float : length of the sightline in kpc
+        line_list : list : ions to add to lightray
+        other_fields : list : fields to add to lightray
+        out_dir : string : path to where ray files will be written
+        parallel : bool : runs in parallel by evenly dividing rays to processes
+        seed : int : seed to use in random number generate. If None, then seed will
+            be chosen randomly by numpy
+
+    Returns:
+        none
     """
-    #stuff
+
     if parallel:
         comm = MPI.COMM_WORLD
 
+    # get start/end points for light rays
     ds = yt.load(dsname)
     start_points, end_points = random_sightlines(dsname, center,
                                                  n_rays,
-                                                 max_impact,
+                                                 max_impact_param,
                                                  min_impact_param=min_impact_param,
                                                  length=length,
                                                  seed=seed)
@@ -103,6 +124,7 @@ def random_rays(dsname, center,
     pad = np.floor( np.log10(n_rays) )
     pad = int(pad) + 1
 
+    # distribute rays to proccesors
     my_ray_nums = np.arange(n_rays)
     if parallel:
         #split ray numbers then take a portion based on rank
@@ -115,6 +137,7 @@ def random_rays(dsname, center,
                                 end_points[i],
                                 lines=line_list, fields=other_fields,
                                 data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
+
 if __name__ == '__main__':
     #setup conditions
     line_list = ['H I','H II','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']

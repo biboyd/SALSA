@@ -6,6 +6,8 @@
 Holds code carried over from a previous analysis
 some code is borrowed/modified  
 
+## metallicity_analysis
+This holds code for studying the metallicitiy of absorbers. It includes code both to randomly find light rays and then extract absorption features from light rays. Then there is also code to create plots showing the distribution of metallicity vs HI column density.
 ## multi_plot_movie
 Holds code for a multiplot class that uses yt and trident. It's purpose is to construct a multiplot that shows a light ray traveling through a galactic simulation, it's corresponding number density along its length (for a given ion), and the resulting spectra an observer would see.  
 * main file is multi_plot.py (holds relavent classe).   
