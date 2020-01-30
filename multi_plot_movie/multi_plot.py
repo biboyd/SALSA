@@ -30,6 +30,7 @@ class multi_plot():
                 ds_filename,
                 ray_filename,
                 ion_name='H I',
+                cut_region_list=None,
                 slice_field=None,
                 absorber_fields=[],
                 north_vector=[0, 0, 1],
@@ -63,6 +64,7 @@ class multi_plot():
         ds_filename : Path/name of the enzo dataset to be loaded
         ray_filename : Path/name of the hdf5 ray file to be loaded
         ion_name :string: Name of the ion to plot in number density plot
+        cut_region_list : list: a list of strings defined by the way you use Cut Regions in YT
         slice_field :string: Field to plot in slice plot. defaults to ion_name's number density
         absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
         north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
@@ -98,10 +100,11 @@ class multi_plot():
         self.ds_filename = ds_filename
         self.ray_filename = ray_filename
         self.ion_name = ion_name
+        self.cut_region_list = cut_region_list
         self.frac = frac
         #open up the dataset and ray files
         self.ds = yt.load(self.ds_filename)
-        self.ray = yt.load(self.ray_filename)
+        self.load_ray(self.ray_filename)
 
         #add ion name to list of all ions to be plotted
         self.ion_list = [ion_name] + absorber_fields
@@ -413,7 +416,7 @@ class multi_plot():
 
 
 
-        spect_gen.make_spectrum(self.ray, lines=ion_list)
+        spect_gen.make_spectrum(self.data, lines=ion_list)
 
 
         #get fields from spectra and give correct units
@@ -490,7 +493,7 @@ class multi_plot():
 
         #use wavelength_width to set the range
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.wavelegnth_res, line_database='my_lines.txt')
-        spect_gen.make_spectrum(self.ray, lines=ion_list, observing_redshift=z_tot)
+        spect_gen.make_spectrum(self.data, lines=ion_list, observing_redshift=z_tot)
 
 
         #get fields from spectra and give correct units
@@ -520,15 +523,20 @@ class multi_plot():
             none
         """
         #get list of num density  los velocity and corresponding lengths
-        num_density = self.ray.data[self.ion_p_name()+'_number_density']
-        prop2 = self.ray.data[prop2_name]
+        num_density = self.data[self.ion_p_name()+'_number_density']
+        prop2 = self.data[prop2_name]
+        prop2_lb = None
+        prop2_ub = None
         #convert to specified units
         if prop2_units is None:
             #check if personal default
             default_units = dict(velocity_los='km/s', metallicity='Zsun')
+            default_limits = dict(velocity_los=[-600, 600], metallicity=[0, 1])
             if prop2_name in default_units.keys():
-                prop2_units = default_units[prop2_name] 
+                prop2_units = default_units[prop2_name]
                 prop2 = prop2.in_units(prop2_units)
+                prop2_lb, prop2_ub = default_limits[prop2_name]
+                print(prop2_lb, prop2_ub)
             else:
                 prop2_units = str(prop2.units)
         else:
@@ -538,7 +546,11 @@ class multi_plot():
         if self.bulk_velocity is not None and prop2_name == 'velocity_los':
             prop2 += self.bulk_velocity
 
-        l_list = self.ray.data['l'].in_units('kpc')
+        #get length data and define x limits
+        l_list = self.data['l'].in_units('kpc')
+        full_l = self.uncut_data['l'].in_units('kpc')
+        pad = 0.1*full_l[-1]
+        xlimits = [-pad, full_l[-1] + pad]
 
 
         if ax_num_dense is not None:
@@ -556,8 +568,9 @@ class multi_plot():
                 self.num_dense_min = med*0.01
                 self.num_dense_max = med*1000
 
+            #set axes limits
             ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
-
+            ax_num_dense.set_xlim(xlimits[0], xlimits[1])
             #check if should plot contour intervals
             if self.plot_contour or self.plot_cloud:
                 if self.plot_cloud:
@@ -609,7 +622,8 @@ class multi_plot():
             ax_prop2.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_prop2.set_ylabel(f"{prop2_name} $({prop2_units})$")
             ax_prop2.grid(zorder=0)
-            ax_prop2.set_ylim(-600, 600)
+            ax_prop2.set_ylim(prop2_lb, prop2_ub)
+            ax_prop2.set_xlim(xlimits[0], xlimits[1])
 
         #add appropriate markers to the plot
         if self.markers and ax_prop2 is not None:
@@ -733,12 +747,9 @@ class multi_plot():
                         be added on to multi_plot
             num_fitted_lines: int: Number of lines fitted by spectacle
         """
-        if self.ray is None:
-            self.ray = yt.load(self.ray_filename)
-
         #compute col density from summing along ray
-        num_density = np.array(self.ray.data[self.ion_p_name()+'_number_density'])
-        dl_array = np.array(self.ray.data['dl'])
+        num_density = np.array(self.data[self.ion_p_name()+'_number_density'])
+        dl_array = np.array(self.data['dl'])
 
 
         line_sum_cd=0
@@ -835,6 +846,33 @@ class multi_plot():
         return sums, line_text, line_models, num_fitted_lines
 
 
+    def load_ray(self, new_ray):
+        """
+        loads a new ray into the multi_plot class. (same dataset)
+
+        Parameters:
+            new_ray :str or yt.ray: either filename to rayfile or a trident ray
+                that's already opened
+        Returns:
+            none
+        """
+
+        #check if str else assume is ray
+        if isinstance(new_ray, str):
+            self.ray_filename=new_ray
+            self.ray = yt.load(new_ray)
+            self.uncut_data = self.ray.all_data()
+        else:
+            self.ray = new_ray
+            self.ray_filename=new_ray.filename_template
+            self.uncut_data = new_ray.all_data()
+
+        #apply cut region if specified
+        if self.cut_region_list is None:
+            self.data = self.uncut_data
+        else:
+            self.data = self.ray.cut_region(self.uncut_data, self.cut_region_list)
+
     def get_contour_intervals(self, char_density_frac = 0.5):
         """
         get the intervals along the ray where an absorption feature is found.
@@ -851,8 +889,8 @@ class multi_plot():
         cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
         init_cutoff = cutoffs[self.ion_name]
 
-        num_density = self.ray.data[self.ion_p_name()+'_number_density']
-        dl_list = self.ray.data['dl']
+        num_density = self.data[self.ion_p_name()+'_number_density']
+        dl_list = self.data['dl']
 
         if self.sigma_smooth is not None:
             num_density = gaussian_filter(num_density, self.sigma_smooth)
@@ -894,8 +932,8 @@ class multi_plot():
         Etract features from number density using a cloud technique
         create by Jason Tumlinson
         """
-        num_density = self.ray.data[self.ion_p_name()+'_number_density']
-        dl_list = self.ray.data['dl']
+        num_density = self.data[self.ion_p_name()+'_number_density']
+        dl_list = self.data['dl']
 
         threshold = self._cloud_method(num_density, coldens_fraction=coldens_fraction)
 
@@ -919,10 +957,10 @@ class multi_plot():
         """
         iteratively do the cloud method to extract all features
         """
-        num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
-        dl_list = self.ray.data['dl'].in_units('cm')
-        vel_los = self.ray.data['velocity_los'].in_units('km/s')
-        density_array = self.ray.data[('gas', 'density')]
+        num_density = self.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
+        dl_list = self.data['dl'].in_units('cm')
+        vel_los = self.data['velocity_los'].in_units('km/s')
+        density_array = self.data[('gas', 'density')]
 
         all_intervals=[]
         lcd_list=[]
@@ -1145,9 +1183,9 @@ class multi_plot():
             min_dict = {'H I': 13, 'C IV' :13, 'O VI':13.5}
             min_logN = min_dict[self.ion_name]
 
-        num_density = self.ray.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
-        dl_list = self.ray.data['dl'].in_units('cm')
-        los_vel = self.ray.data['velocity_los'].in_units('km/s')
+        num_density = self.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
+        dl_list = self.data['dl'].in_units('cm')
+        los_vel = self.data['velocity_los'].in_units('km/s')
 
         all_intervals=[]
         lcd_list=[]
