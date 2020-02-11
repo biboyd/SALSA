@@ -4,7 +4,6 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=2Gb
 #SBATCH -t 00:45:00
-#SBATCH --x11=all
 #SBATCH -o slurm_logs/slurm-%j.out
 
 ds=$1
