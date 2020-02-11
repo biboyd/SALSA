@@ -102,9 +102,6 @@ class multi_plot():
         self.ion_name = ion_name
         self.cut_region_list = cut_region_list
         self.frac = frac
-        #open up the dataset and ray files
-        self.ds = yt.load(self.ds_filename)
-        self.load_ray(self.ray_filename)
 
         #add ion name to list of all ions to be plotted
         self.ion_list = [ion_name] + absorber_fields
@@ -113,6 +110,11 @@ class multi_plot():
         self.slice = None
         self.north_vector = north_vector
         self.center_gal= center_gal
+
+        #open up the dataset and ray files
+        self.ds = yt.load(self.ds_filename)
+        self.load_ray(self.ray_filename)
+
 
         #set slice field to ion name if no field is specified
         if (slice_field == None):
@@ -861,11 +863,13 @@ class multi_plot():
         if isinstance(new_ray, str):
             self.ray_filename=new_ray
             self.ray = yt.load(new_ray)
-            self.uncut_data = self.ray.all_data()
         else:
             self.ray = new_ray
             self.ray_filename=new_ray.filename_template
-            self.uncut_data = new_ray.all_data()
+
+        #save uncut data. define center
+        self.uncut_data = self.ray.all_data()
+        self.uncut_data.set_field_parameter('center', self.center_gal)
 
         #apply cut region if specified
         if self.cut_region_list is None:
