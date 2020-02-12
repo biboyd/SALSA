@@ -307,6 +307,16 @@ class multi_plot():
         #add ion fields to dataset if not already there
         trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
 
+        # add radius field to dataset
+        self.ds.add_field(('gas', 'radius'),
+                 function=_radius,
+                 units="code_length",
+                 take_log=False,
+                 validators=[yt.fields.api.ValidateParameter(['center'])])
+
+        ds_data = self.ds.all_data()
+        if self.cut_region_list is not None:
+            ds_data = ds.cut_region(ds_data, self.cut_region_list)
 
         ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
 
@@ -357,7 +367,7 @@ class multi_plot():
                           self.slice_field,
                           center=center,
                           north_vector = self.north_vector,
-                          width = wid_hght)
+                          width = wid_hght, data_source=ds_data)
 
 
 
@@ -869,8 +879,7 @@ class multi_plot():
 
         #save uncut data. define center
         self.uncut_data = self.ray.all_data()
-        self.uncut_data.set_field_parameter('center', self.center_gal)
-
+        
         #apply cut region if specified
         if self.cut_region_list is None:
             self.data = self.uncut_data
@@ -1211,6 +1220,19 @@ class multi_plot():
                 lcd_list.append(curr_lcd)
 
         return all_intervals, lcd_list
+
+#function to create field in yt
+def _radius(field, data):
+    if data.has_field_parameter("center"):
+        c = data.get_field_parameter("center")
+    else:
+        c = data.ds.domain_center
+
+    x = data[('gas', 'x')] - c[0]
+    y = data[('gas', 'y')] - c[1]
+    z = data[('gas', 'z')] - c[2]
+    return np.sqrt(x*x + y*y + z*z)
+
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]

@@ -44,6 +44,13 @@ def construct_rays( dataset,
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=line_list, ftype='gas')
 
+    # add radius field to dataset
+    ds.add_field(('gas', 'radius'),
+             function=_radius,
+             units="code_length",
+             take_log=False,
+             validators=[yt.fields.api.ValidateParameter(['center'])])
+
     #create directory if doesn't exist
     makedirs(out_dir, exist_ok=True)
 
@@ -111,12 +118,19 @@ def construct_rays( dataset,
         split_ray_nums = np.array_split(my_ray_nums, comm.size)
         my_ray_nums = split_ray_nums[ comm.rank]
 
+    #define center of galaxy for lrays
+    if center is not None:
+        fld_param = {'center':center}
+    else:
+        fld_param=None
     for i in my_ray_nums:
         #construct ray
         trident.make_simple_ray(ds,
                                 ray_begins[i],
                                 ray_ends[i],
-                                lines=line_list, fields= ['density', 'metallicity'],
+                                lines=line_list,
+                                fields= ['density', 'metallicity', 'temperature', ('gas', 'radius')],
+                                field_parameters=fld_param,
                                 data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
     if parallel:
         comm.Barrier()
@@ -124,6 +138,18 @@ def construct_rays( dataset,
              print("-----all finished------")
 
     return norm_vector
+    
+#function to create field in yt
+def _radius(field, data):
+    if data.has_field_parameter("center"):
+        c = data.get_field_parameter("center")
+    else:
+        c = data.ds.domain_center
+
+    x = data[('gas', 'x')] - c[0]
+    y = data[('gas', 'y')] - c[1]
+    z = data[('gas', 'z')] - c[2]
+    return np.sqrt(x*x + y*y + z*z)
 
 
 if __name__ == '__main__':

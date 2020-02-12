@@ -15,7 +15,7 @@ from center_finder import find_center
 
 def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
     """
-    randomly sample impact parameter to get random sightlines from a given galaxy center 
+    randomly sample impact parameter to get random sightlines from a given galaxy center
 
     Parameters:
         center : arr: coordinates of the center of the galaxy
@@ -84,7 +84,7 @@ def random_rays(dsname, center,
                 min_impact_param=0.,
                 length=200,
                 line_list=['H I', 'C IV', 'O VI'],
-                other_fields=['density', 'metallicity'],
+                other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius')],
                 out_dir='./',
                 parallel=True,
                 seed=None):
@@ -113,6 +113,17 @@ def random_rays(dsname, center,
 
     # get start/end points for light rays
     ds = yt.load(dsname)
+
+    #add ion fields to dataset if not already there
+    trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
+    
+    # add radius field to dataset
+    ds.add_field(('gas', 'radius'),
+             function=_radius,
+             units="code_length",
+             take_log=False,
+             validators=[yt.fields.api.ValidateParameter(['center'])])
+
     start_points, end_points = random_sightlines(dsname, center,
                                                  n_rays,
                                                  max_impact_param,
@@ -130,13 +141,34 @@ def random_rays(dsname, center,
         #split ray numbers then take a portion based on rank
         split_ray_nums = np.array_split(my_ray_nums, comm.size)
         my_ray_nums = split_ray_nums[ comm.rank]
+
+    #define center of galaxy for lrays
+    if center is not None:
+        fld_param = {'center':center}
+    else:
+        fld_param=None
+
     for i in my_ray_nums:
         #construct ray
         trident.make_simple_ray(ds,
                                 start_points[i],
                                 end_points[i],
-                                lines=line_list, fields=other_fields,
+                                lines=line_list,
+                                fields=other_fields,
+                                field_parameters=fld_param,
                                 data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
+
+#function to create field in yt
+def _radius(field, data):
+    if data.has_field_parameter("center"):
+        c = data.get_field_parameter("center")
+    else:
+        c = data.ds.domain_center
+
+    x = data[('gas', 'x')] - c[0]
+    y = data[('gas', 'y')] - c[1]
+    z = data[('gas', 'z')] - c[2]
+    return np.sqrt(x*x + y*y + z*z)
 
 if __name__ == '__main__':
     #setup conditions
@@ -152,4 +184,11 @@ if __name__ == '__main__':
         raise RuntimeError("Takes in 5 Arguments. Dataset_filename num_rays ray_lenght max_impact_param out_directory")
 
     center, n_vec, rshift, bv = find_center(filename)
-    random_rays(filename, center, num_rays, max_impact, min_impact_param=min_impact, line_list=line_list, length=ray_length, out_dir=out_dir)
+    random_rays(filename,
+                center,
+                num_rays,
+                max_impact,
+                min_impact_param=min_impact,
+                line_list=line_list,
+                length=ray_length,
+                out_dir=out_dir)
