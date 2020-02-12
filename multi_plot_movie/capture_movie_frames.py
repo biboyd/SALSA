@@ -247,20 +247,36 @@ def ion_p_num(ion_name):
 
 if __name__ == '__main__':
     #take in arguments
-    if len(argv) == 7:
+    if len(argv) == 8:
         filename = argv[1]
         ray_dir = argv[2]
         ion_name = argv[3]
         out_dir= argv[4]
         use_bv = argv[5]
         frac = float(argv[6])
+        cuts = argv[7]
 
     else:
-        raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv? ")
+        raise RuntimeError("Takes 7 arguments: Dataset_fname Ray_directory Ion_name Output_directory use_bv? frac cgm_cut? ")
 
     #check to see if should use bulk velocity
     if use_bv == 'True':
         use_bv=True
     else:
         use_bv=False
+
+    #Define whether to use cuts. See Foggie's github. consistency files for
+    #reason behind values
+    #density in g/cm^3. Temp in K. radius in kpc
+    if cuts == 'cgm':
+        cut_list =[["obj[('gas', 'radius')] > ", 10, 'kpc'],
+                   ["obj[('gas', 'radius')] < ", 200, 'kpc'],
+                   ["obj[('gas', 'temperature')] > ", 1.5e4, 'K'],
+                   ["obj[('gas', 'density')] < ", 2e-26, 'g/cm^3']]
+    elif cuts == 'ism':
+        cut_list =[["obj[('gas', 'radius')] < ", 10, 'kpc'],
+                   ["obj[('gas', 'temperature')] < ", 1.5e4, 'K'],
+                   ["obj[('gas', 'density')] > ", 2e-26, 'g/cm^3']]
+    else:
+        cuts=None
     main(filename, ray_dir, ion_name, out_dir, use_bv, frac)
