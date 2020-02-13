@@ -138,7 +138,7 @@ def construct_rays( dataset,
              print("-----all finished------")
 
     return norm_vector
-    
+
 #function to create field in yt
 def _radius(field, data):
     if data.has_field_parameter("center"):
@@ -174,4 +174,5 @@ if __name__ == '__main__':
                     center = center,
                     out_dir=out_dir,
                     parallel = True)
+    # save vector to fix orientation for future plots 
     np.save(f"{out_dir}/norm_vec.npy", new_n_vec)
