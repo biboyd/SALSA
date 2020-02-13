@@ -316,7 +316,7 @@ class multi_plot():
 
         ds_data = self.ds.all_data()
         if self.cut_region_list is not None:
-            ds_data = ds.cut_region(ds_data, self.cut_region_list)
+            ds_data = self.ds.cut_region(ds_data, self.cut_region_list)
 
         ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
 
