@@ -30,7 +30,7 @@ class multi_plot():
                 ds_filename,
                 ray_filename,
                 ion_name='H I',
-                cut_region_list=None,
+                cut_region_filter=None,
                 slice_field=None,
                 absorber_fields=[],
                 north_vector=[0, 0, 1],
@@ -64,7 +64,7 @@ class multi_plot():
         ds_filename : Path/name of the enzo dataset to be loaded
         ray_filename : Path/name of the hdf5 ray file to be loaded
         ion_name :string: Name of the ion to plot in number density plot
-        cut_region_list : list: a list of strings defined by the way you use Cut Regions in YT
+        cut_region_filter : str: a string defined by the way you use Cut Regions in YT
         slice_field :string: Field to plot in slice plot. defaults to ion_name's number density
         absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
         north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
@@ -100,7 +100,7 @@ class multi_plot():
         self.ds_filename = ds_filename
         self.ray_filename = ray_filename
         self.ion_name = ion_name
-        self.cut_region_list = cut_region_list
+        self.cut_region_filter = cut_region_filter
         self.frac = frac
 
         #add ion name to list of all ions to be plotted
@@ -147,6 +147,10 @@ class multi_plot():
                 'column_density' : False
             }
         }
+
+        # for making the CGM cuts on spheres. very hacky
+        self.cgm_details = cgm_details = [10, 200, "((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
+
         #add user defined defaults
         if spectacle_defaults is not None:
             self.defaults_dict.update(spectacle_defaults)
@@ -314,9 +318,14 @@ class multi_plot():
                  take_log=False,
                  validators=[yt.fields.api.ValidateParameter(['center'])])
 
-        ds_data = self.ds.all_data()
-        if self.cut_region_list is not None:
-            ds_data = ds.cut_region(ds_data, self.cut_region_list)
+        if self.cut_region_filter is not None:
+            # parse for radial cuts
+            rad_in, rad_out, cut_str = self.cgm_details
+            cgm = self.ds.sphere(c, (rad_out, 'kpc')) \
+                  - self.ds.sphere(c, (rad_in, 'kpc'))
+            data_source = cgm.cut_region(cut_str)
+        else:
+            data_source=None
 
         ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
 
@@ -367,7 +376,8 @@ class multi_plot():
                           self.slice_field,
                           center=center,
                           north_vector = self.north_vector,
-                          width = wid_hght, data_source=ds_data)
+                          width = wid_hght,
+                          data_source=data_source)
 
 
 
@@ -879,12 +889,12 @@ class multi_plot():
 
         #save uncut data. define center
         self.uncut_data = self.ray.all_data()
-        
+
         #apply cut region if specified
-        if self.cut_region_list is None:
+        if self.cut_region_filter is None:
             self.data = self.uncut_data
         else:
-            self.data = self.ray.cut_region(self.uncut_data, self.cut_region_list)
+            self.data = self.uncut_data.cut_region(self.cut_region_filter)
 
     def get_contour_intervals(self, char_density_frac = 0.5):
         """
@@ -1232,6 +1242,26 @@ def _radius(field, data):
     y = data[('gas', 'y')] - c[1]
     z = data[('gas', 'z')] - c[2]
     return np.sqrt(x*x + y*y + z*z)
+
+def parse_filter(filter):
+    out_rad = -1
+    in_rad = -1
+    filter = "((obj[('gas', 'radius')].in_units('kpc') > 10) & (obj[('gas', 'radius')].in_units('kpc') < 200)) "#"& ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"
+    sfilter = fliter.split("(obj")
+    #remove filters not dealing with radius
+    for fil in sfilter:
+        if "radius" in fil:
+            if ">" in fil:
+                low_indx = max((fil.find(">"), fil.find("="))
+                high_indx = fil[low_indx:].find(')')
+                radius = fil[low_indx+1: low_indx+high_indx]
+                in_rad=float( radius )
+            elif "<" in fil:
+                low_indx = max((fil.find("<"), fil.find("="))
+                high_indx = fil[low_indx:].find(')')
+                radius = fil[low_indx+1: low_indx+high_indx]
+                out_rad=float( radius )
+    return in_rad, out_rad
 
 if __name__ == '__main__':
     data_set_fname = argv[1]

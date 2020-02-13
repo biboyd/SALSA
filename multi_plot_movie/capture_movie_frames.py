@@ -8,52 +8,28 @@ from center_finder import find_center
 from os import makedirs, listdir
 import h5py
 
-def main(filename, ray_dir, i_name, out_dir, use_bv, frac):
+def main(filename, ray_dir, i_name, out_dir, use_bv, frac, cut_list=None):
     #init mpi
     comm = MPI.COMM_WORLD
 
-    #setup conditions
-    line_list = []#['H I', 'O VI', 'C IV']
-
-    if comm.rank == 0:
-        center, nvec, rshift, bulk_vel = find_center(filename)
-        center = np.array( center.in_units('code_length'), dtype=np.float64)
-        nvec = np.array(nvec, dtype=np.float64)
-        rshift = np.array([rshift], dtype=np.float64)
-        bulk_vel = np.array(bulk_vel, dtype=np.float64)
-    else:
-        center= np.zeros(3, dtype=np.float64)
-        nvec = np.zeros(3, dtype=np.float64)
-        rshift = np.zeros(1, dtype=np.float64)
-        bulk_vel = np.zeros(3, dtype=np.float64)
-
-
-
-    #broadcast information to all processes
-    comm.Barrier()
-    comm.Bcast([center, MPI.DOUBLE])
-    comm.Bcast([nvec, MPI.DOUBLE])
-    comm.Bcast([rshift, MPI.DOUBLE])
-
-    if use_bv is True:
-        comm.Bcast([bulk_vel, MPI.DOUBLE])
-    else:
-        bulk_vel=None
-    comm.Barrier()
+    #find setup conditions
+    center, nvec, rshift, bulk_vel = find_center(filename)
+    center = center.in_units('code_length')
 
 
     #set up multiplot settings
     mp_kwargs = dict(ds_filename=filename, ion_name=i_name,
-    				    absorber_fields=line_list,
-                                    center_gal = center,
-                                    north_vector = nvec,
-                                    redshift=rshift[0],
-                                    frac = frac,
-                                    bulk_velocity=bulk_vel,
-                                    plot_cloud=True,
-                                    use_spectacle= True,
-                                    plot_spectacle=True,
-                                    wavelength_width=20)
+    				 absorber_fields=line_list,
+                     cut_region_list=cut_list,
+                     center_gal = center,
+                     north_vector = nvec,
+                     redshift=rshift[0],
+                     frac = frac,
+                     bulk_velocity=None,
+                     plot_cloud=True,
+                     use_spectacle= True,
+                     plot_spectacle=True,
+                     wavelength_width=20)
 
 
     #collect only ray files in ray_dir
@@ -269,14 +245,14 @@ if __name__ == '__main__':
     #reason behind values
     #density in g/cm^3. Temp in K. radius in kpc
     if cuts == 'cgm':
-        cut_list =[["obj[('gas', 'radius')] > ", 10, 'kpc'],
-                   ["obj[('gas', 'radius')] < ", 200, 'kpc'],
-                   ["obj[('gas', 'temperature')] > ", 1.5e4, 'K'],
-                   ["obj[('gas', 'density')] < ", 2e-26, 'g/cm^3']]
+        cut_list ="((obj[('gas', 'radius')].in_units('kpc') > 10) & \
+                   (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
+                   ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
+                   (obj[('gas', 'density')].in_units('g/cm^3') < 2e-26))"
     elif cuts == 'ism':
-        cut_list =[["obj[('gas', 'radius')] < ", 10, 'kpc'],
-                   ["obj[('gas', 'temperature')] < ", 1.5e4, 'K'],
-                   ["obj[('gas', 'density')] > ", 2e-26, 'g/cm^3']]
+        cut_list =[["obj[('gas', 'radius')].in_units('kpc') < 10"],
+                   ["obj[('gas', 'temperature')].in_units('K') < 1.5e4"],
+                   ["obj[('gas', 'density')].in_units('g/cm^3') > 2e-26"]]
     else:
         cuts=None
     main(filename, ray_dir, ion_name, out_dir, use_bv, frac)
