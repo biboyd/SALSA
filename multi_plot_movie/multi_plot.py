@@ -1242,7 +1242,7 @@ def _radius(field, data):
     y = data[('gas', 'y')] - c[1]
     z = data[('gas', 'z')] - c[2]
     return np.sqrt(x*x + y*y + z*z)
-
+"""
 def parse_filter(filter):
     out_rad = -1
     in_rad = -1
@@ -1262,7 +1262,7 @@ def parse_filter(filter):
                 radius = fil[low_indx+1: low_indx+high_indx]
                 out_rad=float( radius )
     return in_rad, out_rad
-
+"""
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]

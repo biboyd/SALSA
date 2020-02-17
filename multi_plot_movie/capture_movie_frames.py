@@ -19,11 +19,10 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, frac, cut_list=None):
 
     #set up multiplot settings
     mp_kwargs = dict(ds_filename=filename, ion_name=i_name,
-    				 absorber_fields=line_list,
-                     cut_region_list=cut_list,
+                     cut_region_filter=cut_list,
                      center_gal = center,
                      north_vector = nvec,
-                     redshift=rshift[0],
+                     redshift=rshift,
                      frac = frac,
                      bulk_velocity=None,
                      plot_cloud=True,
