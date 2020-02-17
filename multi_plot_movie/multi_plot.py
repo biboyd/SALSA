@@ -1243,25 +1243,6 @@ def _radius(field, data):
     z = data[('gas', 'z')] - c[2]
     return np.sqrt(x*x + y*y + z*z)
 
-def parse_filter(filter):
-    out_rad = -1
-    in_rad = -1
-    filter = "((obj[('gas', 'radius')].in_units('kpc') > 10) & (obj[('gas', 'radius')].in_units('kpc') < 200)) "#"& ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"
-    sfilter = fliter.split("(obj")
-    #remove filters not dealing with radius
-    for fil in sfilter:
-        if "radius" in fil:
-            if ">" in fil:
-                low_indx = max((fil.find(">"), fil.find("="))
-                high_indx = fil[low_indx:].find(')')
-                radius = fil[low_indx+1: low_indx+high_indx]
-                in_rad=float( radius )
-            elif "<" in fil:
-                low_indx = max((fil.find("<"), fil.find("="))
-                high_indx = fil[low_indx:].find(')')
-                radius = fil[low_indx+1: low_indx+high_indx]
-                out_rad=float( radius )
-    return in_rad, out_rad
 
 if __name__ == '__main__':
     data_set_fname = argv[1]

@@ -140,7 +140,7 @@ def create_frames(rays,
     np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load in new ray
-        mp.ray = yt.load(ray_fname)
+        mp.load_ray(ray_fname)
 
         #add ray and other annotations
         ray_num = get_ray_num(ray_fname)
