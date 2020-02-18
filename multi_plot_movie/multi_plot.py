@@ -918,7 +918,8 @@ class multi_plot():
         if self.sigma_smooth is not None:
             num_density = gaussian_filter(num_density, self.sigma_smooth)
 
-        intervals = identify_intervals_char_length(num_density, init_cutoff, char_density_fraction=char_density_frac)
+        intervals = identify_intervals_char_lengt
+        h(num_density, init_cutoff, char_density_fraction=char_density_frac)
 
         lcd_list =[]
         my_intervals=[]
@@ -982,8 +983,10 @@ class multi_plot():
         """
         num_density = self.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
         dl_list = self.data['dl'].in_units('cm')
+        l_list = self.data['l'].in_units('cm')
         vel_los = self.data['velocity_los'].in_units('km/s')
         density_array = self.data[('gas', 'density')]
+
 
         all_intervals=[]
         lcd_list=[]
@@ -999,8 +1002,9 @@ class multi_plot():
 
             #extract intervals this would cover
             curr_intervals = identify_intervals(num_density, curr_thresh)
-            #print(curr_intervals)
-            new_intervals = self._sensible_combination(all_intervals, curr_intervals, vel_los, dl_list, density_array)
+
+
+            new_intervals = self._sensible_combination(all_intervals, curr_intervals, vel_los, dl_list,l_list, density_array)
             all_intervals = new_intervals.copy()
             #mask density array above threshold and apply mask to dl
             curr_num_density = np.ma.masked_greater_equal(num_density, curr_thresh)
@@ -1022,7 +1026,7 @@ class multi_plot():
                 lcd_list.append(lcd)
         return final_intervals, lcd_list
 
-    def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array, dl_array, density_array):
+    def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array, dl_array, l_array, density_array):
         """
         adds new intervals by taking into account the velocities when combining them
 
@@ -1037,6 +1041,41 @@ class multi_plot():
             new_intervals : list : a final list of intervals where prev and curr are
                         properly combined.
         """
+        # first check no region jumping (from use of cut_regions)
+        if self.cut_region_filter is not None:
+            #make sure spatially connected
+            real_intervals = []
+            for curr_b, curr_e in curr_intervals:
+                #check if lengths match up
+                size_dl = np.sum(dl_array[curr_b:curr_e])
+                size_l = l_array[curr_e] - l_array[curr_b]
+                rel_diff = abs(size_dl - size_l)/size_dl
+                print("rel diff: ", rel_diff)
+                if rel_diff > 1e-12:
+                    print(curr_b, curr_e)
+                    # make sure things are good
+                    divide_indx=None
+                    for i in range(curr_b, curr_e):
+                        # find where the jump is
+
+                        rel_diff = abs(l_array[i] +dl_array[i] - l_array[i+1])/l_array[i]
+                        print(i, rel_diff.value)
+                        if rel_diff > 1e-12:
+                            divide_indx=i
+                            break
+                    #append intervals split up by the jump
+                    if divide_indx is not None:
+                        print(divide_indx)
+                        real_intervals.append((curr_b, divide_indx))
+                        real_intervals.append((divide_indx+1, curr_e))
+                    else:
+                        print("couldn't divide index for ",curr_b, " ", curr_e)
+
+                else:
+                    real_intervals.append((curr_b, curr_e))
+            curr_intervals = real_intervals.copy()
+
+
         #check if there are any previous intervals to combine with
         if prev_intervals == []:
             return curr_intervals
@@ -1080,6 +1119,8 @@ class multi_plot():
             if overlap_intervals == []:
                 new_intervals.append((curr_b, curr_e))
             else:
+
+                #collect overlap points into list
                 points = [curr_b]
                 for b, e in overlap_intervals:
                     #print(f"curr {curr_b, curr_e} ovelaps {b, e}")
@@ -1087,6 +1128,7 @@ class multi_plot():
                     points.append(b)
                     points.append(e)
                 points.append(curr_e)
+
                 avg_v=[]
                 for i in range(len(points)-1):
                     pnt1, pnt2 = points[i], points[i+1]
