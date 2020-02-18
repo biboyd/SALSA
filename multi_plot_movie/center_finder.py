@@ -31,6 +31,7 @@ def find_center(ds_fname, tracking_dir=None, save_data=True, max_field=None):
     rshift = ds.current_redshift
 
     if max_field is not None:
+        print(f"using max of field {max_field} as centere")
         #let max field be center of gal
         v, center = ds.find_max(max_field)
         n_vec, bulk_vel = find_normal_vector(ds, center)
@@ -51,6 +52,7 @@ def find_center(ds_fname, tracking_dir=None, save_data=True, max_field=None):
                 raise RuntimeError("could not find {} in {}" \
                                         .format(sfname[-1], center_norm_file))
             else:
+                print(f"using info found in {center_norm_file}")
                 center = ds.arr(center, 'code_length')
                 n_vec = ds.arr(n_vec, 'dimensionless')
         #catch if file or entry not found
@@ -65,8 +67,10 @@ def find_center(ds_fname, tracking_dir=None, save_data=True, max_field=None):
 
                 #compute normal vec from center
                 n_vec, bulk_vel = find_normal_vector(ds, center)
+                print(f"Found center in {center_file}. Calculated n_vec/bluk velocity")
 
                 if save_data:
+                    print(f"Saving that data to {center_norm_file}")
                     #write center and norm to file
                     w = open(center_norm_file, 'a')
                     write_str = "{:s} {:f} ".format(sfname[-1], rshift)
