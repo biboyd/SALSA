@@ -149,7 +149,7 @@ class multi_plot():
         }
 
         # for making the CGM cuts on spheres. very hacky
-        self.cgm_details = cgm_details = [10, 200, "((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
+        self.cgm_details = [10, 200, "((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
 
         #add user defined defaults
         if spectacle_defaults is not None:
@@ -256,6 +256,7 @@ class multi_plot():
             ray_unit :(YT arr): unit vector showing direction of the ray
         """
         #get start and end points of ray. convert to defined units
+        #print(self.ray)
         ray_begin = self.ray.light_ray_solution[0]['start']
         ray_end = self.ray.light_ray_solution[0]['end']
 
@@ -307,23 +308,26 @@ class multi_plot():
         Returns:
         slice : yt SlicePlot with ray annotated
         """
+        #print("adding ion fields")
 
         #add ion fields to dataset if not already there
         trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
 
         # add radius field to dataset
-        self.ds.add_field(('gas', 'radius'),
-                 function=_radius,
-                 units="code_length",
-                 take_log=False,
-                 validators=[yt.fields.api.ValidateParameter(['center'])])
+        #self.ds.add_field(('gas', 'radius'),
+        #         function=_radius,
+        #         units="code_length",
+        #         take_log=False,
+        #         validators=[yt.fields.api.ValidateParameter(['center'])])
 
+        #print("now making cgm thing")
         if self.cut_region_filter is not None:
             # parse for radial cuts
             rad_in, rad_out, cut_str = self.cgm_details
-            cgm = self.ds.sphere(c, (rad_out, 'kpc')) \
-                  - self.ds.sphere(c, (rad_in, 'kpc'))
-            data_source = cgm.cut_region(cut_str)
+            cgm = self.ds.sphere(self.center_gal, (rad_out, 'kpc')) \
+                  - self.ds.sphere(self.center_gal, (rad_in, 'kpc'))
+            # cuts running too slow rn so just not including them
+            data_source = cgm #cgm.cut_region(cut_str)
         else:
             data_source=None
 

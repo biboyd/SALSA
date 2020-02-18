@@ -16,7 +16,6 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, frac, cut_list=None):
     center, nvec, rshift, bulk_vel = find_center(filename)
     center = center.in_units('code_length')
 
-
     #set up multiplot settings
     mp_kwargs = dict(ds_filename=filename, ion_name=i_name,
                      cut_region_filter=cut_list,
@@ -121,11 +120,13 @@ def create_frames(rays,
 
     #create initial slice
     mp = multi_plot(ray_filename=rays[0], **multi_plot_kwargs)
+    print("----------- Beginning to Create Iinitial Slice -------------")
     mp.create_slice(cmap='cividis')
 
     #clear annotations
     mp.slice.annotate_clear()
 
+    print("----------- Finished Creating Initial Slice -------------")
     absorber_head=np.array(['ray_num',
                             'start_interval',
                             'end_intervals',
@@ -247,11 +248,11 @@ if __name__ == '__main__':
         cut_list ="((obj[('gas', 'radius')].in_units('kpc') > 10) & \
                    (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
                    ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
-                   (obj[('gas', 'density')].in_units('g/cm^3') < 2e-26))"
+                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"
     elif cuts == 'ism':
         cut_list =[["obj[('gas', 'radius')].in_units('kpc') < 10"],
                    ["obj[('gas', 'temperature')].in_units('K') < 1.5e4"],
-                   ["obj[('gas', 'density')].in_units('g/cm^3') > 2e-26"]]
+                   ["obj[('gas', 'density')].in_units('g/cm**3') > 2e-26"]]
     else:
-        cuts=None
-    main(filename, ray_dir, ion_name, out_dir, use_bv, frac)
+        cut_list=None
+    main(filename, ray_dir, ion_name, out_dir, use_bv, frac, cut_list = cut_list)
