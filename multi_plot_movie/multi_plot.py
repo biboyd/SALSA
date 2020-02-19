@@ -539,7 +539,7 @@ class multi_plot():
 
         return wavelength, flux
 
-    def plot_num_density(self, ax_num_dense=None, ax_prop2=None, prop2_name='velocity_los', prop2_units=None):
+    def plot_num_density(self, ax_num_dense=None, ax_prop2=None, prop2_name='velocity_los', prop2_units=None, plot_kwargs={}):
         """
         Plots the number density at different lengths along the ray
 
@@ -556,8 +556,8 @@ class multi_plot():
         #convert to specified units
         if prop2_units is None:
             #check if personal default
-            default_units = dict(velocity_los='km/s', metallicity='Zsun')
-            default_limits = dict(velocity_los=[-600, 600], metallicity=[0, 1])
+            default_units = dict(velocity_los='km/s', metallicity='Zsun', temperature='K', density='g/cm**3')
+            default_limits = dict(velocity_los=[-600, 600], metallicity=[0, 1], temperature=[1e4, 1e9], density=[1e-30, 1e-26])
             if prop2_name in default_units.keys():
                 prop2_units = default_units[prop2_name]
                 prop2 = prop2.in_units(prop2_units)
@@ -581,7 +581,7 @@ class multi_plot():
 
         if ax_num_dense is not None:
             #make num density plots
-            ax_num_dense.plot(l_list, num_density)
+            ax_num_dense.plot(l_list, num_density, **plot_kwargs)
             ax_num_dense.set_title(f"Number Density of {self.ion_name} Along Ray", loc='right')
             ax_num_dense.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_num_dense.set_ylabel("Number Density \n$(cm^{-3})$")
@@ -643,7 +643,7 @@ class multi_plot():
         if ax_prop2 is not None:
             #make line of sight velocity plots
             ax_prop2.hlines(0, l_list[0], l_list[-1], linestyles='dashed',alpha=0.25, zorder=1)
-            ax_prop2.plot(l_list, prop2)
+            ax_prop2.plot(l_list, prop2, **plot_kwargs)
             ax_prop2.set_title(f"{prop2_name} Along Ray", loc='right')
             ax_prop2.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_prop2.set_ylabel(f"{prop2_name} $({prop2_units})$")
