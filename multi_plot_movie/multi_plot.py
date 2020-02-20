@@ -140,7 +140,7 @@ class multi_plot():
         self.spect_res = spectra_resolution #km/s
         self.defaults_dict = {
             'bounds' :{
-                'column_density' : (12.0, 23)
+                'column_density' : (self.cloud_min, 23)
             },
             'fixed' : {
                 'delta_lambda' : True,
@@ -928,7 +928,7 @@ class multi_plot():
         lcd_list =[]
         my_intervals=[]
         #check interval has high enough column density
-        lim = self.defaults_dict['bounds']['column_density'][0]
+        lim = self.cloud_min
         for b,e in intervals:
             #compute log col density
             curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
@@ -941,45 +941,7 @@ class multi_plot():
         #create empty array then fill with intervals and column densities
         return (my_intervals, lcd_list)
 
-    def _cloud_method(self, num_density_arr, coldens_fraction):
 
-        cut = 0.999
-        total = np.sum(num_density_arr)
-        ratio = 0.001
-        while ratio < coldens_fraction:
-            part = np.sum(num_density_arr[num_density_arr > cut * np.max(num_density_arr)])
-            ratio = part / total
-            cut = cut - 0.001
-
-        threshold = cut * np.max(num_density_arr)
-
-        return threshold
-
-    def get_cloud_intervals(self, coldens_fraction=0.85):
-        """
-        Etract features from number density using a cloud technique
-        create by Jason Tumlinson
-        """
-        num_density = self.data[self.ion_p_name()+'_number_density']
-        dl_list = self.data['dl']
-
-        threshold = self._cloud_method(num_density, coldens_fraction=coldens_fraction)
-
-        intervals = identify_intervals(num_density, threshold)
-
-        my_intervals=[]
-        lcd_list=[]
-        lim = self.defaults_dict['bounds']['column_density'][0]
-        for b,e in intervals:
-            #compute log col density
-            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
-
-            #check if col density is above limit
-            if True:# curr_lcd > lim:
-                lcd_list.append(curr_lcd)
-                my_intervals.append( (b, e) )
-
-        return my_intervals, lcd_list
 
     def get_iterative_cloud(self, coldens_fraction=0.85, min_logN=12):
         """
@@ -998,7 +960,7 @@ class multi_plot():
         curr_col_density = np.sum(num_density*dl_list)
         min_col_density = 10**min_logN
         count=0
-        lim = self.defaults_dict['bounds']['column_density'][0]
+        lim = min_logN
 
         while curr_col_density > min_col_density:
             #calc threshold to get fraction from current num density
@@ -1030,6 +992,19 @@ class multi_plot():
                 lcd_list.append(lcd)
         return final_intervals, lcd_list
 
+    def _cloud_method(self, num_density_arr, coldens_fraction):
+
+        cut = 0.999
+        total = np.sum(num_density_arr)
+        ratio = 0.001
+        while ratio < coldens_fraction:
+            part = np.sum(num_density_arr[num_density_arr > cut * np.max(num_density_arr)])
+            ratio = part / total
+            cut = cut - 0.001
+
+        threshold = cut * np.max(num_density_arr)
+
+        return threshold
     def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array, dl_array, l_array, density_array):
         """
         adds new intervals by taking into account the velocities when combining them
@@ -1155,127 +1130,6 @@ class multi_plot():
 
 
         return new_intervals
-
-    def foo(self, bar):
-        #find avg velocity of each interval
-        center_vel_avg = np.mean(velocity_array[b:e])
-
-        if curr_b == b:
-            dif_l = 0.
-        else:
-            left_vel_avg = np.mean(velocity_array[curr_b:b])
-            dif_l = abs(left_vel_avg - center_vel_avg)
-
-        if curr_e == e:
-            dif_r = 0.0
-        else:
-            right_vel_avg = np.mean(velocity_array[e:curr_e])
-            dif_r= abs(center_vel_avg - right_vel_avg)
-
-        #find difference and compare to threshold
-        #print(dif_l, dif_r)
-        if dif_l <= del_v:
-            if dif_r <= del_v:
-                #add one large
-                new_intervals.remove((b, e))
-                new_intervals.append((curr_b, curr_e))
-            else:
-                #add large left small right
-                new_intervals.remove((b, e))
-                new_intervals.append((curr_b, e))
-                new_intervals.append((e, curr_e))
-        elif dif_r <= del_v:
-            #add large right small left
-                new_intervals.remove((b, e))
-                new_intervals.append((curr_b, b))
-                new_intervals.append((b, curr_e))
-        else:
-            #add all three intervals
-            new_intervals.append((curr_b, b))
-            new_intervals.append((e, curr_e))
-
-    def _cleanup(self, intervals):
-        """
-        clean up the intervals to combine small ones and take biggest spread
-        and remove unnecessary ones.
-        """
-
-        """l = mp.ray.data['l'].in_units('kpc')
-        # first order intervals by first
-        real_intervals = [ l[b:e] for b, e in intervals ]
-        #combine those that are overlapping
-
-        final_intervals=[]
-
-        for b, e in intervals:
-            for btest, etest in intervals:"""
-
-
-        return b
-
-    def _bottoms_up(self, num_density_arr, dl_arr, min_logN):
-        n=100000
-        step = 0.01
-        cut = 1.0
-        part = 10000
-
-        thresh_range = np.linspace(np.min(num_density_arr), np.median(num_density_arr)*100, n)
-
-        for curr_thresh in thresh_range:
-
-            #mask arrays
-            m_number_density_arr = np.ma.masked_greater_equal(num_density_arr, curr_thresh)
-            m_dl = np.ma.masked_array(dl_arr, m_number_density_arr.mask)
-
-            #calc part column density
-            part = np.log10(np.sum(m_number_density_arr*m_dl))
-            #print(cut, part)
-            if part >= min_logN:
-                return curr_thresh
-
-    def _sensible_division(self, vel, intervals):
-        new_intervals=[]
-
-        del_v = self.ds.quan(self.spect_res, 'km/s')
-        for inter in intervals:
-            start, end = inter
-            for index in np.arange(start, end+1):
-                #check if velocity difference is greater than spectacle res
-                if abs(vel[index] - vel[index+1]) > del_v:
-                    new_intervals.append([start, index])
-                    #update start to new index
-                    start = index+1
-        return new_intervals
-    def get_bottom(self, min_logN=None):
-        #set min logN to default unless specified
-        if min_logN is None:
-            min_dict = {'H I': 13, 'C IV' :13, 'O VI':13.5}
-            min_logN = min_dict[self.ion_name]
-
-        num_density = self.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
-        dl_list = self.data['dl'].in_units('cm')
-        los_vel = self.data['velocity_los'].in_units('km/s')
-
-        all_intervals=[]
-        lcd_list=[]
-        #find threshold
-        thresh = self._bottoms_up(num_density, dl_list, min_logN)
-        lim = self.defaults_dict['bounds']['column_density'][0]
-
-        #get intervals and throw out low col dense ones
-        intervals = identify_intervals(num_density, thresh)
-        intervals = self._sensible_division(los_vel, intervals)
-
-        for b,e in intervals:
-            #compute log col density
-            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
-
-            #check if col density is above limit
-            if curr_lcd > lim:
-                all_intervals.append( (b, e) )
-                lcd_list.append(curr_lcd)
-
-        return all_intervals, lcd_list
 
 #function to create field in yt
 def _radius(field, data):
