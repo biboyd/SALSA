@@ -577,6 +577,15 @@ class multi_plot():
         full_l = self.uncut_data['l'].in_units('kpc')
         pad = 0.1*full_l[-1]
         xlimits = [-pad, full_l[-1] + pad]
+    
+        # check if l_list is non-empty cuz something went wrong then.
+        if l_list.size == 0:
+            err_file = open("error_file.txt", 'a')
+            err_file.write(f"{self.ray_filename} had an l_list that was of size zero")
+            err_file.close()
+            return 1
+
+            
 
 
         if ax_num_dense is not None:
@@ -899,6 +908,8 @@ class multi_plot():
             self.data = self.uncut_data
         else:
             self.data = self.uncut_data.cut_region(self.cut_region_filter)
+        if self.data['l'].size == 0:
+            print(f'light ray {self.ray} is empty')
 
     def get_contour_intervals(self, char_density_frac = 0.5):
         """
@@ -1054,7 +1065,7 @@ class multi_plot():
                 size_dl = np.sum(dl_array[curr_b:curr_e])
                 size_l = l_array[curr_e] - l_array[curr_b]
                 rel_diff = abs(size_dl - size_l)/size_dl
-                print("rel diff: ", rel_diff)
+                #print("rel diff: ", rel_diff)
                 if rel_diff > 1e-12:
                     print(curr_b, curr_e)
                     # make sure things are good
@@ -1063,7 +1074,7 @@ class multi_plot():
                         # find where the jump is
 
                         rel_diff = abs(l_array[i] +dl_array[i] - l_array[i+1])/l_array[i]
-                        print(i, rel_diff.value)
+                        #print(i, rel_diff.value)
                         if rel_diff > 1e-12:
                             divide_indx=i
                             break

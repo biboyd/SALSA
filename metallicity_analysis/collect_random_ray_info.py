@@ -10,7 +10,7 @@ path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie")
 path.insert(0, "/home/bb/Repo/CGM/multi_plot_movie")
 from center_finder import find_center
 from multi_plot import multi_plot
-def main(filename, ray_dir, i_name, out_dir, frac):
+def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
     #init mpi
     comm = MPI.COMM_WORLD
 
@@ -54,6 +54,7 @@ def main(filename, ray_dir, i_name, out_dir, frac):
                                     frac = frac,
                                     bulk_velocity=bulk_vel,
                                     plot_cloud=True,
+                                    cut_region_filter=cut_filter,
                                     use_spectacle= True,
                                     plot_spectacle=True,
                                     wavelength_width=20)
@@ -131,7 +132,9 @@ def create_frames(rays,
     for ray_fname in rays:
         #load new multi plot and ray
         mp = multi_plot(ray_filename=ray_fname, **multi_plot_kwargs)
-        mp.ray = yt.load(ray_fname)
+        if mp.data['l'].size == 0:
+            continue
+
         if save_multi_plot:
             #create slice
             mp.create_slice(cmap='cividis')
@@ -232,7 +235,7 @@ def get_num_density_range(ion_name, comm, my_rays, use_defaults=True):
                        'Si III':[1e-11, 1e-5],
                        'Si II':[1e-11, 1e-5]}
 
-    if ion_name in num_density_dict and use_defaults=True:
+    if ion_name in num_density_dict and use_defaults==True:
         num_density_range = num_density_dict[ion_name]
 
     else:
@@ -265,15 +268,24 @@ def get_num_density_range(ion_name, comm, my_rays, use_defaults=True):
     return num_density_range
 if __name__ == '__main__':
     #take in arguments
-    if len(argv) == 6:
+    if len(argv) == 7:
         filename = argv[1]
         ray_dir = argv[2]
         ion_name = argv[3]
         out_dir= argv[4]
         frac = float(argv[5])
+        cut_filter = argv[6]
 
     else:
-        raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory frac ")
+        raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory frac ")
+
+    if cut_filter == 'cgm':
+        cut_filter = "((obj[('gas', 'radius')].in_units('kpc') > 10) & \
+                   (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
+                   ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
+                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"
+    else:
+        cut_filter=None
 
     #check to see if should use bulk velocity
-    main(filename, ray_dir, ion_name, out_dir, frac)
+    main(filename, ray_dir, ion_name, out_dir, frac, cut_filter=cut_filter)
