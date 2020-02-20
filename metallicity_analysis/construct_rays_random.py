@@ -115,7 +115,7 @@ def random_rays(dsname, center,
     ds = yt.load(dsname)
 
     #add ion fields to dataset if not already there
-    trident.add_ion_fields(ds, ions=ion_list, ftype='gas')
+    trident.add_ion_fields(ds, ions=line_list, ftype='gas')
 
     # add radius field to dataset
     ds.add_field(('gas', 'radius'),
