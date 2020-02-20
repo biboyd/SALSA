@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #runs all make movie scripts
-frameDir=$1
+mainDir=$1
 cd $mainDir
 
 shopt -s nullglob
