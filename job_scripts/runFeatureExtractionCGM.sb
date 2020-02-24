@@ -16,7 +16,7 @@ mainDir="$s/metallicity_analysis/foggie/$dsName/max_impact${maxImpact}"
 rayDir="$mainDir/rays"
 #label outdir but split ion into element and number
 ionLabel=${ionName% *}_${ionName#* }
-outDir="$mainDir/output_$frac/ion_$ionLabel"
+outDir="$mainDir/output_CGM$frac/ion_$ionLabel"
 
 if ! [ -d $outDir ];
 then
@@ -26,6 +26,6 @@ else
 fi
 srun -n 32							\
 	python ~/Repo/CGM/metallicity_analysis/collect_random_ray_info.py\
-		$dataFile $rayDir "$ionName" $outDir $frac 'none'
+		$dataFile $rayDir "$ionName" $outDir $frac 'cgm'
 python ~/Repo/CGM/metallicity_analysis/combine_np_arrays.py $outDir
 scontrol show job $SLURM_JOB_ID
