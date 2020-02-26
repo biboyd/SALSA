@@ -8,6 +8,7 @@ from sys import argv, path
 from os import remove, listdir, makedirs
 import errno
 import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 from center_finder import find_center
@@ -454,10 +455,11 @@ class multi_plot():
             ax.plot(velocity[:-1], flux[:-1])
             ax.set_ylim(0, 1.05)
             ax.set_xlim(vel_min, vel_max)
+            ax.xaxis.set_minor_locator(AutoMinorLocator(2))
             ax.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
             ax.set_xlabel("Delta_v (km/s)")
             ax.set_ylabel("Flux")
-            ax.grid(zorder=0)
+            ax.grid(zorder=0, which='both')
 
 
             #annotate plot with column densities
@@ -532,10 +534,11 @@ class multi_plot():
             ax.plot(wavelength[:-1], flux[:-1])
             ax.set_ylim(0, 1.05)
             ax.set_xlim(wave_min, wave_max)
+            ax.xaxis.set_minor_locator(AutoMinorLocator(2))
             ax.set_title(f"Spectrum {self.ion_name}", loc='right')
             ax.set_xlabel("Wavelength $\AA$")
             ax.set_ylabel("Flux")
-            ax.grid(zorder=0)
+            ax.grid(zorder=0, which='both')
 
         return wavelength, flux
 
@@ -577,7 +580,7 @@ class multi_plot():
         full_l = self.uncut_data['l'].in_units('kpc')
         pad = 0.1*full_l[-1]
         xlimits = [-pad, full_l[-1] + pad]
-    
+
         # check if l_list is non-empty cuz something went wrong then.
         if l_list.size == 0:
             err_file = open("error_file.txt", 'a')
@@ -585,7 +588,7 @@ class multi_plot():
             err_file.close()
             return 1
 
-            
+
 
 
         if ax_num_dense is not None:
@@ -606,6 +609,8 @@ class multi_plot():
             #set axes limits
             ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
             ax_num_dense.set_xlim(xlimits[0], xlimits[1])
+            ax_num_dense.xaxis.set_minor_locator(AutoMinorLocator(2))
+
             #check if should plot contour intervals
             if self.plot_contour or self.plot_cloud:
                 if self.plot_cloud:
@@ -656,9 +661,12 @@ class multi_plot():
             ax_prop2.set_title(f"{prop2_name} Along Ray", loc='right')
             ax_prop2.set_xlabel("Length From Start of Ray $(kpc)$")
             ax_prop2.set_ylabel(f"{prop2_name} $({prop2_units})$")
-            ax_prop2.grid(zorder=0)
             ax_prop2.set_ylim(prop2_lb, prop2_ub)
             ax_prop2.set_xlim(xlimits[0], xlimits[1])
+            ax_prop2.yaxis.set_minor_locator(AutoMinorLocator(2))
+            ax_prop2.xaxis.set_minor_locator(AutoMinorLocator(2))
+            ax_prop2.grid(zorder=0, which='major')
+            ax_prop2.grid(zorder=0, which='minor', axis='y')
 
         #add appropriate markers to the plot
         if self.markers and ax_prop2 is not None:
