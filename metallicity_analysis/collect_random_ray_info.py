@@ -96,7 +96,7 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
 
 
 def create_frames(rays,
-                  save_multi_plot=True,
+                  save_multi_plot=False,
                   slice_width=None,
                   slice_height=None,
                   out_dir='./',
@@ -135,18 +135,31 @@ def create_frames(rays,
         if mp.data['l'].size == 0:
             continue
 
+        ray_num = get_ray_num(ray_fname)
         if save_multi_plot:
             #create slice
             mp.create_slice(cmap='cividis')
 
             #add ray to title
-            ray_num = get_ray_num(ray_fname)
             mp.slice.annotate_title(f"ray {ray_num}")
 
             #create and save frame
             mp.create_multi_plot(f"{out_dir}/mp{ray_num}.png")
 
             #close files/figures
+            mp.close()
+        else:
+            #just plot the 3 bottom graphs. No slice
+            ax1 = mp.fig.add_subplot(311)
+            ax2 = mp.fig.add_subplot(312)
+            ax3 = mp.fig.add_subplot(313)
+
+            mp.plot_num_density(ax_num_dense=ax1, ax_prop2=ax2)
+            mp.plot_vel_space(ax=ax3)
+
+            mp.fig.tight_layout()
+            mp.fig.savefig(f"{out_dir}/plots{ray_num}.png")
+
             mp.close()
 
         #save interval information
@@ -279,6 +292,7 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory frac ")
 
+    makedirs(out_dir, exist_ok=True)
     if cut_filter == 'cgm':
         cut_filter = "((obj[('gas', 'radius')].in_units('kpc') > 10) & \
                    (obj[('gas', 'radius')].in_units('kpc') < 200)) & \

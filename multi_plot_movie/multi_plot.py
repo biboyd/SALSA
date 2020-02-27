@@ -414,7 +414,11 @@ class multi_plot():
         """
         #set which ions to add to spectra
         if single_line is None:
-            ion_list = self.ion_list
+            # add wav center first so it is set as zero
+            #point velocity by trident
+            wav = int( np.round(self.wavelength_center) )
+            line = f"{self.ion_name} {wav}"
+            ion_list = [line] + self.ion_list
         else:
             ion_list = [single_line]
 
@@ -458,7 +462,6 @@ class multi_plot():
             ax.set_xlabel("Delta_v (km/s)")
             ax.set_ylabel("Flux")
             ax.grid(zorder=0)
-
 
             #annotate plot with column densities
             sums, line_txt, line_models, num_fitted_lines = self.compute_col_density()
@@ -518,7 +521,7 @@ class multi_plot():
         wave_max = rest_wavelength + self.wavelength_width/2
 
         #use wavelength_width to set the range
-        spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.wavelegnth_res, line_database='my_lines.txt')
+        spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.wavelegnth_res)
         spect_gen.make_spectrum(self.data, lines=ion_list, observing_redshift=z_tot)
 
 
@@ -1161,9 +1164,13 @@ if __name__ == '__main__':
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
     center, nvec, rshift, bv = find_center(data_set_fname)
+    cut_filter = "((obj[('gas', 'radius')].in_units('kpc') > 10) & \
+                   (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
+                   ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
+                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
                     center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,
-                    redshift=rshift, wavelength_width = 30)
+                    redshift=rshift, wavelength_width = 30, cut_region_filter=cut_filter)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(outfname=outfile)
