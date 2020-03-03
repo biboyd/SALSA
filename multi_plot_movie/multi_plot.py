@@ -49,7 +49,7 @@ class multi_plot():
                 contour = False,
                 plot_contour=False,
                 plot_cloud=False,
-                cloud_min=13,
+                cloud_min=None,
                 spectra_resolution=10,
                 sigma_smooth = None,
                 frac=0.8,
@@ -134,11 +134,19 @@ class multi_plot():
         self.contour = contour
         self.plot_contour = plot_contour
         self.plot_cloud = plot_cloud
-        self.cloud_min = cloud_min
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
         self.spect_res = spectra_resolution #km/s
+
+        if cloud_min is None:
+            min_defaults = {'H I': 12, 'Si II': 11, 'Si IV': 12,
+                            'C IV':13, 'O VI':13}
+            if self.ion_name in min_defaults.keys():
+                self.cloud_min = min_defaults[self.ion_name]
+            else:
+                self.cloud_min=13
+
         self.defaults_dict = {
             'bounds' :{
                 'column_density' : (self.cloud_min, 23)
