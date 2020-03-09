@@ -172,7 +172,7 @@ def _radius(field, data):
 
 if __name__ == '__main__':
     #setup conditions
-    line_list = ['H I','H II','Si II', 'Si III', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
+    line_list = ['H I','H II','Si II', 'Si III', 'Si IV', 'C II', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
     if len(argv) == 7:
         filename = argv[1]
         num_rays=int(argv[2])

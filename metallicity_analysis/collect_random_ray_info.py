@@ -125,9 +125,10 @@ def create_frames(rays,
                             'x_location',
                             'y_location',
                             'z_location',
+                            'avg density',
                             'avg metallicity',
                             'avg velocity',
-                            'avg_temperature'])
+                            'avg temperature'])
     np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load new multi plot and ray
@@ -191,7 +192,7 @@ def calc_absorber_props(ray, start, end):
     dl = ray.data['dl'][start:end]
     density = ray.data[('gas', 'density')][start:end]
     col_dense = np.sum(dl*density)
-    props = ('x', 'y', 'z', 'metallicity', 'velocity_los', 'temperature')
+    props = ('x', 'y', 'z', 'density', 'metallicity', 'velocity_los', 'temperature')
     avg_props = []
     for prop in props:
         #compute weighted sum of property
