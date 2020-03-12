@@ -77,7 +77,7 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
     end_point = sightline_centers + length/2 *perp_vec
     start_point = sightline_centers - length/2 *perp_vec
 
-    return start_point, end_point
+    return start_point, end_point, impact_param
 
 def random_rays(dsname, center,
                 n_rays, max_impact_param,
@@ -124,13 +124,14 @@ def random_rays(dsname, center,
              take_log=False,
              validators=[yt.fields.api.ValidateParameter(['center'])])
 
-    start_points, end_points = random_sightlines(dsname, center,
+    start_points, end_points, impact_param = random_sightlines(dsname, center,
                                                  n_rays,
                                                  max_impact_param,
                                                  min_impact_param=min_impact_param,
                                                  length=length,
                                                  seed=seed)
 
+    np.save(f"{out_dir}/impact_parameter.npy", impact_param)
     #set padding for filenames
     pad = np.floor( np.log10(n_rays) )
     pad = int(pad) + 1
@@ -150,13 +151,14 @@ def random_rays(dsname, center,
 
     for i in my_ray_nums:
         #construct ray
+        ray_filename = f"{out_dir}/ray{i:0{pad}d}.h5"
         trident.make_simple_ray(ds,
                                 start_points[i],
                                 end_points[i],
                                 lines=line_list,
                                 fields=other_fields,
                                 field_parameters=fld_param,
-                                data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
+                                data_filename=ray_filename)
 
 #function to create field in yt
 def _radius(field, data):

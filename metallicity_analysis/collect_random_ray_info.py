@@ -5,6 +5,8 @@ import yt
 import trident
 from os import makedirs, listdir
 import h5py
+import astropy.units  as u
+
 
 path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie")
 path.insert(0, "/home/bb/Repo/CGM/multi_plot_movie")
@@ -62,6 +64,7 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
 
     #collect only ray files in ray_dir
     ray_files=[]
+    impact_parameter=None
     for f in listdir(ray_dir):
         #check hdf5 file
         if (f[-3:] == ".h5"):
@@ -73,6 +76,13 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
             full_name = "/".join((ray_dir, f))
             normal_vector = np.load(full_name)
             mp_kwargs['north_vector'] = normal_vector
+        elif f == 'impact_parameter.npy':
+            full_name = "/".join((ray_dir, f))
+            impact_parameter = np.load(full_name)
+
+    #set impact param to NaNs if not found
+    if impact_parameter is None:
+        impact_parameter = np.full(len(ray_files), np.nan)
 
     #split up rays betweeen proccesors
     ray_files_split = np.array_split(ray_files, comm.size)
@@ -117,18 +127,22 @@ def create_frames(rays,
     """
 
 
-
+    # define info to collect
     absorber_head=np.array(['ray_num',
+                            'spectacle',
+                            'cloudy',
                             'start_interval',
                             'end_intervals',
                             'col density',
+                            'impact_parameter',
                             'x_location',
                             'y_location',
                             'z_location',
-                            'avg density',
-                            'avg metallicity',
-                            'avg velocity',
-                            'avg temperature'])
+                            'avg_velocity',
+                            'avg_density',
+                            'avg_metallicity',
+                            'avg_temperature',
+                            'vel_doppler'])
     np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load new multi plot and ray
@@ -147,8 +161,6 @@ def create_frames(rays,
             #create and save frame
             mp.create_multi_plot(f"{out_dir}/mp{ray_num}.png")
 
-            #close files/figures
-            mp.close()
         else:
             #just plot the 3 bottom graphs. No slice
             ax1 = mp.fig.add_subplot(311)
@@ -161,25 +173,73 @@ def create_frames(rays,
             mp.fig.tight_layout()
             mp.fig.savefig(f"{out_dir}/plots{ray_num}.png")
 
-            mp.close()
-
-        #save interval information
+        #save cloudy information
         interval_list, lcd_list = mp.get_iterative_cloud(coldens_fraction=mp.frac, min_logN=mp.cloud_min)
         abs_num=0
         for interval, lcd in zip(interval_list, lcd_list):
             #Create np array to store absorber data
             absorber_info = np.empty(len(absorber_head), dtype=np.float64)
             absorber_info[0] = ray_num
-            absorber_info[1] = interval[0]
-            absorber_info[2] = interval[1]
-            absorber_info[3] = lcd
+            absorber_info[1] = 0.
+            absorber_info[2] = 1.
+            absorber_info[3] = interval[0]
+            absorber_info[4] = interval[1]
+            absorber_info[5] = lcd
+            absorber_info[6] = impact_parameter[ray_num]
 
-            absorber_info[4:] = calc_absorber_props(mp.ray, interval[0], interval[1])
-
-            np.save(f"{out_dir}/ray{ray_num}_absorber{abs_num:02d}.npy", absorber_info)
+            absorber_info[7:-1] = calc_cloudy_absorber_props(mp.ray, interval[0], interval[1])
+            absorber_info[-1] = np.nan
+            np.save(f"{out_dir}/ray{ray_num}_cloudy_absorber{abs_num:02d}.npy", absorber_info)
             abs_num+=1
 
-def calc_absorber_props(ray, start, end):
+        # save spectacle information
+        if mp.spectacle_model is not None:
+            lcd, del_vel, vel_doppler = calc_spectacle_absorber_props(mp.spectacle_model)
+            abs_num=0
+            for i in range(lcd.size):
+                absorber_info = np.empty(len(absorber_head), dtype=np.float64)
+                absorber_info[0] = ray_num
+                absorber_info[1] = 1.
+                absorber_info[2] = 0.
+                absorber_info[3] = np.nan
+                absorber_info[4] = np.nan
+                absorber_info[5] = lcd[i]
+                absorber_info[6] = impact_parameter[ray_num]
+                absorber_info[7] = del_vel[i]
+                absorber_info[8:-1] = np.nan
+                absorber_info[-1] = vel_doppler[i]
+
+                np.save(f"{out_dir}/ray{ray_num}_spectacle_absorber{abs_num:02d}.npy", absorber_info)
+                abs_num+=1
+
+
+        # close files/figures
+        mp.close()
+
+def calc_spectacle_absorber_props(spec_model):
+    """
+    Calculate/gather data from spectacle model including absorber inforamtion
+    like column density, velocity, etc.
+
+    Parameters:
+        spectacle model
+    Returns:
+        list of absorbers with properties
+    """
+    vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
+    line_stats = spec_model.line_stats(vel_array)
+
+    lcd = line_stats['col_dens']
+    delta_v = line_stats['delta_v'].values
+    v_doppler = line_stats['v_doppler'].values
+
+
+    return lcd, delta_v, v_doppler
+
+
+
+
+def calc_cloudy_absorber_props(ray, start, end):
     """
     Calculate the weighted average of a list of absorber properties
     using the total gas column density as the weight.
@@ -192,7 +252,7 @@ def calc_absorber_props(ray, start, end):
     dl = ray.data['dl'][start:end]
     density = ray.data[('gas', 'density')][start:end]
     col_dense = np.sum(dl*density)
-    props = ('x', 'y', 'z', 'density', 'metallicity', 'velocity_los', 'temperature')
+    props = ('x', 'y', 'z', 'velocity_los', 'density', 'metallicity', 'temperature')
     avg_props = []
     for prop in props:
         #compute weighted sum of property

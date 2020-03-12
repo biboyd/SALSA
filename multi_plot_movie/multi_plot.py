@@ -138,6 +138,7 @@ class multi_plot():
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
         self.spect_res = spectra_resolution #km/s
+        self.spectacle_model=None
 
         if cloud_min is None:
             min_defaults = {'H I': 12, 'Si II': 11, 'Si IV': 12,
@@ -818,6 +819,7 @@ class multi_plot():
             #format ion correctly to fit
             ion_wav= "".join(line.split())
 
+
             #constrain possible column density values
             #create line model
             line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
@@ -826,22 +828,23 @@ class multi_plot():
 
             #fit data
             try:
-                fit_spec_mod = line_finder(true_vel*u.Unit('km/s'), true_flux)
+                self.spectacle_model = line_finder(true_vel*u.Unit('km/s'), true_flux)
             except RuntimeError:
                 print('fit failed(prolly hit max iterations)', self.ray)
-                fit_spec_mod = None
+                self.spectacle_model = None
             except IndexError:
                 print('INDEX ERROR on', self.ray)
-                fit_spec_mod = None
+                self.spectacle_model = None
             #check that fit was succesful/at least one line
-            if fit_spec_mod is None:
+            if self.spectacle_model is None:
                 print('line could not be fit on ray ', self.ray)
 
 
             else:
-                num_fitted_lines = len(fit_spec_mod.lines)
+
+                num_fitted_lines = len(self.spectacle_model.lines)
                 vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
-                line_stats = fit_spec_mod.line_stats(vel_array)
+                line_stats = self.spectacle_model.line_stats(vel_array)
 
                 #compute total column density
                 line_sum_cd = 0
@@ -849,15 +852,13 @@ class multi_plot():
                     line_sum_cd+= 10**cd
 
                 # get biggest lines (max of 3)
-                num_lines = line_stats['col_dens'].size
-                if num_lines > 3:
-                    num_lines = 3
+                num_lines = min(line_stats['col_dens'].size, 3)
 
                 line_models = []
                 indx_max = line_stats.argsort('col_dens')
                 for indx in indx_max[-num_lines:]:
-                    line = fit_spec_mod.lines[indx]
-                    line_models.append( fit_spec_mod.with_line(line, reset=True))
+                    line = self.spectacle_model.lines[indx]
+                    line_models.append( self.spectacle_model.with_line(line, reset=True))
 
                 #sort lines based on delta v
                 line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
