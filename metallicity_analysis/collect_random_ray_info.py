@@ -101,11 +101,12 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
     print("my rank ", comm.rank, "my rays ", print_rays)
 
     #construct the frames
-    create_frames(my_rays, out_dir=out_dir, multi_plot_kwargs=mp_kwargs)
+    create_frames(my_rays, impact_parameter,out_dir=out_dir, multi_plot_kwargs=mp_kwargs)
     print(f"-------------- {comm.rank} finished----------------")
 
 
 def create_frames(rays,
+                  impact_parameter,
                   save_multi_plot=False,
                   slice_width=None,
                   slice_height=None,
@@ -135,10 +136,10 @@ def create_frames(rays,
                             'end_intervals',
                             'col density',
                             'impact_parameter',
+                            'avg_velocity',
                             'x_location',
                             'y_location',
                             'z_location',
-                            'avg_velocity',
                             'avg_density',
                             'avg_metallicity',
                             'avg_temperature',
@@ -173,19 +174,20 @@ def create_frames(rays,
             mp.fig.tight_layout()
             mp.fig.savefig(f"{out_dir}/plots{ray_num}.png")
 
+        ray_index = int(ray_num)
         #save cloudy information
         interval_list, lcd_list = mp.get_iterative_cloud(coldens_fraction=mp.frac, min_logN=mp.cloud_min)
         abs_num=0
         for interval, lcd in zip(interval_list, lcd_list):
             #Create np array to store absorber data
             absorber_info = np.empty(len(absorber_head), dtype=np.float64)
-            absorber_info[0] = ray_num
+            absorber_info[0] = ray_index
             absorber_info[1] = 0.
             absorber_info[2] = 1.
             absorber_info[3] = interval[0]
             absorber_info[4] = interval[1]
             absorber_info[5] = lcd
-            absorber_info[6] = impact_parameter[ray_num]
+            absorber_info[6] = impact_parameter[ray_index]
 
             absorber_info[7:-1] = calc_cloudy_absorber_props(mp.ray, interval[0], interval[1])
             absorber_info[-1] = np.nan
@@ -198,13 +200,13 @@ def create_frames(rays,
             abs_num=0
             for i in range(lcd.size):
                 absorber_info = np.empty(len(absorber_head), dtype=np.float64)
-                absorber_info[0] = ray_num
+                absorber_info[0] =ray_index 
                 absorber_info[1] = 1.
                 absorber_info[2] = 0.
                 absorber_info[3] = np.nan
                 absorber_info[4] = np.nan
                 absorber_info[5] = lcd[i]
-                absorber_info[6] = impact_parameter[ray_num]
+                absorber_info[6] = impact_parameter[ray_index]
                 absorber_info[7] = del_vel[i]
                 absorber_info[8:-1] = np.nan
                 absorber_info[-1] = vel_doppler[i]
@@ -230,8 +232,8 @@ def calc_spectacle_absorber_props(spec_model):
     line_stats = spec_model.line_stats(vel_array)
 
     lcd = line_stats['col_dens']
-    delta_v = line_stats['delta_v'].values
-    v_doppler = line_stats['v_doppler'].values
+    delta_v = line_stats['delta_v'].value
+    v_doppler = line_stats['v_dop'].value
 
 
     return lcd, delta_v, v_doppler
@@ -252,12 +254,13 @@ def calc_cloudy_absorber_props(ray, start, end):
     dl = ray.data['dl'][start:end]
     density = ray.data[('gas', 'density')][start:end]
     col_dense = np.sum(dl*density)
-    props = ('x', 'y', 'z', 'velocity_los', 'density', 'metallicity', 'temperature')
+    props = ('velocity_los', 'x', 'y', 'z', 'density', 'metallicity', 'temperature')
+    props_units=('km/s', 'kpc', 'kpc', 'kpc', 'g/cm**3', 'Zsun','K') 
     avg_props = []
-    for prop in props:
+    for prop, units in zip(props, props_units):
         #compute weighted sum of property
         avg = np.sum(dl*density*ray.data[prop][start:end])/col_dense
-        avg_props.append(avg)
+        avg_props.append(avg.in_units(units))
 
     return avg_props
 

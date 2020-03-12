@@ -131,6 +131,7 @@ def random_rays(dsname, center,
                                                  length=length,
                                                  seed=seed)
 
+    impact_param = ds.arr(impact_param, 'code_length').in_units('kpc').value
     np.save(f"{out_dir}/impact_parameter.npy", impact_param)
     #set padding for filenames
     pad = np.floor( np.log10(n_rays) )
