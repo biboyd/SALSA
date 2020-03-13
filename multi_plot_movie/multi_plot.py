@@ -828,43 +828,63 @@ class multi_plot():
 
             #fit data
             try:
-                self.spectacle_model = line_finder(true_vel*u.Unit('km/s'), true_flux)
+                spec_model = line_finder(true_vel*u.Unit('km/s'), true_flux)
             except RuntimeError:
                 print('fit failed(prolly hit max iterations)', self.ray)
-                self.spectacle_model = None
+                spec_model = None
             except IndexError:
                 print('INDEX ERROR on', self.ray)
-                self.spectacle_model = None
+                spec_model = None
             #check that fit was succesful/at least one line
-            if self.spectacle_model is None:
+            if spec_model is None:
                 print('line could not be fit on ray ', self.ray)
-
-
+                self.spectacle_model = None
             else:
-
-                num_fitted_lines = len(self.spectacle_model.lines)
                 vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
-                init_stats = self.spectacle_model.line_stats(vel_array)
+                init_stats = spec_model.line_stats(vel_array)
 
+                print("--------------------------------------")
+                print("spec model before ", len(spec_model.lines))
+                print("--------------------------------------")
                 # include only lines greater than min defined. 
-                line_stats = init_stats[ np.where( init_stats['col_dens'] >= self.cloud_min)]
+                line_indxs, = np.where( init_stats['col_dens'] >= self.cloud_min)
+                if line_indxs.size == 0:
+                    print('line could not be fit on ray ', self.ray)
+                    print("--------------------------------------")
+                    print("spec model after 0")
+                    print("--------------------------------------")
+                    self.spectacle_model = None
+                else:
+                    # retrieve lines that pass col dense threshold
+                    good_lines=[] 
+                    for i in line_indxs:
+                        good_lines.append(spec_model.lines[i])
+                    #import pdb; pdb.set_trace()
+ 
+                    #create and save new model with lines desired
+                    self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
+                    num_fitted_lines = len(good_lines)
+                    print("--------------------------------------")
+                    print("spec model after ", num_fitted_lines)
+                    print("--------------------------------------")
+                    line_stats=self.spectacle_model.line_stats(vel_array)
 
-                #compute total column density
-                line_sum_cd = 0
-                for cd in line_stats['col_dens']:
-                    line_sum_cd+= 10**cd
+                    #compute total column density
+                    line_sum_cd = 0
+                    for cd in line_stats['col_dens']:
+                        line_sum_cd+= 10**cd
 
-                # get biggest lines (max of 3)
-                num_lines = min(line_stats['col_dens'].size, 3)
+                    # get biggest lines (max of 3)
+                    num_lines = min(line_stats['col_dens'].size, 3)
 
-                line_models = []
-                indx_max = line_stats.argsort('col_dens')
-                for indx in indx_max[-num_lines:]:
-                    line = self.spectacle_model.lines[indx]
-                    line_models.append( self.spectacle_model.with_line(line, reset=True))
+                    line_models = []
+                    indx_max = line_stats.argsort('col_dens')
+                    for indx in indx_max[-num_lines:]:
+                        line = self.spectacle_model.lines[indx]
+                        line_models.append( self.spectacle_model.with_line(line, reset=True))
 
-                #sort lines based on delta v
-                line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
+                    #sort lines based on delta v
+                    line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
 
         #get values and format text box correctly
         #get sum for fitting method
