@@ -143,7 +143,9 @@ def create_frames(rays,
                             'avg_density',
                             'avg_metallicity',
                             'avg_temperature',
+                            'radial_velocity',
                             'vel_doppler'])
+                            
     np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load new multi plot and ray
@@ -254,8 +256,8 @@ def calc_cloudy_absorber_props(ray, start, end):
     dl = ray.data['dl'][start:end]
     density = ray.data[('gas', 'density')][start:end]
     col_dense = np.sum(dl*density)
-    props = ('velocity_los', 'x', 'y', 'z', 'density', 'metallicity', 'temperature')
-    props_units=('km/s', 'kpc', 'kpc', 'kpc', 'g/cm**3', 'Zsun','K') 
+    props = ('velocity_los', 'x', 'y', 'z', 'density', 'metallicity', 'temperature', 'radial_velocity')
+    props_units=('km/s', 'kpc', 'kpc', 'kpc', 'g/cm**3', 'Zsun','K', 'km/s') 
     avg_props = []
     for prop, units in zip(props, props_units):
         #compute weighted sum of property

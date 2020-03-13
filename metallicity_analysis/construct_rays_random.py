@@ -38,7 +38,6 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
     min_impact_param = ds.quan(min_impact_param, 'kpc').in_units('code_length')
     max_impact_param = ds.quan(max_impact_param, 'kpc').in_units('code_length')
 
-
     #randomly select angle and distance from center of gal
     #take sqrt so that impact param is uniform in projected area space
     impact_param = np.sqrt(np.random.uniform(min_impact_param.value**2, max_impact_param.value**2, num_sightlines))
@@ -83,8 +82,9 @@ def random_rays(dsname, center,
                 n_rays, max_impact_param,
                 min_impact_param=0.,
                 length=200,
+                bulk_velocity=None,
                 line_list=['H I', 'C IV', 'O VI'],
-                other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius')],
+                other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius'), 'radial_velocity'],
                 out_dir='./',
                 parallel=True,
                 seed=None):
@@ -113,6 +113,7 @@ def random_rays(dsname, center,
 
     # get start/end points for light rays
     ds = yt.load(dsname)
+    bulk_velocity = ds.arr(bulk_velocity, 'km/s')
 
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=line_list, ftype='gas')
@@ -145,10 +146,14 @@ def random_rays(dsname, center,
         my_ray_nums = split_ray_nums[ comm.rank]
 
     #define center of galaxy for lrays
+    fld_param={}
     if center is not None:
-        fld_param = {'center':center}
-    else:
-        fld_param=None
+        fld_param.update({'center':center})
+    if bulk_velocity is not None:
+        fld_param.update({'bulk_velocity':bulk_velocity})
+
+    if fld_param is {}:
+        fld_param = None
 
     for i in my_ray_nums:
         #construct ray
@@ -192,6 +197,7 @@ if __name__ == '__main__':
                 num_rays,
                 max_impact,
                 min_impact_param=min_impact,
+                bulk_velocity=bv,
                 line_list=line_list,
                 length=ray_length,
                 out_dir=out_dir)
