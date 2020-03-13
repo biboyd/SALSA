@@ -150,7 +150,7 @@ class multi_plot():
 
         self.defaults_dict = {
             'bounds' :{
-                'column_density' : (self.cloud_min, 23)
+                'column_density' : (self.cloud_min-0.5, 23)
             },
             'fixed' : {
                 'delta_lambda' : True,
@@ -844,7 +844,10 @@ class multi_plot():
 
                 num_fitted_lines = len(self.spectacle_model.lines)
                 vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
-                line_stats = self.spectacle_model.line_stats(vel_array)
+                init_stats = self.spectacle_model.line_stats(vel_array)
+
+                # include only lines greater than min defined. 
+                line_stats = init_stats[ np.where( init_stats['col_dens'] >= self.cloud_min)]
 
                 #compute total column density
                 line_sum_cd = 0
