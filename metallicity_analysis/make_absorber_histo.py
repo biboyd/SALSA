@@ -9,7 +9,7 @@ import multi_plot
 from center_finder import find_center
 
 
-def construct_histo(dsname, max_b, frac, ion, cgm='', bins=30, outname='./plot.png'):
+def construct_histo(dsname, max_b, frac, ion, column='col density', spectacle=True,cgm='CGM', bins=30, outname='./plot.png'):
     ion_under=f"{ion.split()[0]}_{ion.split()[1]}"
 
     scratch_dir="/mnt/gs18/scratch/users/boydbre1/"
@@ -19,23 +19,26 @@ def construct_histo(dsname, max_b, frac, ion, cgm='', bins=30, outname='./plot.p
 
     try:
         absorber_array=np.load(f"{arr_dir}/all_absorbers.npy")
+        header = np.load(f"{arr_dir}/absorber_info_header.npy")
     except FileNotFoundError:
         print(f"Couldn't find file for {dsname} {ion} {max_b}")
         return 1
+    indx = np.where(header == column)
+    abs_column = absorber_array[:, indx]
     c, nv, r, bv = find_center(ds_fname)
     
     fig = plt.figure()
-    plt.hist(absorber_array[:, 3], bins=bins)
+    plt.hist(abs_column, bins=bins)
     plt.title(f"{ion} z={r:.2f} max_b={max_b} kpc {cgm}")
 
-    plt.xlabel(f"Log Col Density {ion}")
+    plt.xlabel(f"{col density} {ion}")
     plt.ylabel(f"Count")
-    plt.annotate(f"num absorbers: {absorber_array[:, 3].size}", (0.65, 0.9), xycoords='axes fraction')
+    plt.annotate(f"num absorbers: {abs_column.size}", (0.65, 0.9), xycoords='axes fraction')
     plt.savefig(outname)
     plt.close(fig)
     return 0
 
-def all_histo(dsname_list, max_b, frac, ion, cgm='', bins=50, histo_type='stepfilled',linewidth=1,alpha=0.5, ax=None):
+def all_histo(dsname_list, max_b, frac, ion, cgm='', column='col density', bins=50, histo_type='stepfilled',linewidth=1,alpha=0.5, ax=None):
     scratch_dir="/mnt/gs18/scratch/users/boydbre1/"
     ion_under=f"{ion.split()[0]}_{ion.split()[1]}"
 
@@ -52,13 +55,16 @@ def all_histo(dsname_list, max_b, frac, ion, cgm='', bins=50, histo_type='stepfi
 
         try:
             absorber_array=np.load(f"{arr_dir}/all_absorbers.npy")
+            header = np.load(f"{arr_dir}/absorber_info_header.npy")
         except FileNotFoundError:
             print(f"Couldn't find file for {dsname} {ion} {max_b}")
             return 1
-        n_abs = absorber_array[:, 3].size
-        #lcd_norm = absorber_array[:, 3]/n_abs
+        indx = np.where(header == column)
+        abs_column = absorber_array[:, indx]
+        n_abs = abs_column.size
+        #lcd_norm = abs_column/n_abs
 
-        histo, edges= np.histogram(absorber_array[:, 3], range=(13, 14.75), bins=bins)
+        histo, edges= np.histogram(abs_column,  range=(13, 14.75), bins=bins)
         histo = histo/n_abs
 
         ax.hist(edges[:-1], edges, weights=histo, histtype=histo_type, label=f"z={r:.2f}: {n_abs}",linewidth=linewidth, alpha=alpha)
@@ -69,7 +75,7 @@ def all_histo(dsname_list, max_b, frac, ion, cgm='', bins=50, histo_type='stepfi
     ax.legend()
     return fig, ax
 
-def scatter_plot(dsname_list, max_b, frac, ion, ax=None, cgm=''):
+def scatter_plot(dsname_list, max_b, frac, ion, column='col density', ax=None, cgm=''):
     scratch_dir="/mnt/gs18/scratch/users/boydbre1/"
     ion_under=f"{ion.split()[0]}_{ion.split()[1]}"
     if ax is None:
@@ -88,11 +94,15 @@ def scatter_plot(dsname_list, max_b, frac, ion, ax=None, cgm=''):
 
         try:
             absorber_array=np.load(f"{arr_dir}/all_absorbers.npy")
+            header = np.load(f"{arr_dir}/absorber_info_header.npy")
         except FileNotFoundError:
             print(f"Couldn't find file for {dsname} {ion} {max_b}")
-            continue
-        n_abs.append(absorber_array[:, 3].size)
+            return 1
+        indx = np.where(header == column)
+        abs_column = absorber_array[:, indx]
+        n_abs.append(abs_column.size)
         redshift.append(r)
+
     ax.plot(redshift, n_abs, '-o')
     ax.set_xlabel("Redshift")
     ax.set_ylabel("Number of Absorbers")
@@ -119,6 +129,7 @@ if __name__ == '__main__':
 
     #for ds in ds_names:
     #    construct_histo(ds, max_b, frac, ion, cgm=cgm, outname=f"{outdir}/histo{ds}.png")
+    
     all_histo(ds_names, max_b, frac, ion, cgm=cgm, outname=f"{outdir}/all.png")
 
 

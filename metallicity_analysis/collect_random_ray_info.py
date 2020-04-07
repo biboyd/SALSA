@@ -80,10 +80,6 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
             full_name = "/".join((ray_dir, f))
             impact_parameter = np.load(full_name)
 
-    #set impact param to NaNs if not found
-    if impact_parameter is None:
-        impact_parameter = np.full(len(ray_files), np.nan)
-
     #split up rays betweeen proccesors
     ray_files_split = np.array_split(ray_files, comm.size)
     my_rays = ray_files_split[ comm.rank ]
@@ -106,7 +102,7 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
 
 
 def create_frames(rays,
-                  impact_parameter,
+                  impact_parameter=None,
                   save_multi_plot=False,
                   slice_width=None,
                   slice_height=None,
@@ -140,6 +136,7 @@ def create_frames(rays,
                             'x_location',
                             'y_location',
                             'z_location',
+                            'radius',
                             'avg_density',
                             'avg_metallicity',
                             'avg_temperature',
@@ -181,6 +178,10 @@ def create_frames(rays,
         interval_list, lcd_list = mp.get_iterative_cloud(coldens_fraction=mp.frac, min_logN=mp.cloud_min)
         abs_num=0
         for interval, lcd in zip(interval_list, lcd_list):
+            if impact_parameter is None:
+                impact = np.nan
+            else:
+                impact = impact_parameter[ray_index]
             #Create np array to store absorber data
             absorber_info = np.empty(len(absorber_head), dtype=np.float64)
             absorber_info[0] = ray_index
@@ -189,7 +190,7 @@ def create_frames(rays,
             absorber_info[3] = interval[0]
             absorber_info[4] = interval[1]
             absorber_info[5] = lcd
-            absorber_info[6] = impact_parameter[ray_index]
+            absorber_info[6] = impact
 
             absorber_info[7:-1] = calc_cloudy_absorber_props(mp.ray, interval[0], interval[1])
             absorber_info[-1] = np.nan
@@ -208,7 +209,7 @@ def create_frames(rays,
                 absorber_info[3] = np.nan
                 absorber_info[4] = np.nan
                 absorber_info[5] = lcd[i]
-                absorber_info[6] = impact_parameter[ray_index]
+                absorber_info[6] = impact
                 absorber_info[7] = del_vel[i]
                 absorber_info[8:-1] = np.nan
                 absorber_info[-1] = vel_doppler[i]
@@ -256,8 +257,8 @@ def calc_cloudy_absorber_props(ray, start, end):
     dl = ray.data['dl'][start:end]
     density = ray.data[('gas', 'density')][start:end]
     col_dense = np.sum(dl*density)
-    props = ('velocity_los', 'x', 'y', 'z', 'density', 'metallicity', 'temperature', 'radial_velocity')
-    props_units=('km/s', 'kpc', 'kpc', 'kpc', 'g/cm**3', 'Zsun','K', 'km/s') 
+    props = ('velocity_los', 'x', 'y', 'z','radius', 'density', 'metallicity', 'temperature', 'radial_velocity')
+    props_units=('km/s', 'kpc', 'kpc', 'kpc','kpc', 'g/cm**3', 'Zsun','K', 'km/s') 
     avg_props = []
     for prop, units in zip(props, props_units):
         #compute weighted sum of property
