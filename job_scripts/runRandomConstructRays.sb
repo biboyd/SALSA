@@ -13,7 +13,7 @@ minImpact=$4
 maxImpact=$5
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/metallicity_analysis/foggie/$dsName/max_impact$maxImpact/rays"
+outDir="$scratch/analysis/foggie/$dsName/max_impact$maxImpact/rays"
 
 if ! [ -d $outDir ]
 then
@@ -23,7 +23,7 @@ else
 fi
 
 srun -n 16							\
-	python ~/Repo/CGM/metallicity_analysis/construct_rays_random.py\
+	python ~/Repo/CGM/analysis/construct_rays_random.py\
 		$inFile \
                 $nRays \
                 $rayDist \

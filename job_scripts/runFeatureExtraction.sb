@@ -12,7 +12,7 @@ maxImpact=$3
 frac=$4
 s="/mnt/gs18/scratch/users/boydbre1"
 dataFile="$s/cosmological/foggie/$dsName/$dsName"
-mainDir="$s/metallicity_analysis/foggie/$dsName/max_impact${maxImpact}"
+mainDir="$s/analysis/foggie/$dsName/max_impact${maxImpact}"
 rayDir="$mainDir/rays"
 #label outdir but split ion into element and number
 ionLabel=${ionName% *}_${ionName#* }
@@ -25,7 +25,7 @@ else
 	rm -rf $outDir/*
 fi
 srun -n 32							\
-	python ~/Repo/CGM/metallicity_analysis/collect_random_ray_info.py\
+	python ~/Repo/CGM/analysis/collect_random_ray_info.py\
 		$dataFile $rayDir "$ionName" $outDir $frac 'none'
-python ~/Repo/CGM/metallicity_analysis/combine_np_arrays.py $outDir
+python ~/Repo/CGM/analysis/combine_np_arrays.py $outDir
 scontrol show job $SLURM_JOB_ID
