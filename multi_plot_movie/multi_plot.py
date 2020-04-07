@@ -141,12 +141,14 @@ class multi_plot():
         self.spectacle_model=None
 
         if cloud_min is None:
-            min_defaults = {'H I': 12, 'Si II': 11, 'Si IV': 12,
+            min_defaults = {'H I': 13, 'Si II': 11, 'Si IV': 12,
                             'C IV':13, 'O VI':13}
             if self.ion_name in min_defaults.keys():
                 self.cloud_min = min_defaults[self.ion_name]
             else:
                 self.cloud_min=13
+        else:
+            self.cloud_min = cloud_min
 
         self.defaults_dict = {
             'bounds' :{

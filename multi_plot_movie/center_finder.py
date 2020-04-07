@@ -8,14 +8,13 @@ from pathlib import Path
 #return center coordinates and normal vector
 #
 
-def find_center(ds_fname, tracking_dir=None, save_data=True, max_field=None):
+def find_center(ds_fname, tracking_dir='/mnt/home/boydbre1/data/track_files', save_data=True, max_field=None):
     """
     Use to retrieve the center of galaxy
 
     Parameters:
         ds_fname : string: path to dataset containing galaxy
         tracking_dir : string: path to directory contianing tracking files
-                    if set to None, defaults to ds_path/../../track_files
         save_data : bool : write data to file? defaults to True
         max_field : string : field name. finds maximum of that field and sets
                     that to be the center. If None, will try to retrieve the center
@@ -38,8 +37,6 @@ def find_center(ds_fname, tracking_dir=None, save_data=True, max_field=None):
     else:
         #get directory where tracker files are kept
         sfname = ds_fname.split('/')
-        if tracking_dir is None:
-            tracking_dir = '/'.join(sfname[:-2]) + '/track_files'
 
         try:
             #check if kept center and normal_vector in center_normal_track.dat
