@@ -13,7 +13,7 @@ off=$4
 width=$5
 scratch="/mnt/gs18/scratch/users/boydbre1"
 inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/rotate_projection/foggie_cmaps/$dsName/offset${off}_width${width}/frames"
+outDir="$scratch/rotate_projection/foggie_cmaps/$dsName/offset${off}_width${width}/cgm_only_frames"
 if ! [ -d $outDir ]
 then
 	mkdir -p $outDir
@@ -21,6 +21,6 @@ fi
 
 srun -n 39							\
 	python ~/Repo/CGM/rotation_movie/create_rot_frames.py\
-		$inFile $field $nFrames $off $width $outDir 'none'
+		$inFile $field $nFrames $off $width $outDir True
 scontrol show job $SLURM_JOB_ID
 

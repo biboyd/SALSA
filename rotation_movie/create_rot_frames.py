@@ -12,6 +12,7 @@ def create_proj_frames(ds_fname,
                        offset=30,
                        fields=['density'],
                        color_maps=['magma'],
+                       CGM=False,
                        ccwh_gas=True,
                        weight=None,
                        num_frames=10,
@@ -108,7 +109,14 @@ def create_proj_frames(ds_fname,
     #load ds and construct sphere around galaxy
     ds = yt.load(ds_fname)
     trident.add_ion_fields(ds, ['Mg II', 'Si II', 'Si III','Si IV', 'C II', 'C IV', 'O VI', 'Ne VIII'])
-    sph = ds.sphere(center, (width, 'kpc'))
+    
+    if CGM is True:
+        reg= ds.sphere(center, (200, 'kpc')) - ds.sphere(center, (10, 'kpc')) 
+        data_obj = reg.cut_region("((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
+                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))")
+    else:
+        data_obj= ds.sphere(center, (width, 'kpc'))
+    
     pad = int(np.ceil( np.log10(num_frames)))
     for i in my_rot_nums:
         #construct rotation vector and use to rotate
@@ -121,7 +129,7 @@ def create_proj_frames(ds_fname,
                                            north_vector=normal_vec,
                                            fontsize=24,
                                            weight_field=weight,
-                                           data_source=sph)
+                                           data_source=data_obj)
             # set color bar and color map to be consistent on all proj
             lim_lb, lim_ub = lim_dict[fld]
             prj.set_unit('density', 'Msun/pc**2')
@@ -173,19 +181,18 @@ if __name__ == '__main__':
     offset=float(sys.argv[4])
     width=float(sys.argv[5])
     out_dir = sys.argv[6]
+    cgm_only = sys.argv[7]
+    
+    # filter out non-cgm stuff?
+    if cgm_only == 'True':
+        CGM=True
+    else:
+        CGM=False
 
-    #fields = ["C_p3_number_density", "O_p5_number_density"]
-    #cmaps = ['magma', 'magma']
-    #fields = ["density", "H_p0_number_density", "temperature", "metallicity"]
-    #cmaps = ["magma", "magma", "thermal", "haline"]
-    #fields = ['density', 'H_p0_number_density', 'Si_p1_number_density', 'Si_p2_number_density', 'Si_p3_number_density', 'C_p1_number_density', 'C_p3_number_density', 'O_p5_number_density']
     h1_cmap = sns.blend_palette(("white", "#ababab", "#565656", "black",
                                   "#4575b4", "#984ea3", "#d73027",
                                   "darkorange", "#ffe34d"), as_cmap=True)
     density_cmap = sns.blend_palette(("black", "#4575b4", "#4daf4a", "#ffe34d", "darkorange"), as_cmap=True)
-    #cmaps = ['magma', h1_cmap, 'ice', 'ice', 'ice', 'cividis', 'cividis', 'plasma']
-    #cmaps = [density_cmap, h1_cmap,'plasma', 'magma', 'inferno', 'plasma', 'inferno', 'magma']
-    #fields=['Mg_p1_number_density', 'Ne_p7_number_density']
 
     cmaps={'density' :density_cmap,
            'H_p0_number_density' : h1_cmap,
@@ -203,9 +210,8 @@ if __name__ == '__main__':
     makedirs(out_dir, exist_ok=True)
     makedirs(f"{out_dir}/{field}", exist_ok=True)
 
-    names=['cold', 'cool', 'warm', 'hot']
-    for f in names:
-        makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
-    fld='density'
-    fld_cmap='magma'
-    create_proj_frames(dsname, c, n, ccwh_gas=True,fields=[fld], color_maps=[fld_cmap], num_frames=frms, width=width,offset=offset, out_dir=out_dir)
+    #names=['cold', 'cool', 'warm', 'hot']
+    #for f in names:
+    #    makedirs(f"{out_dir}/{f}_gas", exist_ok=True)
+
+    create_proj_frames(dsname, c, n, ccwh_gas=False,CGM=CGM,fields=[field], color_maps=[cmaps[field]], num_frames=frms, width=width,offset=offset, out_dir=out_dir)
