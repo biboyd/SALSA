@@ -10,7 +10,7 @@ ds=$1
 len=$2
 scratch=/mnt/gs18/scratch/users/boydbre1/
 dsPath=$scratch/cosmological/foggie/$ds/$ds
-outDir=$scratch/multiplot_movie/foggie/$ds/movie_${len}kpc/slices/
+outDir=$scratch/slices/foggie/$ds/slices__${len}kpc/
 
 if ! [ -d $outDir ];
 then
