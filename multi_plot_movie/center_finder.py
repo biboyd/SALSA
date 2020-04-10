@@ -1,7 +1,7 @@
 import yt
 import numpy as np
 from sys import argv, path
-path.insert("/mnt/boydbre1/Repo/foggie")
+path.insert(0,"/mnt/home/boydbre1/Repo/foggie")
 from foggie.utils.foggie_load import foggie_load
 
 #
@@ -64,8 +64,8 @@ def find_center(ds_fname, tracking_dir='/mnt/home/boydbre1/data/track_files', us
                 ds_foggie, reg_foggie = foggie_load(ds_fname, box_trackfile, disk_relative=True)
 
                 center = ds.arr(ds_foggie.halo_center_code, 'code_length')
-                bulk_vel = ds.halo_velocity_kms
-                nv = ds.z_unit_disk
+                bulk_vel = ds_foggie.halo_velocity_kms
+                n_vec = ds_foggie.z_unit_disk
 
             else:
                 #check for center in center_track file
