@@ -411,7 +411,7 @@ class multi_plot():
 
         return self.slice
 
-    def plot_vel_space(self, ax=None, single_line=None):
+    def plot_vel_space(self, ax=None, single_line=None, annotate_column_density=True):
         """
         Use trident to plot the absorption spectrum of the ray in velocity
         space. Compute column densities with spectacle fits.
@@ -420,9 +420,11 @@ class multi_plot():
             ax : a matplotlib axis in which to draw the velocity plot
             single_line : str : option to plot a single line ie "HI1216" for
                     fitting purposes.
+            annotate_column_density: bool : add a textbox reporting the calculated col
+                    densities by each method.
         Returns:
-            wavelength, velocity and flux arrays created by spectrum generator
-                units are angstrom, km/s
+            velocity and flux arrays created by spectrum generator
+                units are km/s
         """
         #set which ions to add to spectra
         if single_line is None:
@@ -476,10 +478,11 @@ class multi_plot():
             ax.set_ylabel("Flux")
             ax.grid(zorder=0, which='both')
 
-            #annotate plot with column densities
-            sums, line_txt, line_models, num_fitted_lines = self.compute_col_density()
-            box_props = dict(boxstyle='square', facecolor='white')
-            ax.text(0.8, 0.05, line_txt, transform=ax.transAxes, bbox = box_props)
+            if annotate_column_density:
+                #annotate plot with column densities
+                sums, line_txt, line_models, num_fitted_lines = self.compute_col_density()
+                box_props = dict(boxstyle='square', facecolor='white')
+                ax.text(0.8, 0.05, line_txt, transform=ax.transAxes, bbox = box_props)
 
             if self.use_spectacle:
                 #annotate number of lines

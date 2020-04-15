@@ -107,7 +107,7 @@ def create_frames(rays,
                   slice_width=None,
                   slice_height=None,
                   out_dir='./',
-                  multi_plot_kwargs={}):
+                  multi_plot_kwargs={}, savefig_kwargs={}):
     """
     creates a movie by combining all the plots made from the ray in ray_dir
 
@@ -171,7 +171,7 @@ def create_frames(rays,
             mp.plot_vel_space(ax=ax3)
 
             mp.fig.tight_layout()
-            mp.fig.savefig(f"{out_dir}/plots{ray_num}.png")
+            mp.fig.savefig(f"{out_dir}/plots{ray_num}.png", **savefig_kwargs)
 
         ray_index = int(ray_num)
         #save cloudy information
