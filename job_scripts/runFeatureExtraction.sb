@@ -8,8 +8,11 @@
 
 dsName=$1
 ionName=$2
-maxImpact=$3
-frac=$4
+cuts=$3
+
+maxImpact=200
+frac=0.8
+
 s="/mnt/gs18/scratch/users/boydbre1"
 dataFile="$s/cosmological/foggie/$dsName/$dsName"
 mainDir="$s/analysis/foggie/$dsName/max_impact${maxImpact}"
@@ -26,6 +29,6 @@ else
 fi
 srun -n 32							\
 	python ~/Repo/CGM/analysis/collect_random_ray_info.py\
-		$dataFile $rayDir "$ionName" $outDir $frac 'none'
+		$dataFile $rayDir "$ionName" $outDir $frac $cuts
 python ~/Repo/CGM/analysis/combine_np_arrays.py $outDir
 scontrol show job $SLURM_JOB_ID

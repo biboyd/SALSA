@@ -142,7 +142,7 @@ def create_frames(rays,
                             'avg_temperature',
                             'radial_velocity',
                             'vel_doppler'])
-                            
+
     np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load new multi plot and ray
@@ -203,7 +203,7 @@ def create_frames(rays,
             abs_num=0
             for i in range(lcd.size):
                 absorber_info = np.empty(len(absorber_head), dtype=np.float64)
-                absorber_info[0] =ray_index 
+                absorber_info[0] =ray_index
                 absorber_info[1] = 1.
                 absorber_info[2] = 0.
                 absorber_info[3] = np.nan
@@ -258,7 +258,7 @@ def calc_cloudy_absorber_props(ray, start, end):
     density = ray.data[('gas', 'density')][start:end]
     col_dense = np.sum(dl*density)
     props = ('velocity_los', 'x', 'y', 'z','radius', 'density', 'metallicity', 'temperature', 'radial_velocity')
-    props_units=('km/s', 'kpc', 'kpc', 'kpc','kpc', 'g/cm**3', 'Zsun','K', 'km/s') 
+    props_units=('km/s', 'kpc', 'kpc', 'kpc','kpc', 'g/cm**3', 'Zsun','K', 'km/s')
     avg_props = []
     for prop, units in zip(props, props_units):
         #compute weighted sum of property
@@ -346,6 +346,33 @@ def get_num_density_range(ion_name, comm, my_rays, use_defaults=True):
         num_density_range = np.array( [0.01*avg_med, 1000*avg_med] , dtype=np.float64)
 
     return num_density_range
+
+
+def parse_cut_filter(cuts):
+    """
+    Parses a string defining what cuts to apply to analysis. Then returns the proper
+    YT cut_region filter
+    """
+    #define cut dictionary
+    cgm_rad = "(obj[('gas', 'radius')].in_units('kpc') > 10.) & (obj[('gas', 'radius')].in_units('kpc') < 200.)"
+    cgm_d_t = "(obj[('gas', 'temperature')].in_units('K') > 1.5e4) | (obj[('gas', 'density')].in_units('g/cm**3') < 2.e-26)"
+    cgm_filter = f"{cgm_rad} & {cgm_d_t}"
+
+    hot = "(obj[('gas', 'temperature')].in_units('K') > 1.e5)"
+    cold = "(obj[('gas', 'temperature')].in_units('K') <= 1.e5)"
+
+    inflow = "(obj[('gas', 'radial_velocity')] <= 0.)"
+    outflow = "(obj[('gas', 'radial_velocity')] > 0.)"
+
+    filter_dict=dict(cgm=cgm_filter, hot=hot, cold=cold, inflow=inflow, outflow=outflow)
+
+    #split filter call
+    filter_names = cuts.split(' ')
+    filters = [ filter_dict[name] for name in filter_names ]
+    cut_filter = "&".join(filters)
+
+    return cut_filter
+
 if __name__ == '__main__':
     #take in arguments
     if len(argv) == 7:
@@ -354,19 +381,26 @@ if __name__ == '__main__':
         ion_name = argv[3]
         out_dir= argv[4]
         frac = float(argv[5])
-        cut_filter = argv[6]
+        cuts = argv[6] # Ex. "hot inflow cgm"
+        cut_dir = "_".join(cuts.split(" "))
+        out_dir +="/cut_dir"
+        #retrieve properly formatted cut argument
+        cut_filter = parse_cut_filter(cuts)
 
-    else:
-        raise RuntimeError("Takes 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory frac ")
-
-    makedirs(out_dir, exist_ok=True)
-    if cut_filter == 'cgm':
-        cut_filter = "((obj[('gas', 'radius')].in_units('kpc') > 10) & \
-                   (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
-                   ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
-                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"
-    else:
+    elif len(argv) == 6:
+        filename = argv[1]
+        ray_dir = argv[2]
+        ion_name = argv[3]
+        out_dir= argv[4]
+        frac = float(argv[5])
         cut_filter=None
+        out_dir+="/no_cuts"
+        print("Not applying any sort of cuts")
+    else:
+        raise RuntimeError("Takes 5 or 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory frac (cuts)")
 
+
+    #make sure out directory exists
+    makedirs(out_dir, exist_ok=True)
     #check to see if should use bulk velocity
     main(filename, ray_dir, ion_name, out_dir, frac, cut_filter=cut_filter)
