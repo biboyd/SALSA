@@ -383,7 +383,7 @@ if __name__ == '__main__':
         frac = float(argv[5])
         cuts = argv[6] # Ex. "hot inflow cgm"
         cut_dir = "_".join(cuts.split(" "))
-        out_dir +="/cut_dir"
+        out_dir +=f"/{cut_dir}"
         #retrieve properly formatted cut argument
         cut_filter = parse_cut_filter(cuts)
 
