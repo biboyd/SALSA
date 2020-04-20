@@ -24,11 +24,11 @@ outDir="$mainDir/output_$frac/ion_$ionLabel"
 if ! [ -d $outDir ];
 then
         mkdir -p $outDir
-else
-	rm -rf $outDir/*
+#else
+#	rm -rf $outDir/*
 fi
 srun -n 32							\
 	python ~/Repo/CGM/analysis/collect_random_ray_info.py\
 		$dataFile $rayDir "$ionName" $outDir $frac "$cuts"
-python ~/Repo/CGM/analysis/combine_np_arrays.py $outDir
+#python ~/Repo/CGM/analysis/combine_np_arrays.py $outDir
 scontrol show job $SLURM_JOB_ID
