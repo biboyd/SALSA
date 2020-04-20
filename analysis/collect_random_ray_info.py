@@ -12,7 +12,7 @@ path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie")
 path.insert(0, "/home/bb/Repo/CGM/multi_plot_movie")
 from center_finder import find_center
 from multi_plot import multi_plot
-def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
+def main(filename, ray_dir, i_name, out_dir, frac, cut_filters):
     #init mpi
     comm = MPI.COMM_WORLD
 
@@ -56,7 +56,7 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filter):
                                     frac = frac,
                                     bulk_velocity=bulk_vel,
                                     plot_cloud=True,
-                                    cut_region_filter=cut_filter,
+                                    cut_region_filters=cut_filters,
                                     use_spectacle= True,
                                     plot_spectacle=True,
                                     wavelength_width=20)
@@ -368,10 +368,10 @@ def parse_cut_filter(cuts):
 
     #split filter call
     filter_names = cuts.split(' ')
-    filters = [ filter_dict[name] for name in filter_names ]
-    cut_filter = "&".join(filters)
+    cut_filters = [ filter_dict[name] for name in filter_names ]
+    #cut_filter = "&".join(filters)
 
-    return cut_filter
+    return cut_filters
 
 if __name__ == '__main__':
     #take in arguments
@@ -385,7 +385,7 @@ if __name__ == '__main__':
         cut_dir = "_".join(cuts.split(" "))
         out_dir +=f"/{cut_dir}"
         #retrieve properly formatted cut argument
-        cut_filter = parse_cut_filter(cuts)
+        cut_filters = parse_cut_filter(cuts)
 
     elif len(argv) == 6:
         filename = argv[1]
@@ -393,7 +393,7 @@ if __name__ == '__main__':
         ion_name = argv[3]
         out_dir= argv[4]
         frac = float(argv[5])
-        cut_filter=None
+        cut_filters=None
         out_dir+="/no_cuts"
         print("Not applying any sort of cuts")
     else:
@@ -403,4 +403,4 @@ if __name__ == '__main__':
     #make sure out directory exists
     makedirs(out_dir, exist_ok=True)
     #check to see if should use bulk velocity
-    main(filename, ray_dir, ion_name, out_dir, frac, cut_filter=cut_filter)
+    main(filename, ray_dir, ion_name, out_dir, frac, cut_filters=cut_filters)

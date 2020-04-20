@@ -31,7 +31,7 @@ class multi_plot():
                 ds_filename,
                 ray_filename,
                 ion_name='H I',
-                cut_region_filter=None,
+                cut_region_filters=None,
                 slice_field=None,
                 absorber_fields=[],
                 north_vector=[0, 0, 1],
@@ -65,7 +65,7 @@ class multi_plot():
         ds_filename : Path/name of the enzo dataset to be loaded
         ray_filename : Path/name of the hdf5 ray file to be loaded
         ion_name :string: Name of the ion to plot in number density plot
-        cut_region_filter : str: a string defined by the way you use Cut Regions in YT
+        cut_region_filters : list of str: a list of filters defined by the way you use Cut Regions in YT
         slice_field :string: Field to plot in slice plot. defaults to ion_name's number density
         absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
         north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
@@ -101,7 +101,7 @@ class multi_plot():
         self.ds_filename = ds_filename
         self.ray_filename = ray_filename
         self.ion_name = ion_name
-        self.cut_region_filter = cut_region_filter
+        self.cut_region_filters = cut_region_filters
         self.frac = frac
 
         #add ion name to list of all ions to be plotted
@@ -333,7 +333,7 @@ class multi_plot():
         #         validators=[yt.fields.api.ValidateParameter(['center'])])
 
         #print("now making cgm thing")
-        if self.cut_region_filter is not None:
+        if self.cut_region_filters is not None:
             # parse for radial cuts
             rad_in, rad_out, cut_str = self.cgm_details
             cgm = self.ds.sphere(self.center_gal, (rad_out, 'kpc')) \
@@ -851,7 +851,7 @@ class multi_plot():
                 print("--------------------------------------")
                 print("spec model before ", len(spec_model.lines))
                 print("--------------------------------------")
-                # include only lines greater than min defined. 
+                # include only lines greater than min defined.
                 line_indxs, = np.where( init_stats['col_dens'] >= self.cloud_min)
                 if line_indxs.size == 0:
                     print('line could not be fit on ray ', self.ray)
@@ -861,11 +861,11 @@ class multi_plot():
                     self.spectacle_model = None
                 else:
                     # retrieve lines that pass col dense threshold
-                    good_lines=[] 
+                    good_lines=[]
                     for i in line_indxs:
                         good_lines.append(spec_model.lines[i])
                     #import pdb; pdb.set_trace()
- 
+
                     #create and save new model with lines desired
                     self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
                     num_fitted_lines = len(good_lines)
@@ -952,10 +952,17 @@ class multi_plot():
         self.uncut_data = self.ray.all_data()
 
         #apply cut region if specified
-        if self.cut_region_filter is None:
+        if self.cut_region_filters is None:
             self.data = self.uncut_data
         else:
-            self.data = self.uncut_data.cut_region(self.cut_region_filter)
+            curr_data = self.uncut_data
+            #iteratively apply filters 
+            for filter in self.cut_region_filters:
+                curr_data = curr_data.cut_region(filter)
+
+            self.data = curr_data
+
+        # Check if ray is empty due to cuts
         if self.data['l'].size == 0:
             print(f'light ray {self.ray} is empty')
 
@@ -1080,7 +1087,7 @@ class multi_plot():
                         properly combined.
         """
         # first check no region jumping (from use of cut_regions)
-        if self.cut_region_filter is not None:
+        if self.cut_region_filters is not None:
             #make sure spatially connected
             real_intervals = []
             for curr_b, curr_e in curr_intervals:
@@ -1209,13 +1216,13 @@ if __name__ == '__main__':
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
     center, nvec, rshift, bv = find_center(data_set_fname)
-    cut_filter = "((obj[('gas', 'radius')].in_units('kpc') > 10) & \
+    cut_filters = ["((obj[('gas', 'radius')].in_units('kpc') > 10) & \
                    (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
                    ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
-                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"
+                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
                     center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,
-                    redshift=rshift, wavelength_width = 30, cut_region_filter=cut_filter)
+                    redshift=rshift, wavelength_width = 30, cut_region_filters=cut_filters)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(outfname=outfile)
