@@ -192,7 +192,7 @@ def create_frames(rays,
             absorber_info[5] = lcd
             absorber_info[6] = impact
 
-            absorber_info[7:-1] = calc_cloudy_absorber_props(mp.ray, interval[0], interval[1])
+            absorber_info[7:-1] = calc_cloudy_absorber_props(mp.data, interval[0], interval[1])
             absorber_info[-1] = np.nan
             np.save(f"{out_dir}/ray{ray_num}_cloudy_absorber{abs_num:02d}.npy", absorber_info)
             abs_num+=1
@@ -244,13 +244,13 @@ def calc_spectacle_absorber_props(spec_model):
 
 
 
-def calc_cloudy_absorber_props(ray, start, end):
+def calc_cloudy_absorber_props(data, start, end):
     """
     Calculate the weighted average of a list of absorber properties
     using the total gas column density as the weight.
 
     Parameters:
-        ray : yt.ray : lightray with the fields
+        data : yt data object : yt data object of ray
         start : int: beginning of interval along light ray
         end : end: end of the intervals along the light ray
     """
