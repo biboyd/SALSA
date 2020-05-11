@@ -7,11 +7,10 @@ from sys import argv
 from os import makedirs
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
-from sys import path
-path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie")
-path.insert(0, "/home/bb/Repo/CGM/multi_plot_movie")
-from center_finder import find_center
-#sample impact param
+
+from CGM.general_utils.construct_rays import construct_rays
+from CGM.general_utils.center_finder import find_center
+from CGM.general_utils.filter_definitions import radius_function
 
 def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
     """
@@ -108,23 +107,23 @@ def random_rays(dsname, center,
         none
     """
 
-    if parallel:
-        comm = MPI.COMM_WORLD
-
     # get start/end points for light rays
     ds = yt.load(dsname)
-    bulk_velocity = ds.arr(bulk_velocity, 'km/s')
+
+    if bulk_velocity is not None:
+        bulk_velocity = ds.arr(bulk_velocity, 'km/s')
 
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=line_list, ftype='gas')
 
     # add radius field to dataset
     ds.add_field(('gas', 'radius'),
-             function=_radius,
+             function=radius_function,
              units="code_length",
              take_log=False,
              validators=[yt.fields.api.ValidateParameter(['center'])])
 
+    #collect sightlines
     start_points, end_points, impact_param = random_sightlines(dsname, center,
                                                  n_rays,
                                                  max_impact_param,
@@ -134,49 +133,18 @@ def random_rays(dsname, center,
 
     impact_param = ds.arr(impact_param, 'code_length').in_units('kpc').value
     np.save(f"{out_dir}/impact_parameter.npy", impact_param)
-    #set padding for filenames
-    pad = np.floor( np.log10(n_rays) )
-    pad = int(pad) + 1
 
-    # distribute rays to proccesors
-    my_ray_nums = np.arange(n_rays)
-    if parallel:
-        #split ray numbers then take a portion based on rank
-        split_ray_nums = np.array_split(my_ray_nums, comm.size)
-        my_ray_nums = split_ray_nums[ comm.rank]
+    #construct rays
+    construct_rays(ds, start_points, end_points,
+                   center=center, bulk_velocity=bulk_velocity,
+                   line_list=line_list,
+                   other_fields=other_fields,
+                   out_dir=out_dir,
+                   parallel=parallel)
 
-    #define center of galaxy for lrays
-    fld_param={}
-    if center is not None:
-        fld_param.update({'center':center})
-    if bulk_velocity is not None:
-        fld_param.update({'bulk_velocity':bulk_velocity})
 
-    if fld_param is {}:
-        fld_param = None
 
-    for i in my_ray_nums:
-        #construct ray
-        ray_filename = f"{out_dir}/ray{i:0{pad}d}.h5"
-        trident.make_simple_ray(ds,
-                                start_points[i],
-                                end_points[i],
-                                lines=line_list,
-                                fields=other_fields,
-                                field_parameters=fld_param,
-                                data_filename=ray_filename)
 
-#function to create field in yt
-def _radius(field, data):
-    if data.has_field_parameter("center"):
-        c = data.get_field_parameter("center")
-    else:
-        c = data.ds.domain_center
-
-    x = data[('gas', 'x')] - c[0]
-    y = data[('gas', 'y')] - c[1]
-    z = data[('gas', 'z')] - c[2]
-    return np.sqrt(x*x + y*y + z*z)
 
 if __name__ == '__main__':
     #setup conditions
@@ -191,6 +159,8 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("Takes in 5 Arguments. Dataset_filename num_rays ray_lenght max_impact_param out_directory")
 
+    my_seed = 2020
+    print(f"My seed is: {my_seed}")
     center, n_vec, rshift, bv = find_center(filename)
     random_rays(filename,
                 center,
@@ -200,4 +170,5 @@ if __name__ == '__main__':
                 bulk_velocity=bv,
                 line_list=line_list,
                 length=ray_length,
-                out_dir=out_dir)
+                out_dir=out_dir,
+                seed=my_seed)

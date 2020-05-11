@@ -7,59 +7,40 @@ from sys import argv
 from os import makedirs
 from scipy.spatial.transform import Rotation
 
+from CGM.general_utils.construct_rays import construct_rays
+from CGM.general_utils.center_finder import find_center
+from CGM.general_utils.filter_definitions import radius_function
 
-def construct_rays( dataset,
-                    line_list,
+def movie_sightlines(dataset,
                     length=200,
                     n_rays=100,
                     norm_vector=[0, 0, 1],
-                    angle=0,
+                    az_angle=0,
                     off_angle=45,
-                    bulk_vel = 0,
                     max_impact_param=200,
-                    center=None,
-                    parallel=False,
-                    out_dir='./rays'):
-    """
-    Constructs a number of light rays to "scan" a galactic data set using trident
+                    center=None):
 
+    """
     Parameters:
         dataset: enzo dataset on which to construct the rays
-        line_list: list of ions to include in rays
         length: the length of the rays in kpc
         n_rays: the number of rays to construct
         norm_vector: normal vector of galaxy. (perpendiuclar to disk)
-        angle: The azimuthal angle around the direction. in degrees
-        offset: Polar angle to normal_vector. in degrees.
+        az_angle: The azimuthal angle around the direction. in degrees
+        off_angle: Polar angle to normal_vector. in degrees.
         max_impact_param: sets range to construct rays. in kpc from center of galaxy
         center : array/list. Coordinates to center ray creation. Defaults to dataset/s center. in kpc
-        parallel : boolean. If parallelization is being used set to true.
-        out_dir: directory in which to save the rays
 
     Returns:
-        none
+        start_points : numpy array : the starting coordinates for each lightray
+        end_points : numpy array : the ending coordinates for each lightray
+        norm_vecotr : numpy array : normal vector that will fix galaxy orientation
+                when plotting using multi_plot class.
+
     """
 
     ds = yt.load(dataset)
-    #add ion fields to dataset if not already there
-    trident.add_ion_fields(ds, ions=line_list, ftype='gas')
-
-    # add radius field to dataset
-    ds.add_field(('gas', 'radius'),
-             function=_radius,
-             units="code_length",
-             take_log=False,
-             validators=[yt.fields.api.ValidateParameter(['center'])])
-
-    #create directory if doesn't exist
-    makedirs(out_dir, exist_ok=True)
-
-
-    #start MPI in case parallelization is being used
-    if parallel:
-        comm = MPI.COMM_WORLD
-
-    #convert lengths to code_length and angle to radians
+    #convert lengths to code_length
     length = ds.quan(length, 'kpc').in_units('code_length')
     max_impact_param = ds.quan(max_impact_param, 'kpc').in_units('code_length')
     norm_vector = norm_vector/np.linalg.norm(norm_vector)
@@ -74,8 +55,8 @@ def construct_rays( dataset,
 
     ray_unit = ray_unit/np.linalg.norm(ray_unit)
     #rotate ray unit
-    if angle != 0:
-        angle = np.deg2rad(angle)
+    if az_angle != 0:
+        angle = np.deg2rad(az_angle)
         rot_vector = norm_vector*angle
         rot = Rotation.from_rotvec(rot_vector)
         ray_unit = rot.apply(ray_unit)
@@ -85,8 +66,8 @@ def construct_rays( dataset,
         rot_vector = np.cross(ray_unit, norm_vector)
 
         #convert degree to rad and scale rot_vector
-        offset_rad = np.deg2rad(off_angle)
-        rot_vector *= offset_rad/np.linalg.norm(rot_vector)
+        off_rad = np.deg2rad(off_angle)
+        rot_vector *= off_rad/np.linalg.norm(rot_vector)
 
         #apply rotation to ray unit and norm vectors
         rot= Rotation.from_rotvec(rot_vector)
@@ -105,52 +86,77 @@ def construct_rays( dataset,
 
     #add offset to find end and beginning to all rays
     offset = length/2 * ray_unit
-    ray_begins = ray_centers - offset
-    ray_ends = ray_centers + offset
+    start_points = ray_centers - offset
+    end_points = ray_centers + offset
 
-    #set padding for filenames
-    pad = np.floor( np.log10(n_rays) )
-    pad = int(pad) + 1
+    return start_points, end_points, norm_vector
 
-    my_ray_nums = np.arange(n_rays)
-    if parallel:
-        #split ray numbers then take a portion based on rank
-        split_ray_nums = np.array_split(my_ray_nums, comm.size)
-        my_ray_nums = split_ray_nums[ comm.rank]
+def movie_rays( dataset,
+                    line_list,
+                    length=200,
+                    n_rays=100,
+                    norm_vector=[0, 0, 1],
+                    az_angle=0,
+                    off_angle=45,
+                    bulk_vel = None,
+                    max_impact_param=200,
+                    center=None,
+                    parallel=False,
+                    out_dir='./rays'):
+    """
+    Constructs a number of light rays to "scan" a galactic data set using trident
 
-    #define center of galaxy for lrays
-    if center is not None:
-        fld_param = {'center':center}
-    else:
-        fld_param=None
-    for i in my_ray_nums:
-        #construct ray
-        trident.make_simple_ray(ds,
-                                ray_begins[i],
-                                ray_ends[i],
-                                lines=line_list,
-                                fields= ['density', 'metallicity', 'temperature', ('gas', 'radius')],
-                                field_parameters=fld_param,
-                                data_filename= f"{out_dir}/ray{i:0{pad}d}.h5")
-    if parallel:
-        comm.Barrier()
-        if comm.rank == 0:
-             print("-----all finished------")
+    Parameters:
+        dataset: enzo dataset on which to construct the rays
+        line_list: list of ions to include in rays
+        length: the length of the rays in kpc
+        n_rays: the number of rays to construct
+        norm_vector: normal vector of galaxy. (perpendiuclar to disk)
+        az_angle: The azimuthal angle around the direction. in degrees
+        off_angle: Polar angle to normal_vector. in degrees.
+        max_impact_param: sets range to construct rays. in kpc from center of galaxy
+        center : array/list. Coordinates to center ray creation. Defaults to dataset/s center. in kpc
+        parallel : boolean. If parallelization is being used set to true.
+        out_dir: directory in which to save the rays
 
-    return norm_vector
+    Returns:
+        none
+    """
+    #create directory if doesn't exist
+    makedirs(out_dir, exist_ok=True)
 
-#function to create field in yt
-def _radius(field, data):
-    if data.has_field_parameter("center"):
-        c = data.get_field_parameter("center")
-    else:
-        c = data.ds.domain_center
+    other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius'), 'radial_velocity']
+    ds = yt.load(dataset)
+    #add ion fields to dataset if not already there
+    trident.add_ion_fields(ds, ions=line_list, ftype='gas')
 
-    x = data[('gas', 'x')] - c[0]
-    y = data[('gas', 'y')] - c[1]
-    z = data[('gas', 'z')] - c[2]
-    return np.sqrt(x*x + y*y + z*z)
+    # add radius field to dataset
+    ds.add_field(('gas', 'radius'),
+             function=radius_function,
+             units="code_length",
+             take_log=False,
+             validators=[yt.fields.api.ValidateParameter(['center'])])
 
+    #collect sightlines
+    start_points, end_poits, norm_vector = movie_sightlines(dataset,
+                                                length=length,
+                                                n_rays=n_rays,
+                                                norm_vector=norm_vector,
+                                                az_angle=az_angle,
+                                                off_angle=off_angle,
+                                                max_impact_param=max_impact_param,
+                                                center=center)
+
+    #save normal vector for future plotting purposes
+    np.save(f"{out_dir}/norm_vec.npy", norm_vector)
+
+    #construct lightrays
+    construct_rays(ds, start_points, end_points,
+                   center=center, bulk_velocity=bulk_velocity,
+                   line_list=line_list,
+                   other_fields=other_fields,
+                   out_dir=out_dir,
+                   parallel=parallel)
 
 if __name__ == '__main__':
     #setup conditions
@@ -165,7 +171,7 @@ if __name__ == '__main__':
 
     center, n_vec, rshift, bv = find_center(filename)
     #divide rays evenly
-    new_n_vec = construct_rays(filename, line_list,
+    movie_rays(filename, line_list,
                     n_rays=num_rays,
                     norm_vector = n_vec,
                     bulk_vel = bv,
@@ -174,5 +180,3 @@ if __name__ == '__main__':
                     center = center,
                     out_dir=out_dir,
                     parallel = True)
-    # save vector to fix orientation for future plots 
-    np.save(f"{out_dir}/norm_vec.npy", new_n_vec)
