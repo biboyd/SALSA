@@ -127,7 +127,7 @@ def create_frames(rays,
     # define info to collect
     absorber_head=np.array(['ray_num',
                             'spectacle',
-                            'cloudy',
+                            'ice',
                             'start_interval',
                             'end_intervals',
                             'col density',
@@ -167,14 +167,14 @@ def create_frames(rays,
             ax2 = mp.fig.add_subplot(312)
             ax3 = mp.fig.add_subplot(313)
 
-            mp.plot_num_density(ax_num_dense=ax1, ax_prop2=ax2)
+            mp.plot_num_density(ax_num_dense=ax1, ax_prop2=ax2, prop2_name='radial_velocity', prop2_units='km/s')
             mp.plot_vel_space(ax=ax3)
 
             mp.fig.tight_layout()
             mp.fig.savefig(f"{out_dir}/plots{ray_num}.png", **savefig_kwargs)
 
         ray_index = int(ray_num)
-        #save cloudy information
+        #save ice information
         interval_list, lcd_list = mp.get_iterative_cloud(coldens_fraction=mp.frac, min_logN=mp.cloud_min)
         abs_num=0
         for interval, lcd in zip(interval_list, lcd_list):
@@ -192,9 +192,9 @@ def create_frames(rays,
             absorber_info[5] = lcd
             absorber_info[6] = impact
 
-            absorber_info[7:-1] = calc_cloudy_absorber_props(mp.data, interval[0], interval[1])
+            absorber_info[7:-1] = calc_ice_absorber_props(mp.data, interval[0], interval[1])
             absorber_info[-1] = np.nan
-            np.save(f"{out_dir}/ray{ray_num}_cloudy_absorber{abs_num:02d}.npy", absorber_info)
+            np.save(f"{out_dir}/ray{ray_num}_ice_absorber{abs_num:02d}.npy", absorber_info)
             abs_num+=1
 
         # save spectacle information
@@ -244,7 +244,7 @@ def calc_spectacle_absorber_props(spec_model):
 
 
 
-def calc_cloudy_absorber_props(data, start, end):
+def calc_ice_absorber_props(data, start, end):
     """
     Calculate the weighted average of a list of absorber properties
     using the total gas column density as the weight.
@@ -254,15 +254,15 @@ def calc_cloudy_absorber_props(data, start, end):
         start : int: beginning of interval along light ray
         end : end: end of the intervals along the light ray
     """
-    dl = ray.data['dl'][start:end]
-    density = ray.data[('gas', 'density')][start:end]
+    dl = data['dl'][start:end]
+    density = data[('gas', 'density')][start:end]
     col_dense = np.sum(dl*density)
     props = ('velocity_los', 'x', 'y', 'z','radius', 'density', 'metallicity', 'temperature', 'radial_velocity')
     props_units=('km/s', 'kpc', 'kpc', 'kpc','kpc', 'g/cm**3', 'Zsun','K', 'km/s')
     avg_props = []
     for prop, units in zip(props, props_units):
         #compute weighted sum of property
-        avg = np.sum(dl*density*ray.data[prop][start:end])/col_dense
+        avg = np.sum(dl*density*data[prop][start:end])/col_dense
         avg_props.append(avg.in_units(units))
 
     return avg_props
@@ -383,7 +383,8 @@ if __name__ == '__main__':
         frac = float(argv[5])
         cuts = argv[6] # Ex. "hot inflow cgm"
         cut_dir = "_".join(cuts.split(" "))
-        out_dir +=f"/{cut_dir}"
+        if cut_dir != 'cgm':
+            out_dir +=f"/{cut_dir}"
         #retrieve properly formatted cut argument
         cut_filters = parse_cut_filter(cuts)
 

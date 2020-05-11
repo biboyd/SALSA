@@ -15,7 +15,7 @@ import seaborn as sns
 
 # plot functions
 
-def double_hist(data1, data2, bins, hist_range=None, ax=None, color1='tab:blue', color2='tab:orange',label1='Spectacle', label2="rCloudy"):
+def double_hist(data1, data2, bins, hist_range=None, ax=None, color1='tab:blue', color2='tab:orange',label1='Spectacle', label2="ICE"):
     if ax is None:
         fig, ax = plt.subplots(1)
     else:
@@ -33,16 +33,16 @@ def double_hist(data1, data2, bins, hist_range=None, ax=None, color1='tab:blue',
     
     return fig, ax
 
-## MAKE COLUMN DENSITY HISTO comparing Spectacle and rCloudy
-def col_dense_histo(spect_df, cloudy_df, z,ion="O VI", bins=20, hist_range=None, outdir='./'):
+## MAKE COLUMN DENSITY HISTO comparing Spectacle and Cloudy
+def col_dense_histo(spect_df, ice_df, z,ion="O VI", bins=20, hist_range=None, outdir='./'):
     ion_u=f"{ion.split()[0]}_{ion.split()[1]}"
     spect_cd = spect_df['col density']
-    cloudy_cd = cloudy_df['col density']
+    ice_cd = ice_df['col density']
 
     fig, ax = plt.subplots(1)
-    double_hist(spect_cd, cloudy_cd, bins, hist_range, ax=ax, color1='tab:purple', color2='black') 
+    double_hist(spect_cd, ice_cd, bins, hist_range, ax=ax, color1='tab:purple', color2='black') 
 
-    ax.set_title(f"{ion} Column Density for Spectacle and rCloudy (z={z:0.2f})")
+    ax.set_title(f"{ion} Column Density for Spectacle and ICE (z={z:0.2f})")
     ax.set_ylabel("% of absorbers")
     ax.set_xlabel(f"Log( $N_{ {ion} }$ )")
     ax.legend()
@@ -50,15 +50,15 @@ def col_dense_histo(spect_df, cloudy_df, z,ion="O VI", bins=20, hist_range=None,
     fig.savefig(f"{outdir}/col_density_{ion_u}_{z:0.2f}.png", dpi=400)
 
 ## MAKE VELOCITY HISTO
-def los_velocity_histo(spect_df, cloudy_df, z,ion="O VI", bins=25, hist_range=None,outdir='./'):
+def los_velocity_histo(spect_df, ice_df, z,ion="O VI", bins=25, hist_range=None,outdir='./'):
     ion_u=f"{ion.split()[0]}_{ion.split()[1]}"
     spect_vel = spect_df['avg_velocity']
-    cloudy_vel = cloudy_df['avg_velocity']
+    ice_vel = ice_df['avg_velocity']
 
     fig, ax = plt.subplots(1)
-    double_hist(spect_vel, cloudy_vel, bins, hist_range, ax=ax, color1='tab:purple', color2='black') 
+    double_hist(spect_vel, ice_vel, bins, hist_range, ax=ax, color1='tab:purple', color2='black') 
 
-    ax.set_title(f"{ion} Velocity for Spectacle and rCloudy (z={z:0.2f})")
+    ax.set_title(f"{ion} Velocity for Spectacle and ICE (z={z:0.2f})")
     ax.set_ylabel("% of absorbers")
     ax.set_xlabel("Line of Sight Velocity (km/s)")
     ax.legend()
@@ -94,7 +94,7 @@ def b_histo(spect_df, z, b_lim=None, bins=15, ion="O VI",outdir='./', filtered=F
     fig.savefig(f"{outdir}/b_inflow_outflow_{ion_u}_{z:0.2f}.png", dpi=400)
 
 ## MAKE VELOCITY HISTO
-def inflow_outflow_histos(cloudy_df, z,ion="O VI", bins=15, hist_range=None, outdir='./'):
+def inflow_outflow_histos(ice_df, z,ion="O VI", bins=15, hist_range=None, outdir='./'):
     ion_u=f"{ion.split()[0]}_{ion.split()[1]}"
 
     titles=['Metallicity', 'Radius', 'Density', 'Temperature']
@@ -103,8 +103,8 @@ def inflow_outflow_histos(cloudy_df, z,ion="O VI", bins=15, hist_range=None, out
 
     for title, fld, xlabel, curr_range in zip(titles, fields, xlabels, hist_range):
         #extract inflow metal and outflow metal information
-        inflow = cloudy_df[ cloudy_df['flow'] == 'Inflow'][fld]
-        outflow = cloudy_df[ cloudy_df['flow'] == 'Outflow'][fld]
+        inflow = ice_df[ ice_df['flow'] == 'Inflow'][fld]
+        outflow = ice_df[ ice_df['flow'] == 'Outflow'][fld]
 
         fig, ax = plt.subplots(1)
         double_hist(inflow, outflow, bins, curr_range, ax=ax, label1='Inflow', label2='Outflow')
@@ -158,27 +158,27 @@ if __name__ == '__main__':
     df = pd.DataFrame(data=absorber_array, columns=header)
     z = ds.current_redshift
 
-    #divide data into spectacle and cloudy
+    #divide data into spectacle and ice
     spect_df = df[ df['spectacle'] == 1.]
-    cloudy_df = df[ df['cloudy'] == 1.]
+    ice_df = df[ df['ice'] == 1.]
     print('z:',z, 
           '\nspec #:',spect_df['ray_num'].count(),
-          '\nrcloud #:',cloudy_df['ray_num'].count(),
+          '\nice #:',ice_df['ray_num'].count(),
           )
 
     if filtered is False:
         # DEFINE INFLOW OUTLFOW STUFF
-        cloudy_df['flow'] = cloudy_df['radial_velocity'].apply(lambda r : "Inflow" if (r < 0) else "Outflow" )
+        ice_df['flow'] = ice_df['radial_velocity'].apply(lambda r : "Inflow" if (r < 0) else "Outflow" )
     elif filtered is True:
         #set flow for already filtered data
-        cloudy_df['flow'] = cloudy_df['inflow'].apply(lambda i : "Inflow" if (i == 1.) else "Outflow")
+        ice_df['flow'] = ice_df['inflow'].apply(lambda i : "Inflow" if (i == 1.) else "Outflow")
         spect_df['flow'] = spect_df['inflow'].apply(lambda i : "Inflow" if (i == 1.) else "Outflow")
 
     # LOG SOME VARS FOR PAIRPLOT
     variables =['avg_density', 'avg_metallicity', 'avg_temperature']
     for v in variables:
         logv = 'log_' + v
-        cloudy_df[logv] = np.log10(df[v])
+        ice_df[logv] = np.log10(df[v])
     log_var = ['col density', 'log_avg_density', 'log_avg_temperature', 'log_avg_metallicity', 'radius', 'radial_velocity']
 
     # labels to use in final plot instead
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     #create pairplot
     # MAKE AND SAVE PAIRPLOT
     sns.set_palette('colorblind')
-    pp= sns.pairplot(cloudy_df, vars=log_var, hue='flow', markers='o', diag_kind='hist', diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
+    pp= sns.pairplot(ice_df, vars=log_var, hue='flow', markers='o', diag_kind='hist', diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
     pp.fig.suptitle(f"{ion} properties for z= {z:0.2f}",size=18, y=1.05)
    
     # change the axis labels
@@ -225,8 +225,8 @@ if __name__ == '__main__':
         Z_lim = None
     #run plot functions
     print(f"creating plotting stuff rn, goin into {outdir}")
-    col_dense_histo(spect_df, cloudy_df, z, ion=ion,  hist_range=cd_lim, outdir=outdir)
-    los_velocity_histo(spect_df, cloudy_df, z, ion=ion,  hist_range=los_vel_lim, outdir=outdir)
+    col_dense_histo(spect_df, ice_df, z, ion=ion,  hist_range=cd_lim, outdir=outdir)
+    los_velocity_histo(spect_df, ice_df, z, ion=ion,  hist_range=los_vel_lim, outdir=outdir)
     b_histo(spect_df, z, ion=ion, b_lim=b_lim,outdir=outdir, filtered=filtered)
-    inflow_outflow_histos(cloudy_df, z, ion=ion, bins=10,hist_range=(Z_lim, (0, 200), dense_lim, temp_lim),outdir=outdir)
+    inflow_outflow_histos(ice_df, z, ion=ion, bins=10,hist_range=(Z_lim, (0, 200), dense_lim, temp_lim),outdir=outdir)
     

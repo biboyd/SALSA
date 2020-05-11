@@ -141,7 +141,7 @@ class multi_plot():
         self.spectacle_model=None
 
         if cloud_min is None:
-            min_defaults = {'H I': 13, 'Si II': 11, 'Si IV': 12,
+            min_defaults = {'H I': 12.5, 'Si II': 11, 'Si IV': 12,
                             'C IV':13, 'O VI':13}
             if self.ion_name in min_defaults.keys():
                 self.cloud_min = min_defaults[self.ion_name]
@@ -453,11 +453,10 @@ class multi_plot():
         if single_line is None:
             #use wavelength_width to set the range
 
-            spect_gen = trident.SpectrumGenerator(lambda_min=vel_min, lambda_max=vel_max, dlambda = self.velocity_res, bin_space="velocity")
+            spect_gen = trident.SpectrumGenerator(lambda_min=vel_min, lambda_max=vel_max*2, dlambda = self.velocity_res, bin_space="velocity")
         else:
             #use auto feature to capture full line
             spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, bin_space="velocity")
-
 
 
         spect_gen.make_spectrum(self.data, lines=ion_list)
@@ -478,13 +477,14 @@ class multi_plot():
             ax.set_ylabel("Flux")
             ax.grid(zorder=0, which='both')
 
-            if annotate_column_density:
-                #annotate plot with column densities
+            if self.use_spectacle:
                 sums, line_txt, line_models, num_fitted_lines = self.compute_col_density()
                 box_props = dict(boxstyle='square', facecolor='white')
-                ax.text(0.8, 0.05, line_txt, transform=ax.transAxes, bbox = box_props)
 
-            if self.use_spectacle:
+                if annotate_column_density:
+                    #annotate plot with column densities
+                    ax.text(0.8, 0.05, line_txt, transform=ax.transAxes, bbox = box_props)
+
                 #annotate number of lines
                 ax.text(0.9, 0.85, f"{num_fitted_lines} lines", transform=ax.transAxes, bbox = box_props)
 
@@ -808,8 +808,8 @@ class multi_plot():
             num_fitted_lines: int: Number of lines fitted by spectacle
         """
         #compute col density from summing along ray
-        num_density = np.array(self.data[self.ion_p_name()+'_number_density'])
-        dl_array = np.array(self.data['dl'])
+        num_density = np.array(self.data[self.ion_p_name()+'_number_density'].in_units('cm**-3'))
+        dl_array = np.array(self.data['dl'].in_units('cm'))
 
 
         line_sum_cd=0
@@ -903,7 +903,7 @@ class multi_plot():
             fit_string = "{: <14s}{:04.1f}\n".format(fit_label, log_line_sum)
 
         #get sum from contour method
-        cloud_label="cloud:"#contour_label= "countour:"
+        cloud_label="ICE:"#contour_label= "countour:"
         interval, lcd_list = self.get_iterative_cloud(coldens_fraction=self.frac, min_logN=self.cloud_min)
         if lcd_list is []:
             log_bot_sum=0
@@ -1221,8 +1221,8 @@ if __name__ == '__main__':
                    ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
                    (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,
-                    redshift=rshift, wavelength_width = 30, cut_region_filters=cut_filters)
+                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,plot_spectacle=True,
+                    redshift=rshift, cloud_min=12.5,wavelength_width = 30, cut_region_filters=None)#cut_filters)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
-    mp.create_multi_plot(outfname=outfile)
+    mp.create_multi_plot(cmap='cividis',outfname=outfile)
