@@ -15,10 +15,6 @@ from center_finder import find_center
 import astropy.units  as u
 from scipy.ndimage import gaussian_filter
 
-path.insert(0, "/mnt/home/boydbre1/Repo/absorber_generation_post")
-path.insert(0, "/home/bb/Repo/absorber_generation_post")
-from new_generate_contour_absorbers import identify_intervals_char_length, identify_intervals
-
 class multi_plot():
     """
     Plots three images side by side for easy analysis. The images are:
@@ -37,7 +33,7 @@ class multi_plot():
                 north_vector=[0, 0, 1],
                 center_gal = None,
                 wavelength_center=None,
-                wavelength_width = 300,
+                wavelength_width = 30,
                 velocity_width = 3000,
                 wavelength_res = 0.1,
                 velocity_res = 10,
@@ -956,7 +952,7 @@ class multi_plot():
             self.data = self.uncut_data
         else:
             curr_data = self.uncut_data
-            #iteratively apply filters 
+            #iteratively apply filters
             for filter in self.cut_region_filters:
                 curr_data = curr_data.cut_region(filter)
 
@@ -966,46 +962,6 @@ class multi_plot():
         if self.data['l'].size == 0:
             print(f'light ray {self.ray} is empty')
 
-    def get_contour_intervals(self, char_density_frac = 0.5):
-        """
-        get the intervals along the ray where an absorption feature is found.
-        Then compute the column density of each interval and return them
-
-        Parameters:
-            char_density_frac : float < 1: Fraction used to define when to end
-                an absorption feature. Relative to maximum
-        Returns:
-            intervals_lcd: tuple of list: first list containing interval start and stop
-                indices. second list with corresponding log column densities
-        """
-        #define intial region to check
-        cutoffs = {'H I':1e-11, 'C IV':1e-14, 'O VI':1e-11, 'Si III':1e-11, 'Si II':1e-11}
-        init_cutoff = cutoffs[self.ion_name]
-
-        num_density = self.data[self.ion_p_name()+'_number_density']
-        dl_list = self.data['dl']
-
-        if self.sigma_smooth is not None:
-            num_density = gaussian_filter(num_density, self.sigma_smooth)
-
-        intervals = identify_intervals_char_lengt
-        h(num_density, init_cutoff, char_density_fraction=char_density_frac)
-
-        lcd_list =[]
-        my_intervals=[]
-        #check interval has high enough column density
-        lim = self.cloud_min
-        for b,e in intervals:
-            #compute log col density
-            curr_lcd = np.log10( np.sum(dl_list[b:e]*num_density[b:e]) )
-
-            #check if col density is above limit
-            if curr_lcd > lim:
-                lcd_list.append(curr_lcd)
-                my_intervals.append( (b, e) )
-
-        #create empty array then fill with intervals and column densities
-        return (my_intervals, lcd_list)
 
 
 
@@ -1033,7 +989,7 @@ class multi_plot():
             curr_thresh = self._cloud_method(curr_num_density, coldens_fraction=coldens_fraction)
 
             #extract intervals this would cover
-            curr_intervals = identify_intervals(num_density, curr_thresh)
+            curr_intervals = self._identify_intervals(num_density, curr_thresh)
 
 
             new_intervals = self._sensible_combination(all_intervals, curr_intervals, vel_los, dl_list,l_list, density_array)
@@ -1071,6 +1027,7 @@ class multi_plot():
         threshold = cut * np.max(num_density_arr)
 
         return threshold
+
     def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array, dl_array, l_array, density_array):
         """
         adds new intervals by taking into account the velocities when combining them
@@ -1145,12 +1102,12 @@ class multi_plot():
                     #check if just beginning point enclose
                     else:
                         err_file = open("error_file.txt", 'a')
-                        err_file.write(f"{self.ray_filename} had an intersection taht wasn't complete :/")
+                        err_file.write(f"{self.ray_filename} had an intersection that wasn't complete :/")
                         err_file.close()
                 #check if just endpoint enclosed
                 elif curr_b <= e and curr_e >= e:
                     err_file = open("error_file.txt", 'a')
-                    err_file.write(f"{self.ray_filename} had an intersection taht wasn't complete :/")
+                    err_file.write(f"{self.ray_filename} had an intersection that wasn't complete :/")
                     err_file.close()
 
             #
@@ -1196,6 +1153,40 @@ class multi_plot():
 
 
         return new_intervals
+
+    def _identify_intervals(self, field, cutoff):
+        """
+        Find the intervals for absorbers using some cutoff on a
+        field (generally number density) along lightray.
+
+        Parameters:
+            field : array/list : list of values to compare to cutoff
+            cutoff : double : threshold defining where absorbers are.
+
+        Returns:
+            intervals : list of tuples : list of the intervals defining the
+                    absorbers in this ray.
+        """
+        in_absorber = False
+        intervals = []
+
+        #Iterate over values in field
+        for i,value in enumerate(field):
+            #Check if started an absorber and if above cutoff
+            if in_absorber and value < cutoff:
+                in_absorber = False
+                #add interval to list
+                    intervals.append((start,i))
+            # check if just entered an absorber
+            elif not in_absorber and value >= cutoff:
+                in_absorber = True
+                start = i
+            else:
+                continue
+        #check if was still in absorber when hitting end of ray
+        if in_absorber and start != i:
+            intervals.append((start, i))
+        return intervals
 
 #function to create field in yt
 def _radius(field, data):
