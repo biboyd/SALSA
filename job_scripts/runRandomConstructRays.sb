@@ -6,14 +6,19 @@
 #SBATCH -t 00:30:00
 #SBATCH -o slurm_logs/slurm-%j.out
 #SBATCH -e slurm_logs/slurm-%jerr.out
-dsName=$1
-nRays=$2
-rayDist=$3
-minImpact=$4
-maxImpact=$5
+
+refine=$1
+dsName=$2
+nRays=$3
+rayDist=$4
+minImpact=$5
+maxImpact=$6
+
+dataDir=${refine}_refinement
+
 scratch="/mnt/gs18/scratch/users/boydbre1"
-inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/analysis/foggie/$dsName/max_impact$maxImpact/rays"
+inFile="$scratch/cosmological/$dataDir/$dsName/$dsName"
+outDir="$scratch/analysis/$dataDir/$dsName/max_impact$maxImpact/rays"
 
 if ! [ -d $outDir ]
 then
@@ -24,11 +29,10 @@ fi
 
 srun -n 16							\
 	python ~/Repo/CGM/analysis/construct_rays_random.py\
-		$inFile \
-                $nRays \
-                $rayDist \
-                $minImpact \
-		$maxImpact \
-		$outDir
+		    $inFile \
+        $nRays \
+        $rayDist \
+        $minImpact \
+		    $maxImpact \
+		    $outDir
 scontrol show job $SLURM_JOB_ID
-

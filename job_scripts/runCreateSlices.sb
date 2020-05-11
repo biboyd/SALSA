@@ -6,11 +6,14 @@
 #SBATCH -t 00:45:00
 #SBATCH -o slurm_logs/slurm-%j.out
 
-ds=$1
-len=$2
-scratch=/mnt/gs18/scratch/users/boydbre1/
-dsPath=$scratch/cosmological/foggie/$ds/$ds
-outDir=$scratch/slices/foggie/$ds/slices__${len}kpc/
+refine=$1
+ds=$2
+len=$3
+dataDir="${refine}_refinement"
+
+scratch="/mnt/gs18/scratch/users/boydbre1/"
+dsPath="$scratch/cosmological/$dataDir/$ds/$ds"
+outDir="$scratch/slices/$dataDir/$ds/slices_${len}kpc/"
 
 if ! [ -d $outDir ];
 then
