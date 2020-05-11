@@ -3,8 +3,9 @@ import numpy as np
 from sys import argv
 import yt
 import trident
-from multi_plot import multi_plot
-from center_finder import find_center
+from CGM.absorber_extraction_class.multi_plot import multi_plot
+from CGM.general_utils.center_finder import find_center
+from CGM.general_utils.filter_definitions import ion_p_num
 from os import makedirs, listdir
 import h5py
 
@@ -207,19 +208,7 @@ def get_ray_num(file_path):
     num = filename[3:-3]
 
     return num
-def ion_p_num(ion_name):
-    """
-    convert ion species name from trident style to one that
-    can be used with h5 files
-    """
-    #split up the words in ion species name
-    ion_split = ion_name.split()
-    #convert num from roman numeral. subtract run b/c h5
-    num = trident.from_roman(ion_split[1])-1
 
-    #combine all the names
-    outname = f"{ion_split[0]}_p{num}_number_density"
-    return outname
 
 if __name__ == '__main__':
     #take in arguments

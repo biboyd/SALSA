@@ -11,9 +11,11 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
-from center_finder import find_center
 import astropy.units  as u
 from scipy.ndimage import gaussian_filter
+
+from CGM.general_utils.filter_definitions import ion_p_num
+from CGM.general_utils.center_finder import find_center
 
 class multi_plot():
     """
@@ -115,7 +117,7 @@ class multi_plot():
 
         #set slice field to ion name if no field is specified
         if (slice_field == None):
-            self.slice_field = self.ion_p_name() + "_number_density"
+            self.slice_field = ion_p_num(self.ion_name)
         else:
             self.slice_field = slice_field
 
@@ -280,29 +282,6 @@ class multi_plot():
 
         return ray_begin, ray_end, ray_length, ray_unit
 
-    def ion_p_name(self):
-        """
-        convert ion species name to yt style field convention
-        ('H I' -> 'H_p0')
-        Returns:
-        outname : Name of the ion in the yt notation
-        """
-
-        ######### Deprecated, no longer needed #########3
-        # 'H I' is an exception just return H
-
-        #if self.ion_name == 'H I':
-        #    return 'H'
-
-        #split up the words in ion species name
-        ion_split = self.ion_name.split()
-
-        #convert num from roman numeral. subtract one to follow convention
-        num = trident.from_roman(ion_split[1])-1
-
-        #combine all the names
-        outname = ion_split[0] + '_p' + str(num)
-        return outname
 
     def create_slice(self, cmap="magma", height=None, width=None):
         """
@@ -320,13 +299,6 @@ class multi_plot():
 
         #add ion fields to dataset if not already there
         trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
-
-        # add radius field to dataset
-        #self.ds.add_field(('gas', 'radius'),
-        #         function=_radius,
-        #         units="code_length",
-        #         take_log=False,
-        #         validators=[yt.fields.api.ValidateParameter(['center'])])
 
         #print("now making cgm thing")
         if self.cut_region_filters is not None:
@@ -565,7 +537,7 @@ class multi_plot():
             none
         """
         #get list of num density  los velocity and corresponding lengths
-        num_density = self.data[self.ion_p_name()+'_number_density']
+        num_density = self.data[ion_p_num(self.ion_name)]
         prop2 = self.data[prop2_name]
         prop2_lb = None
         prop2_ub = None
@@ -804,8 +776,9 @@ class multi_plot():
             num_fitted_lines: int: Number of lines fitted by spectacle
         """
         #compute col density from summing along ray
-        num_density = np.array(self.data[self.ion_p_name()+'_number_density'].in_units('cm**-3'))
-        dl_array = np.array(self.data['dl'].in_units('cm'))
+        fld_name = ion_p_num(self.ion_name)
+        num_density = np.array( self.data[fld_name].in_units('cm**-3') )
+        dl_array = np.array( self.data['dl'].in_units('cm') )
 
 
         line_sum_cd=0
@@ -969,7 +942,7 @@ class multi_plot():
         """
         iteratively do the cloud method to extract all features
         """
-        num_density = self.data[self.ion_p_name()+'_number_density'].in_units("cm**(-3)")
+        num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
         dl_list = self.data['dl'].in_units('cm')
         l_list = self.data['l'].in_units('cm')
         vel_los = self.data['velocity_los'].in_units('km/s')
@@ -1188,17 +1161,7 @@ class multi_plot():
             intervals.append((start, i))
         return intervals
 
-#function to create field in yt
-def _radius(field, data):
-    if data.has_field_parameter("center"):
-        c = data.get_field_parameter("center")
-    else:
-        c = data.ds.domain_center
 
-    x = data[('gas', 'x')] - c[0]
-    y = data[('gas', 'y')] - c[1]
-    z = data[('gas', 'z')] - c[2]
-    return np.sqrt(x*x + y*y + z*z)
 
 if __name__ == '__main__':
     data_set_fname = argv[1]
@@ -1211,6 +1174,7 @@ if __name__ == '__main__':
                    (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
                    ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
                    (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
+    
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
                     center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,plot_spectacle=True,
                     redshift=rshift, cloud_min=12.5,wavelength_width = 30, cut_region_filters=None)#cut_filters)

@@ -1,17 +1,16 @@
 from mpi4py import MPI
 import numpy as np
-from sys import argv, path
+from sys import argv
 import yt
 import trident
 from os import makedirs, listdir
 import h5py
 import astropy.units  as u
 
+from CGM.general_utils.center_finder import find_center
+from CGM.absorber_extraction_class.multi_plot import multi_plot
+from CGM.general_utils.filter_definitions import parse_cut_filter
 
-path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie")
-path.insert(0, "/home/bb/Repo/CGM/multi_plot_movie")
-from center_finder import find_center
-from multi_plot import multi_plot
 def main(filename, ray_dir, i_name, out_dir, frac, cut_filters):
     #init mpi
     comm = MPI.COMM_WORLD
@@ -241,9 +240,6 @@ def calc_spectacle_absorber_props(spec_model):
 
     return lcd, delta_v, v_doppler
 
-
-
-
 def calc_ice_absorber_props(data, start, end):
     """
     Calculate the weighted average of a list of absorber properties
@@ -280,19 +276,7 @@ def get_ray_num(file_path):
     num = filename[3:-3]
 
     return num
-def ion_p_num(ion_name):
-    """
-    convert ion species name from trident style to one that
-    can be used with h5 files
-    """
-    #split up the words in ion species name
-    ion_split = ion_name.split()
-    #convert num from roman numeral. subtract run b/c h5
-    num = trident.from_roman(ion_split[1])-1
 
-    #combine all the names
-    outname = f"{ion_split[0]}_p{num}_number_density"
-    return outname
 
 def get_num_density_range(ion_name, comm, my_rays, use_defaults=True):
     """
@@ -348,30 +332,7 @@ def get_num_density_range(ion_name, comm, my_rays, use_defaults=True):
     return num_density_range
 
 
-def parse_cut_filter(cuts):
-    """
-    Parses a string defining what cuts to apply to analysis. Then returns the proper
-    YT cut_region filter
-    """
-    #define cut dictionary
-    cgm_rad = "(obj[('gas', 'radius')].in_units('kpc') > 10.) & (obj[('gas', 'radius')].in_units('kpc') < 200.)"
-    cgm_d_t = "(obj[('gas', 'temperature')].in_units('K') > 1.5e4) | (obj[('gas', 'density')].in_units('g/cm**3') < 2.e-26)"
-    cgm_filter = f"{cgm_rad} & {cgm_d_t}"
 
-    hot = "(obj[('gas', 'temperature')].in_units('K') > 1.e5)"
-    cold = "(obj[('gas', 'temperature')].in_units('K') <= 1.e5)"
-
-    inflow = "(obj[('gas', 'radial_velocity')] <= 0.)"
-    outflow = "(obj[('gas', 'radial_velocity')] > 0.)"
-
-    filter_dict=dict(cgm=cgm_filter, hot=hot, cold=cold, inflow=inflow, outflow=outflow)
-
-    #split filter call
-    filter_names = cuts.split(' ')
-    cut_filters = [ filter_dict[name] for name in filter_names ]
-    #cut_filter = "&".join(filters)
-
-    return cut_filters
 
 if __name__ == '__main__':
     #take in arguments
