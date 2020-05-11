@@ -6,13 +6,16 @@
 #SBATCH -t 00:30:00
 #SBATCH -o slurm_logs/slurm-%j.out
 #SBATCH -e slurm_logs/slurm-%jerr.out
-dsName=$1
-nRays=$2
-rayDist=$3
 
+refine=$1
+dsName=$2
+nRays=$3
+rayDist=$4
+
+dataDir=${refine}_refinement
 scratch="/mnt/gs18/scratch/users/boydbre1"
-inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/multiplot_movie/foggie/$dsName/movie_${rayDist}kpc/rays"
+inFile="$scratch/cosmological/$dataDir/$dsName/$dsName"
+outDir="$scratch/multiplot_movie/$dataDir/$dsName/movie_${rayDist}kpc/rays"
 
 if ! [ -d $outDir ]
 then
@@ -25,4 +28,3 @@ srun -n 16							\
 	python ~/Repo/CGM/multi_plot_movie/construct_rays.py	\
 		$inFile $nRays $rayDist $outDir
 scontrol show job $SLURM_JOB_ID
-

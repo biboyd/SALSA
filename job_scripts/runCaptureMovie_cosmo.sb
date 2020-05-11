@@ -6,13 +6,16 @@
 #SBATCH -t 02:00:00
 #SBATCH -o slurm_logs/slurm-%j.out
 
-dsName=$1
-ionName=$2
-rayDist=$3
-frac=$4
+refine=$1
+dsName=$2
+ionName=$3
+rayDist=$4
+frac=$5
+
+dataDir=${refine}_refinement
 s="/mnt/gs18/scratch/users/boydbre1"
-dataFile="$s/cosmological/foggie/$dsName/$dsName"
-mainDir="$s/multiplot_movie/foggie/$dsName/movie_${rayDist}kpc"
+dataFile="$s/cosmological/$dataDir/$dsName/$dsName"
+mainDir="$s/multiplot_movie/$dataDir/$dsName/movie_${rayDist}kpc"
 rayDir="$mainDir/rays"
 #label outdir but split ion into element and number
 ionLabel=${ionName% *}_${ionName#* }

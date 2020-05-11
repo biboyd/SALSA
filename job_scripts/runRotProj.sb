@@ -6,14 +6,18 @@
 #SBATCH -t 3:00:00
 #SBATCH -o slurm_logs/slurm-%j.out
 
-dsName=$1
-field=$2
-nFrames=$3
-off=$4
-width=$5
+refine=$1
+dsName=$2
+field=$3
+nFrames=$4
+off=$5
+width=$6
+
+dataDir=${refine}_refinement
+
 scratch="/mnt/gs18/scratch/users/boydbre1"
-inFile="$scratch/cosmological/foggie/$dsName/$dsName"
-outDir="$scratch/rotate_projection/foggie_cmaps/$dsName/offset${off}_width${width}/frames"
+inFile="$scratch/cosmological/$dataDir/$dsName/$dsName"
+outDir="$scratch/rotate_projection/$dataDir/$dsName/offset${off}_width${width}/frames"
 if ! [ -d $outDir ]
 then
 	mkdir -p $outDir
@@ -23,4 +27,3 @@ srun -n 39							\
 	python ~/Repo/CGM/rotation_movie/create_rot_frames.py\
 		$inFile $field $nFrames $off $width $outDir 'none'
 scontrol show job $SLURM_JOB_ID
-
