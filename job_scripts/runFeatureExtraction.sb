@@ -17,9 +17,19 @@ s="/mnt/gs18/scratch/users/boydbre1"
 dataFile="$s/cosmological/foggie/$dsName/$dsName"
 mainDir="$s/analysis/foggie/$dsName/max_impact${maxImpact}"
 rayDir="$mainDir/rays"
+
 #label outdir but split ion into element and number
 ionLabel=${ionName% *}_${ionName#* }
-outDir="$mainDir/output_$frac/ion_$ionLabel"
+
+# check if just CGM filter
+if [ "$cuts" == "cgm" ];
+then
+    echo "just cgm"
+	outDir="$mainDir/output_CGM$frac/ion_$ionLabel"
+else 
+	outDir="$mainDir/output_$frac/ion_$ionLabel"
+fi
+
 
 if ! [ -d $outDir ];
 then
@@ -30,5 +40,4 @@ fi
 srun -n 32							\
 	python ~/Repo/CGM/analysis/collect_random_ray_info.py\
 		$dataFile $rayDir "$ionName" $outDir $frac "$cuts"
-#python ~/Repo/CGM/analysis/combine_np_arrays.py $outDir
 scontrol show job $SLURM_JOB_ID
