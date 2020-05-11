@@ -1,7 +1,6 @@
 import yt
 import trident
 import numpy as np
-from center_finder import find_center
 from mpi4py import MPI
 from sys import argv
 from os import makedirs
