@@ -12,17 +12,16 @@ from matplotlib.ticker import AutoMinorLocator
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 import astropy.units  as u
-from scipy.ndimage import gaussian_filter
 
 from CGM.general_utils.filter_definitions import ion_p_num
 from CGM.general_utils.center_finder import find_center
+from CGM.absorber_extraction_class.absorber_extractor import absorber_extractor
 
-class multi_plot():
+class absorber_plotter(absorber_extractor):
     """
-    Plots three images side by side for easy analysis. The images are:
-    A slice of dataset along lightray's path.
-    The number density of the given ion along that path.
-    The artificial absorption spectra that would be observed.
+    Create's plot to easily see where absorbers are found along the light ray
+    both directly and through resulting spectra. Uses absorber extractor as base
+    class.
     """
 
     def __init__(self,
@@ -44,12 +43,9 @@ class multi_plot():
                 use_spectacle=False,
                 plot_spectacle=False,
                 spectacle_defaults=None,
-                contour = False,
-                plot_contour=False,
-                plot_cloud=False,
+                plot_ice=False,
                 cloud_min=None,
                 spectra_resolution=10,
-                sigma_smooth = None,
                 frac=0.8,
                 num_dense_min=None,
                 num_dense_max=None,
@@ -78,11 +74,6 @@ class multi_plot():
         redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
         bulk_velocity : array type : bulk velocity of the galaxy in km/s
         use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
-        contour : bool : choose whether to run and plot the contour method on the
-                        number density and los velcoity plots.
-        sigma_smooth : float : smoothing sigma parameter to define the width of
-                        the gaussian to smooth the number density prior to contouring. Defaults
-                        to None which will apply no smoothing
         markers :bool: whether to include markers on light ray and number density plot
         mark_plot_args : dict : set the property of markers if they are to be plotted.
                         optional settings are:
@@ -129,9 +120,7 @@ class multi_plot():
             self.bulk_velocity = np.dot(ray_u, bulk_velocity)
             self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
-        self.contour = contour
-        self.plot_contour = plot_contour
-        self.plot_cloud = plot_cloud
+        self.plot_ice = plot_ice
         self.sigma_smooth = sigma_smooth
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
@@ -596,13 +585,11 @@ class multi_plot():
             ax_num_dense.set_xlim(xlimits[0], xlimits[1])
             ax_num_dense.xaxis.set_minor_locator(AutoMinorLocator(2))
 
-            #check if should plot contour intervals
-            if self.plot_contour or self.plot_cloud:
-                if self.plot_cloud:
-                    intervals, lcd_list = self.get_iterative_cloud(coldens_fraction=self.frac, min_logN=self.cloud_min)
+            #check if should plot ice intervals
+            if self.plot_ice:
+                if self.plot_ice:
+                    intervals, lcd_list = self.run_ice(coldens_fraction=self.frac, min_logN=self.cloud_min)
 
-                else:
-                    intervals, lcd_list = self.get_contour_intervals()
 
                 #vspan_cmap = plt.cm.get_cmap(self.marker_cmap)
                 tot_lcd=0
@@ -759,7 +746,7 @@ class multi_plot():
         computes the column density along the given ray for a given ion species.
         This is done by using spectacle if use_spectacle is True. as well as
         by summing the product of the number density for a given length by that length.
-        and the contour method
+        and the ICE method
 
         Parameters:
             none
@@ -871,19 +858,19 @@ class multi_plot():
             log_line_sum = np.log10(line_sum_cd)
             fit_string = "{: <14s}{:04.1f}\n".format(fit_label, log_line_sum)
 
-        #get sum from contour method
-        cloud_label="ICE:"#contour_label= "countour:"
-        interval, lcd_list = self.get_iterative_cloud(coldens_fraction=self.frac, min_logN=self.cloud_min)
+        #get sum from ICE method
+        ice_label="ICE:
+        interval, lcd_list = self.get_ice(coldens_fraction=self.frac, min_logN=self.cloud_min)
         if lcd_list is []:
             log_bot_sum=0
-            cloud_string = "{: <11s}{: >4s}\n".format(cloud_label,'--')
+            ice_string = "{: <11s}{: >4s}\n".format(ice_label,'--')
         else:
             bot_sum=0
             for lcd in lcd_list:
                 bot_sum += 10**lcd
             #take log if sum is non zero
             log_bot_sum = np.log10(bot_sum)
-            cloud_string = "{: <11s}{:04.1f}\n".format(cloud_label,log_bot_sum)
+            ice_string = "{: <11s}{:04.1f}\n".format(ice_label,log_bot_sum)
 
         #multiply num density by its dl and sum up to get column density proxy
         tot_ray_cd= np.sum( num_density*dl_array )
@@ -893,7 +880,7 @@ class multi_plot():
         sums = [log_bot_sum, log_line_sum, log_tot_ray]
 
         #combine strings
-        line_text = "Tot Sums\n"+cloud_string + fit_string + total_string
+        line_text = "Tot Sums\n"+ice_string + fit_string + total_string
 
         return sums, line_text, line_models, num_fitted_lines
 
@@ -938,9 +925,9 @@ class multi_plot():
 
 
 
-    def get_iterative_cloud(self, coldens_fraction=0.85, min_logN=12):
+    def run_ice(self, coldens_fraction=0.85, min_logN=12):
         """
-        iteratively do the cloud method to extract all features
+        iteratively do the cloud method to extract all absorption features
         """
         num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
         dl_list = self.data['dl'].in_units('cm')
@@ -1174,9 +1161,9 @@ if __name__ == '__main__':
                    (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
                    ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
                    (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
-    
+
     mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_cloud=True,use_spectacle=True,plot_spectacle=True,
+                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_ice=True,use_spectacle=True,plot_spectacle=True,
                     redshift=rshift, cloud_min=12.5,wavelength_width = 30, cut_region_filters=None)#cut_filters)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
