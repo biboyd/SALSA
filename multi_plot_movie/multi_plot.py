@@ -1176,7 +1176,7 @@ class multi_plot():
             if in_absorber and value < cutoff:
                 in_absorber = False
                 #add interval to list
-                    intervals.append((start,i))
+                intervals.append((start,i))
             # check if just entered an absorber
             elif not in_absorber and value >= cutoff:
                 in_absorber = True
