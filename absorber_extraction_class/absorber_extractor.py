@@ -1,0 +1,617 @@
+import matplotlib as mpl
+mpl.use('Agg')
+import yt
+import trident
+import numpy as np
+from spectacle.fitting import LineFinder1D
+from sys import argv, path
+from os import remove, listdir, makedirs
+import errno
+import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
+from mpl_toolkits.axes_grid1 import AxesGrid
+from numpy.linalg import norm
+import astropy.units  as u
+
+from CGM.general_utils.filter_definitions import ion_p_num
+from CGM.general_utils.center_finder import find_center
+from CGM.absorber_extraction_class.absorber_extractor import absorber_extractor
+
+class absorber_extractor():
+    """
+    Extracts absorbers from a trident lightray for a given ion species. Does This
+    through two methods, directly using ICE (Iterative Cloud Extraction) and
+    by fitting a synthetic spectra made by trident. Fit using spectacle
+    """
+
+    def __init__(self,
+                ds_filename,
+                ray_filename,
+                ion_name='H I',
+                cut_region_filters=None,
+                wavelegnth_center=None,
+                velocity_res = 10,
+                redshift = 0,
+                bulk_velocity=None,
+                spectacle_defaults=None,
+                spectacle_res=None,
+                cloud_min=None,
+                frac=0.8):
+        """
+        init file names and ion name
+
+        Parameters:
+        ds_filename : Path/name of the enzo dataset to be loaded
+        ray_filename : Path/name of the hdf5 ray file to be loaded
+        ion_name :string: Name of the ion to plot in number density plot
+        cut_region_filters : list of str: a list of filters defined by the way you use Cut Regions in YT
+        wavelegnth_center : bool : The specific absorption line to look at. None defaults to strongest
+                absorption line for specified ion (using tridents ion table). In angstrom
+        velocity_res :float: width of velocity bins in spectrum plot. default 10 km/s
+        redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
+        bulk_velocity : array type : bulk velocity of the galaxy in km/s
+        use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
+        spectacle_res : double : Set minimum resolution that spectacle will attempt
+                                 to fit lines to. If None, default to velocity_res
+        """
+
+        #set file names and ion name
+        self.ds_filename = ds_filename
+        self.ray_filename = ray_filename
+        self.ion_name = ion_name
+        self.cut_region_filters = cut_region_filters
+        self.frac = frac
+
+        #add ion name to list of all ions to be plotted
+        self.ion_list = [ion_name]
+
+        #open up the dataset and ray files
+        self.ds = yt.load(self.ds_filename)
+        self.load_ray(self.ray_filename)
+
+        # set bulk velocity
+        if bulk_velocity is None:
+            self.bulk_velocity = None
+        else:
+            ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
+            self.bulk_velocity = np.dot(ray_u, bulk_velocity)
+            self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
+
+        self.spectacle_model=None
+
+        if cloud_min is None:
+            min_defaults = {'H I': 12.5, 'Si II': 11, 'Si IV': 12,
+                            'C IV':13, 'O VI':13}
+            if self.ion_name in min_defaults.keys():
+                self.cloud_min = min_defaults[self.ion_name]
+            else:
+                self.cloud_min=13
+        else:
+            self.cloud_min = cloud_min
+
+        self.defaults_dict = {
+            'bounds' :{
+                'column_density' : (self.cloud_min-0.5, 23)
+            },
+            'fixed' : {
+                'delta_lambda' : True,
+                'column_density' : False
+            }
+        }
+
+        #add user defined defaults
+        if spectacle_defaults is not None:
+            self.defaults_dict.update(spectacle_defaults)
+
+        self.redshift = redshift
+        self.velocity_res = velocity_res
+
+        #default spectacle resolution to velocity_res
+        if spectacle_res is None:
+            self.spectacle_res = velocity_res
+        else:
+            self.spectacle_res = spectacle_res
+
+        #default set the wavelength center to one of the known spectral lines
+        #for ion name. Use tridents line database to search for correct wavelength
+        if wavelength_center is None:
+            #open up tridents default line database
+            lbd = trident.LineDatabase('lines.txt')
+            #find all lines that match ion
+            lines = lbd.parse_subset(subsets= [self.ion_name])
+            #take one with largest f_value
+            f_val = 0
+            for line in lines:
+                if line.f_value >= f_val:
+                    f_val = line.f_value
+                    self.wavelength_center = line.wavelength
+        else:
+            self.wavelength_center = wavelength_center
+
+    def load_ray(self, new_ray):
+        """
+        loads a new ray into the multi_plot class. (same dataset)
+
+        Parameters:
+            new_ray :str or yt.ray: either filename to rayfile or a trident ray
+                that's already opened
+        Returns:
+            none
+        """
+
+        #check if str else assume is ray
+        if isinstance(new_ray, str):
+            self.ray_filename=new_ray
+            self.ray = yt.load(new_ray)
+        else:
+            self.ray = new_ray
+            self.ray_filename=new_ray.filename_template
+
+        #save uncut data. define center
+        self.uncut_data = self.ray.all_data()
+
+        #apply cut region if specified
+        if self.cut_region_filters is None:
+            self.data = self.uncut_data
+        else:
+            curr_data = self.uncut_data
+            #iteratively apply filters
+            for filter in self.cut_region_filters:
+                curr_data = curr_data.cut_region(filter)
+
+            self.data = curr_data
+
+        # Check if ray is empty due to cuts
+        if self.data['l'].size == 0:
+            print(f'light ray {self.ray} is empty')
+
+    def ray_position_prop(self, units='code_length'):
+        """
+        returns positional/directional properties of the ray so that it can be used like a vector
+
+        Parameters:
+            units : YT defined units to return arrays in. defaults to 'code length'
+        Returns:
+            ray_begin : (YT arr): the starting coordinates of ray
+            ray_end : (YT arr): the ending coordinates of the ray
+            ray_length :(YT arr): the length of the ray
+            ray_unit :(YT arr): unit vector showing direction of the ray
+        """
+        #get start and end points of ray. convert to defined units
+        #print(self.ray)
+        ray_begin = self.ray.light_ray_solution[0]['start']
+        ray_end = self.ray.light_ray_solution[0]['end']
+
+        ray_begin = ray_begin.in_units(units)
+        ray_end = ray_end.in_units(units)
+
+        #construct vector pointing in ray's direction
+        ray_vec = ray_end - ray_begin
+        ray_length = self.ds.quan(norm(ray_vec.value), units)
+
+        #normalize vector to unit length
+        ray_unit = ray_vec/ray_length
+
+        return ray_begin, ray_end, ray_length, ray_unit
+
+    def close(self):
+        """
+        close all opened files, dataset, ray
+        """
+
+        self.ds.close()
+        self.ray.close()
+
+    def ice_absorbers(self, fields=None, unit_dict=None):
+        """
+        Use the ICE method to extract absorbers and then find features of
+        absorbers. Default outputs column density and central velocity of the
+        absorption line (delta_v) as well as default_ice_fields which are density
+        weighted averages of yt fields (metallicity, temperature, etc.). All in
+        a astropy QTable.
+
+        Parameters:
+            fields : list : list of yt fields to extract averages of for the
+                    absorbers. None defaults to default_ice_fields in
+                    general_utils.filter_definitions
+
+            unit_dict : dict : dictionary of fields and corresponding units to
+                    use for each field. None defaults to default_unit_dict in
+                    general_utils.filter_definitions
+
+        Returns:
+            stats_table : astropy.table.QTable : QTable of all the absorbers and
+                their corresponding features.
+        """
+        # get absorber locations
+        absorber_intervals = self._run_ice()
+
+        if fields is None:
+            # set default fields to extract
+            fields = default_ice_fields
+
+        #use default unit dict
+        if unit_dict is None:
+            unit_dict = default_unit_dict
+        #update default dict with specified units
+        else:
+            unit_dict = default_unit_dict.update(unit_dict)
+
+        # line information for absorbers
+        line_info = [('name', 'S8'),
+                     ('wave', np.float64),
+                     ('col_dens', np.float64),
+                     ('delta_v', np.float64)]
+
+        # get name of columns and type of data for each
+        name_type = line_info.copy()
+        for f in fields:
+            name_type.append( (f, np.float64) )
+
+        n_feat = len(line_info)+len(fields)
+        n_abs = len(absorber_intervals)
+
+        #initialize empty table
+        stats_table = QTable(np.empty((n_abs, n_feat), dtype=name_type))
+
+        #add ion name and wavelength
+        stats_table['name']= np.full(n_abs, self.ion_name)
+        stats_table['wave'] = np.full(n_abs, self.wavelength_center)
+
+        # fill table with absorber features
+        for i in range(n_abs):
+            #load data for calculating properties
+            start, end = absorber_intervals[i]
+            dl = self.data['dl'][start:end]
+            density = self.data[('gas', 'density')][start:end]
+            tot_density = np.sum(dl*density)
+
+            #calculate column density
+            ion_field = ion_p_num(self.ion_name)
+            stats_table['col_dens'][i] = np.sum( dl*self.data[ion_field] )
+
+            #calculate delta_v of absorber
+            vel_los_data = self.data['velocity_los'][start:end].in_units('km/s')
+            avg_vel_los = np.sum(dl*density*vel_los_dat)/tot_density
+            stats_table['delta_v'][i] = avg_vel_los
+
+            #calculate other field averages
+            for fld in fields:
+                fld_data = self.data[fld][start:end].in_units( unit_dict[fld] )
+                avg_fld = np.sum(dl*density*fld_data)/tot_density
+                stats_table[fld][i] = avg_fld
+
+    def spectacle_absorbers(self):
+        """
+        Uses spectacle to fit a trident made spectra of the specified ion.
+
+        Parameters:
+            none
+
+        Returns:
+            line_stats : astropy.QTable : Table including all line statistics
+                    found from spectacle's fit of the spectra.
+        """
+        #create spectra for a single line to fit
+        wav = int( np.round(self.wavelength_center) )
+        line = f"{self.ion_name} {wav}"
+        #format ion correctly to fit
+        ion_wav= "".join(line.split())
+
+        vel_array, flux_array=self._create_spectra()
+
+        #constrain possible column density values
+        #create line model
+        line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
+                                   defaults=self.defaults_dict,fitter_args={'maxiter':2000},
+                                   threshold=0.01, output='flux', min_distance=self.velocity_res, auto_fit=True)
+        #fit data
+        try:
+            spec_model = line_finder(vel_array*u.Unit('km/s'), flux_array)
+        except RuntimeError:
+            print('fit failed(prolly hit max iterations)', self.ray)
+            spec_model = None
+        except IndexError:
+            print('INDEX ERROR on', self.ray)
+            spec_model = None
+
+        #check if fit found any lines
+        if spec_model is None:
+            print('line could not be fit on ray ', self.ray)
+            self.spectacle_model = None
+            line_stats = None
+
+        else:
+            init_stats = spec_model.line_stats(vel_array)
+
+            # include only lines greater than cloud_min
+            line_indxs, = np.where( init_stats['col_dens'] >= self.cloud_min)
+            if line_indxs.size == 0:
+                print('line could not be fit on ray ', self.ray)
+                self.spectacle_model = None
+                line_stats = None
+            else:
+                # retrieve lines that pass col dense threshold
+                good_lines=[]
+                for i in line_indxs:
+                    good_lines.append(spec_model.lines[i])
+
+                #create and save new model with lines desired
+                self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
+                num_fitted_lines = len(good_lines)
+                line_stats=self.spectacle_model.line_stats(vel_array)
+
+            return line_stats
+
+    def _run_ice(self):
+        """
+        iteratively do the cloud method to extract all absorption features
+        """
+        num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
+        dl_list = self.data['dl'].in_units('cm')
+        l_list = self.data['l'].in_units('cm')
+        vel_los = self.data['velocity_los'].in_units('km/s')
+        density_array = self.data[('gas', 'density')]
+
+
+        all_intervals=[]
+        curr_num_density = num_density.copy()
+        curr_col_density = np.sum(num_density*dl_list)
+        min_col_density = 10**self.cloud_min
+        count=0
+
+        while curr_col_density > min_col_density:
+            #calc threshold to get fraction from current num density
+            curr_thresh = self._cloud_method(curr_num_density, coldens_fraction=self.frac)
+
+            #extract intervals this would cover
+            curr_intervals = self._identify_intervals(num_density, curr_thresh)
+            new_intervals = self._sensible_combination(all_intervals, curr_intervals, vel_los, dl_list,l_list, density_array)
+            all_intervals = new_intervals.copy()
+
+            #mask density array above threshold and apply mask to dl
+            curr_num_density = np.ma.masked_greater_equal(num_density, curr_thresh)
+            curr_dl =  np.ma.masked_array(dl_list, curr_num_density.mask)
+
+            #calc leftover column density
+            curr_col_density = np.sum(curr_num_density*curr_dl)
+            count+=1
+
+        #make sure intervals have high enough col density
+        final_intervals=[]
+        for b, e in all_intervals:
+            lcd = np.log10(np.sum(dl_list[b:e]*num_density[b:e]))
+            if lcd > self.cloud_min:
+                final_intervals.append((b, e))
+        return final_intervals
+
+    def _create_spectra(self):
+        """
+        Use trident to create the absorption spectrum of the ray in velocity
+        space for use in fitting.
+
+        Parameters:
+            none
+        Returns:
+            velocity and flux arrays created by spectrum generator
+                units are km/s
+        """
+        #set which ions to add to spectra
+        wav = int( np.round(self.wavelength_center) )
+        line = f"{self.ion_name} {wav}"
+        ion_list = [single_line]
+
+        # calc doppler redshift due to bulk motion
+        if self.bulk_velocity is None:
+            z_tot=self.redshift
+        else:
+            c = yt.units.c
+            beta = self.bulk_velocity/c
+            z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
+            z_dopp = z_dopp.value
+            z_tot = (1+self.redshift)*(1+z_dopp) - 1
+
+        #use auto feature to capture full line
+        spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, bin_space="velocity")
+        spect_gen.make_spectrum(self.data, lines=ion_list)
+
+        #get fields from spectra and give correct units
+        flux = spect_gen.flux_field
+        velocity = spect_gen.lambda_field
+
+        return velocity, flux
+
+    def _cloud_method(self, num_density_arr, coldens_fraction):
+
+        cut = 0.999
+        total = np.sum(num_density_arr)
+        ratio = 0.001
+        while ratio < coldens_fraction:
+            part = np.sum(num_density_arr[num_density_arr > cut * np.max(num_density_arr)])
+            ratio = part / total
+            cut = cut - 0.001
+
+        threshold = cut * np.max(num_density_arr)
+
+        return threshold
+
+    def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array, dl_array, l_array, density_array):
+        """
+        adds new intervals by taking into account the velocities when combining them
+
+        Parameters:
+            prev_intervals : list : the intervals already calculated
+            curr_intervals : list : the intervals that need to be added/combined
+            velocity_array : array : array of the line of sight velocity along ray
+            dl_array : array : cell lengths along the ray's path.
+            density_array : array : array of gas density. used to weight avg velocity
+                        for a given interval.
+        Returns:
+            new_intervals : list : a final list of intervals where prev and curr are
+                        properly combined.
+        """
+        # first check no region jumping (from use of cut_regions)
+        if self.cut_region_filters is not None:
+            #make sure spatially connected
+            real_intervals = []
+            for curr_b, curr_e in curr_intervals:
+                #check if lengths match up
+                size_dl = np.sum(dl_array[curr_b:curr_e])
+                size_l = l_array[curr_e] - l_array[curr_b]
+                rel_diff = abs(size_dl - size_l)/size_dl
+                #print("rel diff: ", rel_diff)
+                if rel_diff > 1e-12:
+                    print(curr_b, curr_e)
+                    # make sure things are good
+                    divide_indx=None
+                    for i in range(curr_b, curr_e):
+                        # find where the jump is
+
+                        rel_diff = abs(l_array[i] +dl_array[i] - l_array[i+1])/l_array[i]
+                        #print(i, rel_diff.value)
+                        if rel_diff > 1e-12:
+                            divide_indx=i
+                            break
+                    #append intervals split up by the jump
+                    if divide_indx is not None:
+                        print(divide_indx)
+                        real_intervals.append((curr_b, divide_indx))
+                        real_intervals.append((divide_indx+1, curr_e))
+                    else:
+                        print("couldn't divide index for ",curr_b, " ", curr_e)
+
+                else:
+                    real_intervals.append((curr_b, curr_e))
+            curr_intervals = real_intervals.copy()
+
+
+        #check if there are any previous intervals to combine with
+        if prev_intervals == []:
+            return curr_intervals
+        #import pdb; pdb.set_trace()
+        new_intervals=prev_intervals.copy()
+        del_v = self.ds.quan(self.spectacle_res, 'km/s')
+
+        #loop through current intervals
+        for curr_b, curr_e in curr_intervals:
+            #print("all the current intervals", curr_intervals)
+            #print("all the new intervals", new_intervals)
+            #print("current interval ", curr_b, curr_e)
+            overlap_intervals=[]
+            #loop through all previous intervals
+            for b,e in new_intervals:
+                #check if previous interval is nested in curr interval
+                if curr_b <= b and curr_e >= b:
+                    #print(f"interval ({curr_b}, {curr_e}) overlap with ", b, e)
+                    if curr_b <= e and curr_e >= e:
+                        overlap_intervals.append((b, e))
+
+                    #check if just beginning point enclose
+                    else:
+                        err_file = open("error_file.txt", 'a')
+                        err_file.write(f"{self.ray_filename} had an intersection that wasn't complete :/")
+                        err_file.close()
+                #check if just endpoint enclosed
+                elif curr_b <= e and curr_e >= e:
+                    err_file = open("error_file.txt", 'a')
+                    err_file.write(f"{self.ray_filename} had an intersection that wasn't complete :/")
+                    err_file.close()
+
+            #
+            #
+            #This is such a mess below but it works
+            #hopefully I'll think of a much cleaner way to do this
+            #but for now this is it
+            #
+            #
+
+            if overlap_intervals == []:
+                new_intervals.append((curr_b, curr_e))
+            else:
+
+                #collect overlap points into list
+                points = [curr_b]
+                for b, e in overlap_intervals:
+                    #print(f"curr {curr_b, curr_e} ovelaps {b, e}")
+                    new_intervals.remove((b, e))
+                    points.append(b)
+                    points.append(e)
+                points.append(curr_e)
+
+                avg_v=[]
+                for i in range(len(points)-1):
+                    pnt1, pnt2 = points[i], points[i+1]
+                    #find weighted avg velocity
+                    vel = np.sum(density_array[pnt1:pnt2]*dl_array[pnt1:pnt2]*velocity_array[pnt1:pnt2]) \
+                          /np.sum(density_array[pnt1:pnt2]*dl_array[pnt1:pnt2])
+                    avg_v.append((vel, pnt1, pnt2))
+
+                start_b = curr_b
+                for i in range(len(avg_v)-1):
+                    #if velocity difference is greater than threshold
+                    if abs(avg_v[i][0] - avg_v[i+1][0]) > del_v:
+                        #create new interval
+                        new_intervals.append((start_b, avg_v[i][2]))
+                        #change start of next interval
+                        start_b = avg_v[i][2]
+                    #check if this is the last two intervals to check
+                    elif i == len(avg_v) -2:
+                        new_intervals.append((start_b, curr_e))
+
+
+        return new_intervals
+
+    def _identify_intervals(self, field, cutoff):
+        """
+        Find the intervals for absorbers using some cutoff on a
+        field (generally number density) along lightray.
+
+        Parameters:
+            field : array/list : list of values to compare to cutoff
+            cutoff : double : threshold defining where absorbers are.
+
+        Returns:
+            intervals : list of tuples : list of the intervals defining the
+                    absorbers in this ray.
+        """
+        in_absorber = False
+        intervals = []
+
+        #Iterate over values in field
+        for i,value in enumerate(field):
+            #Check if started an absorber and if above cutoff
+            if in_absorber and value < cutoff:
+                in_absorber = False
+                #add interval to list
+                    intervals.append((start,i))
+            # check if just entered an absorber
+            elif not in_absorber and value >= cutoff:
+                in_absorber = True
+                start = i
+            else:
+                continue
+        #check if was still in absorber when hitting end of ray
+        if in_absorber and start != i:
+            intervals.append((start, i))
+        return intervals
+
+
+
+if __name__ == '__main__':
+    data_set_fname = argv[1]
+    ray_fname = argv[2]
+    ion = argv[3]
+    num=int(argv[4])
+    absorbers = [ion] #['H I', 'O VI']
+    center, nvec, rshift, bv = find_center(data_set_fname)
+    cut_filters = ["((obj[('gas', 'radius')].in_units('kpc') > 10) & \
+                   (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
+                   ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
+                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
+
+    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
+                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_ice=True,use_spectacle=True,plot_spectacle=True,
+                    redshift=rshift, cloud_min=12.5,wavelength_width = 30, cut_region_filters=None)#cut_filters)
+    makedirs("mp_frames", exist_ok=True)
+    outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
+    mp.create_multi_plot(cmap='cividis',outfname=outfile)
