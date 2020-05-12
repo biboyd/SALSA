@@ -12,10 +12,10 @@ from matplotlib.ticker import AutoMinorLocator
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 import astropy.units  as u
+from astropy.table import QTable 
 
-from CGM.general_utils.filter_definitions import ion_p_num
+from CGM.general_utils.filter_definitions import ion_p_num, default_ice_fields, default_unit_dict
 from CGM.general_utils.center_finder import find_center
-from CGM.absorber_extraction_class.absorber_extractor import absorber_extractor
 
 class absorber_extractor():
     """
@@ -29,7 +29,7 @@ class absorber_extractor():
                 ray_filename,
                 ion_name='H I',
                 cut_region_filters=None,
-                wavelegnth_center=None,
+                wavelength_center=None,
                 velocity_res = 10,
                 redshift = 0,
                 bulk_velocity=None,
@@ -251,8 +251,11 @@ class absorber_extractor():
         n_feat = len(line_info)+len(fields)
         n_abs = len(absorber_intervals)
 
+        if n_abs == 0:
+            print("No absorbers in ray: ", self.ray)
+            return None
         #initialize empty table
-        stats_table = QTable(np.empty((n_abs, n_feat), dtype=name_type))
+        stats_table = QTable(np.empty(n_abs , dtype=name_type))
 
         #add ion name and wavelength
         stats_table['name']= np.full(n_abs, self.ion_name)
@@ -268,10 +271,10 @@ class absorber_extractor():
 
             #calculate column density
             ion_field = ion_p_num(self.ion_name)
-            stats_table['col_dens'][i] = np.sum( dl*self.data[ion_field] )
+            stats_table['col_dens'][i] = np.log10( np.sum( dl*self.data[ion_field][start:end] ) )
 
             #calculate delta_v of absorber
-            vel_los_data = self.data['velocity_los'][start:end].in_units('km/s')
+            vel_los_dat = self.data['velocity_los'][start:end].in_units('km/s')
             avg_vel_los = np.sum(dl*density*vel_los_dat)/tot_density
             stats_table['delta_v'][i] = avg_vel_los
 
@@ -280,6 +283,7 @@ class absorber_extractor():
                 fld_data = self.data[fld][start:end].in_units( unit_dict[fld] )
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
                 stats_table[fld][i] = avg_fld
+        return stats_table
 
     def spectacle_absorbers(self):
         """
@@ -583,7 +587,7 @@ class absorber_extractor():
             if in_absorber and value < cutoff:
                 in_absorber = False
                 #add interval to list
-                    intervals.append((start,i))
+                intervals.append((start,i))
             # check if just entered an absorber
             elif not in_absorber and value >= cutoff:
                 in_absorber = True

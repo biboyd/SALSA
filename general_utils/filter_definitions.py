@@ -1,4 +1,5 @@
 import yt
+import trident
 import numpy as np
 
 
