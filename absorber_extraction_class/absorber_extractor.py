@@ -323,7 +323,7 @@ class absorber_extractor():
                                    threshold=0.01, output='flux', min_distance=self.velocity_res, auto_fit=True)
         #fit data
         try:
-            spec_model = line_finder(vel_array*u.Unit('km/s'), flux_array)
+            spec_model = line_finder(vel_array.value*u.Unit('km/s'), flux_array)
         except RuntimeError:
             print('fit failed(prolly hit max iterations)', self.ray)
             spec_model = None
@@ -419,7 +419,7 @@ class absorber_extractor():
         #set which ions to add to spectra
         wav = int( np.round(self.wavelength_center) )
         line = f"{self.ion_name} {wav}"
-        ion_list = [single_line]
+        ion_list = [line]
 
         # calc doppler redshift due to bulk motion
         if self.bulk_velocity is None:

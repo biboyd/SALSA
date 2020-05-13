@@ -13,6 +13,7 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 import astropy.units  as u
 
+path.insert(0, "/mnt/home/boydbre1/Repo")
 from CGM.general_utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict
 from CGM.general_utils.center_finder import find_center
 from CGM.absorber_extraction_class.absorber_extractor import absorber_extractor
@@ -268,7 +269,7 @@ class absorber_plotter(absorber_extractor):
         trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
 
         # runs way to slow, may add later
-        if False #self.cut_region_filters is not None:
+        if False: #self.cut_region_filters is not None:
             # parse for radial cuts
             rad_in, rad_out, cut_str = self.cgm_details
             cgm = self.ds.sphere(self.center_gal, (rad_out, 'kpc')) \
@@ -494,7 +495,7 @@ class absorber_plotter(absorber_extractor):
                 prop2 = prop2.in_units(prop2_units)
 
                 # set default bounds
-                if prop2_name in default_limit_dict.keys():
+                if prop2_name in default_limits_dict.keys():
                     prop2_lb, prop2_ub = default_limits_dict[prop2_name]
 
             else:
@@ -797,7 +798,7 @@ if __name__ == '__main__':
 
     mp = absorber_plotter(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
                     center_gal=center, north_vector=nvec, bulk_velocity=None,plot_ice=True,use_spectacle=True,plot_spectacle=True,
-                    redshift=rshift, cloud_min=12.5,wavelength_width = 30, cut_region_filters=None)#cut_filters)
+                    redshift=rshift, cloud_min=12.5,wavelength_width = 30, cut_region_filters=cut_filters)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(cmap='cividis',outfname=outfile)
