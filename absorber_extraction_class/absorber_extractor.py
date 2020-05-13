@@ -323,7 +323,7 @@ class absorber_extractor():
                                    threshold=0.01, output='flux', min_distance=self.velocity_res, auto_fit=True)
         #fit data
         try:
-            spec_model = line_finder(vel_array.value*u.Unit('km/s'), flux_array)
+            spec_model = line_finder(vel_array*u.Unit('km/s'), flux_array)
         except RuntimeError:
             print('fit failed(prolly hit max iterations)', self.ray)
             spec_model = None
@@ -339,7 +339,7 @@ class absorber_extractor():
             self.num_spectacle = 0
 
         else:
-            init_stats = spec_model.line_stats(vel_array)
+            init_stats = spec_model.line_stats(vel_array*u.Unit('km/s'))
 
             # include only lines greater than cloud_min
             line_indxs, = np.where( init_stats['col_dens'] >= self.cloud_min)
@@ -358,7 +358,7 @@ class absorber_extractor():
                 #create and save new model with lines desired
                 self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
                 self.num_spectacle = len(good_lines)
-                line_stats=self.spectacle_model.line_stats(vel_array)
+                line_stats=self.spectacle_model.line_stats(vel_array*u.Unit('km/s'))
 
             self.spectacle_table = line_stats
             return line_stats

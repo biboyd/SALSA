@@ -750,11 +750,12 @@ class absorber_plotter(absorber_extractor):
             for lcd in self.ice_table['col_dens']:
                 cd_sum += 10**lcd
 
-            log_bot_sum = np.log10(bot_sum)
-            ice_string = "{: <11s}{:04.1f}\n".format(ice_label,log_bot_sum)
+            log_cd_sum = np.log10(cd_sum)
+            ice_string = "{: <11s}{:04.1f}\n".format(ice_label,log_cd_sum)
 
         #get total column density along ray
-        tot_ray_cd= np.sum( self.data['num_density']*self.data['dl'] )
+        ion_field = ion_p_num(self.ion_name)
+        tot_ray_cd= np.sum( self.data[ion_field]*self.data['dl'] )
         log_tot_ray = np.log10(tot_ray_cd)
         total_string="{: <14s}{:04.1f}".format("full ray:", log_tot_ray)
 
@@ -763,27 +764,27 @@ class absorber_plotter(absorber_extractor):
 
         return line_text, line_models
 
-        def _get_large_spectacle(self):
-            """
-            Return the total column density found by spectacle and the 3 largest
-            absorbers found by spectacle.
-            """
-            #compute total column density
-            line_sum_cd = 0
-            for cd in self.spectacle_table['col_dens']:
-                line_sum_cd+= 10**cd
-            log_tot_cd = np.log10(line_sum_cd)
+    def _get_large_spectacle(self):
+        """
+        Return the total column density found by spectacle and the 3 largest
+        absorbers found by spectacle.
+        """
+        #compute total column density
+        line_sum_cd = 0
+        for cd in self.spectacle_table['col_dens']:
+            line_sum_cd+= 10**cd
+        log_tot_cd = np.log10(line_sum_cd)
 
-            line_models = []
-            indx_max = self.spectacle_table.argsort('col_dens')
-            for indx in indx_max[-3:]:
-                line = self.spectacle_model.lines[indx]
-                line_models.append( self.spectacle_model.with_line(line, reset=True))
+        line_models = []
+        indx_max = self.spectacle_table.argsort('col_dens')
+        for indx in indx_max[-3:]:
+            line = self.spectacle_model.lines[indx]
+            line_models.append( self.spectacle_model.with_line(line, reset=True))
 
-            #sort lines based on delta v
-            line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
+        #sort lines based on delta v
+        line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
 
-            return log_tot_cd, line_models
+        return log_tot_cd, line_models
 if __name__ == '__main__':
     data_set_fname = argv[1]
     ray_fname = argv[2]
