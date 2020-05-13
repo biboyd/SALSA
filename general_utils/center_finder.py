@@ -32,23 +32,26 @@ def find_center(ds_fname, tracking_dir='/mnt/home/boydbre1/data/track_files', us
 
     if max_field is not None:
         print(f"using max of field {max_field} as centere")
+
         #let max field be center of gal
         v, center = ds.find_max(max_field)
         n_vec, bulk_vel = find_normal_vector(ds, center)
     else:
         #get directory where tracker files are kept
         sfname = ds_fname.split('/')
+        refinement = sfname[-3]
+        ds_name = sfname[-1]
 
         try:
             #check if kept center and normal_vector in center_normal_track.dat
             center_norm_file = tracking_dir + '/main_track.dat'
 
-            center, n_vec, bulk_vel = search_center_norm(center_norm_file, sfname[-1])
+            center, n_vec, bulk_vel = search_center_norm(center_norm_file, ds_name, refinement)
 
             #check if center was found
             if center is None:
                 raise RuntimeError("could not find {} in {}" \
-                                        .format(sfname[-1], center_norm_file))
+                                        .format(ds_name, center_norm_file))
             else:
                 print(f"using info found in {center_norm_file}")
                 center = ds.arr(center, 'code_length')
@@ -89,7 +92,7 @@ def find_center(ds_fname, tracking_dir='/mnt/home/boydbre1/data/track_files', us
                 print(f"Saving that data to {center_norm_file}")
                 #write center and norm to file
                 w = open(center_norm_file, 'a')
-                write_str = "{:s} {:f} ".format(sfname[-1], rshift)
+                write_str = "{:s} {:s} {:f} ".format(refinement, ds_name, rshift)
 
                 #write out all the array values
                 write_str += ' '.join(str(x) for x in center.value) + ' '
@@ -101,7 +104,7 @@ def find_center(ds_fname, tracking_dir='/mnt/home/boydbre1/data/track_files', us
 
     return center, n_vec, rshift, bulk_vel
 
-def search_center_norm(file, ds_name):
+def search_center_norm(file, ds_name, refinement):
     """
     Tries to find the center and normal vector from the file
 
@@ -123,12 +126,13 @@ def search_center_norm(file, ds_name):
     f = open(file, 'r')
     for line in f:
         sline = line.split()
+        #check dataset name. return center and n_vector
         #check line is not empty
         if len(sline) ==0:
-            continue
-
-        #check dataset name. return center and n_vector
-        if ds_name == sline[0]:
+            pass
+        elif line[0] == '#':
+            pass
+        elif refinement == sline[0] and ds_name == sline[1]:
             #convert to floats then stop reading file
             center = [ float(val) for val in sline[2:5] ]
             n_vec = [ float(val) for val in sline[5:8] ]
