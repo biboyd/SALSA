@@ -12,10 +12,9 @@ from matplotlib.ticker import AutoMinorLocator
 from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 import astropy.units  as u
-from astropy.table import QTable 
+from astropy.table import QTable
 
-from CGM.general_utils.filter_definitions import ion_p_num, default_ice_fields, default_unit_dict
-from CGM.general_utils.center_finder import find_center
+from CGM.general_utils.filter_definitions import ion_p_num, default_ice_fields, default_units_dict
 
 class absorber_extractor():
     """
@@ -77,8 +76,6 @@ class absorber_extractor():
             self.bulk_velocity = np.dot(ray_u, bulk_velocity)
             self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
-        self.spectacle_model=None
-
         if cloud_min is None:
             min_defaults = {'H I': 12.5, 'Si II': 11, 'Si IV': 12,
                             'C IV':13, 'O VI':13}
@@ -138,6 +135,18 @@ class absorber_extractor():
         Returns:
             none
         """
+        #reset absorber extraction variables
+        # variables to store raw info from the different methods
+        self.spectacle_model=None
+        self.ice_intervals=None
+
+        # to store absorber feature table
+        self.ice_table=None
+        self.spectacle_table=None
+
+        #store number of features found
+        self.num_ice = None
+        self.num_spectacle = None
 
         #check if str else assume is ray
         if isinstance(new_ray, str):
@@ -202,7 +211,7 @@ class absorber_extractor():
         self.ds.close()
         self.ray.close()
 
-    def ice_absorbers(self, fields=None, unit_dict=None):
+    def get_ice_absorbers(self, fields=None, unit_dict=None):
         """
         Use the ICE method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
@@ -216,7 +225,8 @@ class absorber_extractor():
                     general_utils.filter_definitions
 
             unit_dict : dict : dictionary of fields and corresponding units to
-                    use for each field. None defaults to default_unit_dict in
+                    use for each field. None defaults to default_units
+                    _dict in
                     general_utils.filter_definitions
 
         Returns:
@@ -224,18 +234,18 @@ class absorber_extractor():
                 their corresponding features.
         """
         # get absorber locations
-        absorber_intervals = self._run_ice()
-
+        self.ice_intervals = self.run_ice()
+        self.num_ice = len(self.ice_intervals)
         if fields is None:
             # set default fields to extract
             fields = default_ice_fields
 
         #use default unit dict
         if unit_dict is None:
-            unit_dict = default_unit_dict
+            unit_dict = default_units_dict
         #update default dict with specified units
         else:
-            unit_dict = default_unit_dict.update(unit_dict)
+            unit_dict = default_units_dict.update(unit_dict)
 
         # line information for absorbers
         line_info = [('name', 'S8'),
@@ -249,7 +259,7 @@ class absorber_extractor():
             name_type.append( (f, np.float64) )
 
         n_feat = len(line_info)+len(fields)
-        n_abs = len(absorber_intervals)
+        n_abs = len(self.ice_intervals)
 
         if n_abs == 0:
             print("No absorbers in ray: ", self.ray)
@@ -264,7 +274,7 @@ class absorber_extractor():
         # fill table with absorber features
         for i in range(n_abs):
             #load data for calculating properties
-            start, end = absorber_intervals[i]
+            start, end = self.ice_intervals[i]
             dl = self.data['dl'][start:end]
             density = self.data[('gas', 'density')][start:end]
             tot_density = np.sum(dl*density)
@@ -283,9 +293,11 @@ class absorber_extractor():
                 fld_data = self.data[fld][start:end].in_units( unit_dict[fld] )
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
                 stats_table[fld][i] = avg_fld
+
+        self.ice_table = stats_table
         return stats_table
 
-    def spectacle_absorbers(self):
+    def get_spectacle_absorbers(self):
         """
         Uses spectacle to fit a trident made spectra of the specified ion.
 
@@ -324,6 +336,7 @@ class absorber_extractor():
             print('line could not be fit on ray ', self.ray)
             self.spectacle_model = None
             line_stats = None
+            self.num_spectacle = 0
 
         else:
             init_stats = spec_model.line_stats(vel_array)
@@ -334,6 +347,8 @@ class absorber_extractor():
                 print('line could not be fit on ray ', self.ray)
                 self.spectacle_model = None
                 line_stats = None
+                self.num_spectacle = 0
+
             else:
                 # retrieve lines that pass col dense threshold
                 good_lines=[]
@@ -342,12 +357,13 @@ class absorber_extractor():
 
                 #create and save new model with lines desired
                 self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
-                num_fitted_lines = len(good_lines)
+                self.num_spectacle = len(good_lines)
                 line_stats=self.spectacle_model.line_stats(vel_array)
 
+            self.spectacle_table = line_stats
             return line_stats
 
-    def _run_ice(self):
+    def run_ice(self):
         """
         iteratively do the cloud method to extract all absorption features
         """
@@ -598,24 +614,3 @@ class absorber_extractor():
         if in_absorber and start != i:
             intervals.append((start, i))
         return intervals
-
-
-
-if __name__ == '__main__':
-    data_set_fname = argv[1]
-    ray_fname = argv[2]
-    ion = argv[3]
-    num=int(argv[4])
-    absorbers = [ion] #['H I', 'O VI']
-    center, nvec, rshift, bv = find_center(data_set_fname)
-    cut_filters = ["((obj[('gas', 'radius')].in_units('kpc') > 10) & \
-                   (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
-                   ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
-                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
-
-    mp = multi_plot(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_ice=True,use_spectacle=True,plot_spectacle=True,
-                    redshift=rshift, cloud_min=12.5,wavelength_width = 30, cut_region_filters=None)#cut_filters)
-    makedirs("mp_frames", exist_ok=True)
-    outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
-    mp.create_multi_plot(cmap='cividis',outfname=outfile)
