@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import yt
 import sys
-sys.path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie/")
-import multi_plot
-from center_finder import find_center
 
 from os import makedirs
 import seaborn as sns
@@ -20,7 +17,7 @@ def double_hist(data1, data2, bins, hist_range=None, ax=None, color1='tab:blue',
         fig, ax = plt.subplots(1)
     else:
         fig = ax.figure
-    
+
     data1_histo, data1_edges= np.histogram(data1, range=hist_range, bins=bins)
     data1_histo = data1_histo/data1.size *100
 
@@ -30,7 +27,7 @@ def double_hist(data1, data2, bins, hist_range=None, ax=None, color1='tab:blue',
     data2_histo = data2_histo/data2.size *100
 
     ax.hist(data2_edges[:-1], data2_edges, weights=data2_histo, histtype='step',color=color2, label=f"{label2}: {data2.size}")
-    
+
     return fig, ax
 
 ## MAKE COLUMN DENSITY HISTO comparing Spectacle and Cloudy
@@ -40,7 +37,7 @@ def col_dense_histo(spect_df, ice_df, z,ion="O VI", bins=20, hist_range=None, ou
     ice_cd = ice_df['col density']
 
     fig, ax = plt.subplots(1)
-    double_hist(spect_cd, ice_cd, bins, hist_range, ax=ax, color1='tab:purple', color2='black') 
+    double_hist(spect_cd, ice_cd, bins, hist_range, ax=ax, color1='tab:purple', color2='black')
 
     ax.set_title(f"{ion} Column Density for Spectacle and ICE (z={z:0.2f})")
     ax.set_ylabel("% of absorbers")
@@ -56,7 +53,7 @@ def los_velocity_histo(spect_df, ice_df, z,ion="O VI", bins=25, hist_range=None,
     ice_vel = ice_df['avg_velocity']
 
     fig, ax = plt.subplots(1)
-    double_hist(spect_vel, ice_vel, bins, hist_range, ax=ax, color1='tab:purple', color2='black') 
+    double_hist(spect_vel, ice_vel, bins, hist_range, ax=ax, color1='tab:purple', color2='black')
 
     ax.set_title(f"{ion} Velocity for Spectacle and ICE (z={z:0.2f})")
     ax.set_ylabel("% of absorbers")
@@ -85,7 +82,7 @@ def b_histo(spect_df, z, b_lim=None, bins=15, ion="O VI",outdir='./', filtered=F
         data_histo, data_edges= np.histogram(data, range=b_lim, bins=bins)
         data_histo = data_histo/data.size *100
         ax.hist(data_edges[:-1], data_edges, weights=data_histo, label="# absorbers: {data.size}")
-    
+
     ax.set_title(f"{ion} Doppler Velocity (z={z:0.2f})")
     ax.set_xlabel("b (km/s)")
     ax.set_ylabel("% of absorbers")
@@ -99,7 +96,7 @@ def inflow_outflow_histos(ice_df, z,ion="O VI", bins=15, hist_range=None, outdir
 
     titles=['Metallicity', 'Radius', 'Density', 'Temperature']
     fields=['log_avg_metallicity', 'radius', 'log_avg_density', 'log_avg_temperature']
-    xlabels=["Log( $Z_{\odot}$ )", 'Radius (kpc)', 'Log Density (g/cm^3)', 'Log Temperature (K)'] 
+    xlabels=["Log( $Z_{\odot}$ )", 'Radius (kpc)', 'Log Density (g/cm^3)', 'Log Temperature (K)']
 
     for title, fld, xlabel, curr_range in zip(titles, fields, xlabels, hist_range):
         #extract inflow metal and outflow metal information
@@ -120,13 +117,13 @@ def inflow_outflow_histos(ice_df, z,ion="O VI", bins=15, hist_range=None, outdir
 # run plot functions
 
 if __name__ == '__main__':
-    
+
     #define data set info
     dsname=sys.argv[1]
     max_b=200
     frac=0.8
     ion=sys.argv[2]
-    
+
 
     ion_u = "_".join(ion.split(" "))
     cgm='CGM'
@@ -161,7 +158,7 @@ if __name__ == '__main__':
     #divide data into spectacle and ice
     spect_df = df[ df['spectacle'] == 1.]
     ice_df = df[ df['ice'] == 1.]
-    print('z:',z, 
+    print('z:',z,
           '\nspec #:',spect_df['ray_num'].count(),
           '\nice #:',ice_df['ray_num'].count(),
           )
@@ -182,10 +179,10 @@ if __name__ == '__main__':
     log_var = ['col density', 'log_avg_density', 'log_avg_temperature', 'log_avg_metallicity', 'radius', 'radial_velocity']
 
     # labels to use in final plot instead
-    axis_labels={'log_avg_density':"Log( Density ) ($g/cm^3$)", 
-                      'log_avg_metallicity':"Log( Metallicity ) ($Z_{\odot}$)", 
-                      'radius':'Radial Distance ($kpc$)', 
-                      'log_avg_temperature':"Log( Temperature ) ($K$)", 
+    axis_labels={'log_avg_density':"Log( Density ) ($g/cm^3$)",
+                      'log_avg_metallicity':"Log( Metallicity ) ($Z_{\odot}$)",
+                      'radius':'Radial Distance ($kpc$)',
+                      'log_avg_temperature':"Log( Temperature ) ($K$)",
                       'radial_velocity': "Radial Velocity ($km/s$)"}
 
     #create pairplot
@@ -193,7 +190,7 @@ if __name__ == '__main__':
     sns.set_palette('colorblind')
     pp= sns.pairplot(ice_df, vars=log_var, hue='flow', markers='o', diag_kind='hist', diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
     pp.fig.suptitle(f"{ion} properties for z= {z:0.2f}",size=18, y=1.05)
-   
+
     # change the axis labels
     n_var=len(log_var)
     for i in range(n_var):
@@ -208,11 +205,11 @@ if __name__ == '__main__':
 
             if ylabel in axis_labels.keys():
                 pp.axes[i][j].set_ylabel(axis_labels[ylabel])
-            
-    # save pairplot 
+
+    # save pairplot
     pp.savefig(f"{outdir}/pairplot_{ion_u}_{z:0.2f}.png")
-    
-    
+
+
     hist_range_dict = {"O VI":[(13., 16.), (-300, 200), (0, 150), (-2, 0.05), (-28.75, -25), (4, 7)],
                        "H II":None
                       }
@@ -229,4 +226,3 @@ if __name__ == '__main__':
     los_velocity_histo(spect_df, ice_df, z, ion=ion,  hist_range=los_vel_lim, outdir=outdir)
     b_histo(spect_df, z, ion=ion, b_lim=b_lim,outdir=outdir, filtered=filtered)
     inflow_outflow_histos(ice_df, z, ion=ion, bins=10,hist_range=(Z_lim, (0, 200), dense_lim, temp_lim),outdir=outdir)
-    

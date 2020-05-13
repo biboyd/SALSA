@@ -4,9 +4,6 @@ import yt
 import trident
 from os import makedirs
 import sys
-sys.path.insert(0, "/mnt/home/boydbre1/Repo/CGM/multi_plot_movie/")
-import multi_plot
-from center_finder import find_center
 
 
 def construct_histo(dsname, max_b, frac, ion, column='col density', spectacle=True,cgm='CGM', bins=30, outname='./plot.png'):
@@ -25,8 +22,8 @@ def construct_histo(dsname, max_b, frac, ion, column='col density', spectacle=Tr
         return 1
     indx = np.where(header == column)
     abs_column = absorber_array[:, indx]
-    c, nv, r, bv = find_center(ds_fname)
-    
+    r = yt.load(ds_fname).current_redshift
+
     fig = plt.figure()
     plt.hist(abs_column, bins=bins)
     plt.title(f"{ion} z={r:.2f} max_b={max_b} kpc {cgm}")
@@ -46,12 +43,12 @@ def all_histo(dsname_list, max_b, frac, ion, cgm='', column='col density', bins=
         fig, ax = plt.subplots(1)
     else:
         fig = ax.figure
-    
+
     for dsname in dsname_list:
         ds_fname = f"{scratch_dir}/cosmological/foggie/{dsname}/{dsname}"
         arr_dir=f"{scratch_dir}/metallicity_analysis/foggie/{dsname}/max_impact{max_b}/output_{cgm}{frac}/ion_{ion_under}"
         ray_dir=f"{scratch_dir}/metallicity_analysis/foggie/{dsname}/max_impact{max_b}/rays"
-        c, nv, r, bv = find_center(ds_fname)
+        r = yt.load(ds_fname).current_redshift
 
         try:
             absorber_array=np.load(f"{arr_dir}/all_absorbers.npy")
@@ -83,14 +80,14 @@ def scatter_plot(dsname_list, max_b, frac, ion, column='col density', ax=None, c
     else:
         fig = ax.figure
 
-    
+
     n_abs = []
     redshift = []
     for dsname in dsname_list:
         ds_fname = f"{scratch_dir}/cosmological/foggie/{dsname}/{dsname}"
         arr_dir=f"{scratch_dir}/metallicity_analysis/foggie/{dsname}/max_impact{max_b}/output_{cgm}{frac}/ion_{ion_under}"
         ray_dir=f"{scratch_dir}/metallicity_analysis/foggie/{dsname}/max_impact{max_b}/rays"
-        c, nv, r, bv = find_center(ds_fname)
+        r = yt.load(ds_fname).current_redshift
 
         try:
             absorber_array=np.load(f"{arr_dir}/all_absorbers.npy")
@@ -108,7 +105,7 @@ def scatter_plot(dsname_list, max_b, frac, ion, column='col density', ax=None, c
     ax.set_ylabel("Number of Absorbers")
 
     ax.set_xlim(max(redshift) +0.1, min(redshift) - 0.1)
-    ax.set_title(f"{ion} absorber log col dense > 13") 
+    ax.set_title(f"{ion} absorber log col dense > 13")
     return fig, ax
 
 if __name__ == '__main__':
@@ -120,7 +117,7 @@ if __name__ == '__main__':
     ion = sys.argv[1]
     outdir = sys.argv[2]
     cgm = sys.argv[3]
-  
+
     makedirs(outdir, exist_ok=True)
     if cgm == 'CGM':
         pass
@@ -129,7 +126,5 @@ if __name__ == '__main__':
 
     #for ds in ds_names:
     #    construct_histo(ds, max_b, frac, ion, cgm=cgm, outname=f"{outdir}/histo{ds}.png")
-    
+
     all_histo(ds_names, max_b, frac, ion, cgm=cgm, outname=f"{outdir}/all.png")
-
-

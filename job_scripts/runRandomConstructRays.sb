@@ -28,7 +28,7 @@ else
 fi
 
 srun -n 16							\
-	python ~/Repo/CGM/analysis/construct_rays_random.py\
+	python ~/Repo/CGM/CGM/extract_sample_absorbers/construct_random_rays.py \
 		    $inFile \
         $nRays \
         $rayDist \

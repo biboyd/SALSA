@@ -28,7 +28,7 @@ if [ "$cuts" == "cgm" ];
 then
     echo "just cgm"
 	outDir="$mainDir/output_CGM$frac/ion_$ionLabel"
-else 
+else
 	outDir="$mainDir/output_$frac/ion_$ionLabel"
 fi
 
@@ -40,6 +40,6 @@ then
 #	rm -rf $outDir/*
 fi
 srun -n 32							\
-	python ~/Repo/CGM/analysis/collect_random_ray_info.py\
+	python ~/Repo/CGM/CGM/extract_sample_absorbers/collect_random_ray_info.py\
 		$dataFile $rayDir "$ionName" $outDir $frac "$cuts"
 scontrol show job $SLURM_JOB_ID

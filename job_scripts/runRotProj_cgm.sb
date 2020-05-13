@@ -24,6 +24,6 @@ then
 fi
 
 srun -n 39							\
-	python ~/Repo/CGM/rotation_movie/create_rot_frames.py\
+	python ~/Repo/CGM/CGM/visualize_gal/create_rot_frames.py \
 		$inFile $field $nFrames $off $width $outDir True
 scontrol show job $SLURM_JOB_ID

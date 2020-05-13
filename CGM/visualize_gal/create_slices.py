@@ -1,10 +1,11 @@
 #creates slices of the galaxy as well as a density proj
 import yt
 import numpy as np
-from center_finder import find_center
 from sys import argv
 from os import makedirs
 from scipy.spatial.transform import Rotation
+
+from CGM.general_utils.center_finder import find_center
 
 def main(dataset,
          length=200,
@@ -52,7 +53,7 @@ def main(dataset,
     #plot slices for density, temp and metallicity to compare with multi plot
     fields = ['density', 'temperature', 'metallicity', 'velocity_magnitude', 'vel_bv']
     color_maps = ['magma', 'thermal', 'haline', 'cividis', 'magma']
-     
+
     #construct sphere to make slices/projections from
     sph = ds.sphere(center, length)
     for fld, cmap in yt.parallel_objects(zip(fields, color_maps)):
