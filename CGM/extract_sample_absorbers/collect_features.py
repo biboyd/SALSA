@@ -166,7 +166,7 @@ def create_frames(rays,
             ax2 = mp.fig.add_subplot(312)
             ax3 = mp.fig.add_subplot(313)
 
-            mp.plot_num_density(ax_num_dense=ax1, ax_prop2=ax2, prop2_name='radial_velocity', prop2_units='km/s')
+            mp.plot_num_density(ax_num_dense=ax1, ax_prop2=ax2)
             mp.plot_vel_space(ax=ax3)
 
             mp.fig.tight_layout()
@@ -175,11 +175,11 @@ def create_frames(rays,
         ray_index = int(ray_num)
         # save absorber data
         if mp.ice_table is not None:
-            outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.ecsv"
+            outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.h5"
             mp.ice_table.write(outfile, overwrite=True)
 
         if mp.spectacle_table is not None:
-            outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.ecsv"
+            outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.h5"
             mp.ice_table.write(outfile, overwrite=True)
 
         # close files/figures

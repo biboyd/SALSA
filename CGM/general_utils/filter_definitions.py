@@ -40,7 +40,6 @@ def parse_cut_filter(cuts):
     #split filter call
     filter_names = cuts.split(' ')
     cut_filters = [ filter_dict[name] for name in filter_names ]
-    #cut_filter = "&".join(filters)
 
     return cut_filters
 
@@ -70,7 +69,7 @@ default_units_dict=dict(velocity_los='km/s',
                        temperature='K',
                        radial_velocity='km/s')
 
-default_limits_dict = dict(velocity_los=[-600, 600], 
+default_limits_dict = dict(velocity_los=[-600, 600],
                            metallicity=[0, 1],
                            temperature=[1e4, 1e9],
                            density=[1e-30, 1e-26])

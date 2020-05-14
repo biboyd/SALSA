@@ -144,11 +144,11 @@ def create_frames(rays,
         if save_data:
             # save absorber data
             if mp.ice_table is not None:
-                outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.ecsv"
+                outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.h5"
                 mp.ice_table.write(outfile, overwrite=True)
 
             if mp.spectacle_table is not None:
-                outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.ecsv"
+                outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.h5"
                 mp.ice_table.write(outfile, overwrite=True)
 
         #close ray files and clear axes/annoations

@@ -32,6 +32,7 @@ else
 	outDir="$mainDir/output_$frac/ion_$ionLabel"
 fi
 
+out_data_dir="~/Repo/data/absorber_data/$dataDir/"
 
 if ! [ -d $outDir ];
 then
@@ -42,4 +43,7 @@ fi
 srun -n 32							\
 	python ~/Repo/CGM/CGM/extract_sample_absorbers/collect_features.py\
 		$dataFile $rayDir "$ionName" $outDir $frac "$cuts"
+
+python ~/Repo/CGM/CGM/extract_sample_absorbers/aggregate_data.py \
+  $outDir $dsName "$cuts" $out_data_dir
 scontrol show job $SLURM_JOB_ID
