@@ -1,7 +1,6 @@
 from sys import argv
 from os import listdir
 from astropy.table import QTable, vstack
-import pandas as pd
 
 
 def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
@@ -51,7 +50,7 @@ def combine_astropy_files(directory, kw='ice', outfile=None):
     tables = []
     # open up tables
     for f in files:
-        tables.append(QTable(f"{directory}/{f}"))
+        tables.append(QTable.read(f"{directory}/{f}"))
 
     #combine tables
     main_table = vstack(tables)
@@ -60,3 +59,9 @@ def combine_astropy_files(directory, kw='ice', outfile=None):
     if outfile is not None:
         main_table.write(outfile, overwrite=True)
     return main_table
+
+if __name__ == '__main__':
+    directory= argv[1] 
+    outfile= argv[2]  
+
+    combine_astropy_files(directory, outfile=outfile)

@@ -32,7 +32,7 @@ else
 	outDir="$mainDir/output_$frac/ion_$ionLabel"
 fi
 
-out_data_dir="~/Repo/data/absorber_data/$dataDir/"
+out_data_dir="~/Repo/data/absorber_data/$dataDir/ion_$ionLabel/"
 
 if ! [ -d $outDir ];
 then
