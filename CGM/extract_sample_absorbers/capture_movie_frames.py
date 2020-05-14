@@ -3,7 +3,7 @@ import numpy as np
 from sys import argv
 import yt
 import trident
-from CGM.absorber_extraction_class.multi_plot import multi_plot
+from CGM.absorber_extraction_class.absorber_plotter import absorber_plotter
 from CGM.general_utils.center_finder import find_center
 from CGM.general_utils.filter_definitions import ion_p_num
 from os import makedirs, listdir
@@ -17,7 +17,7 @@ def main(filename, ray_dir, i_name, out_dir, use_bv, frac, cut_list=None):
     center, nvec, rshift, bulk_vel = find_center(filename)
     center = center.in_units('code_length')
 
-    #set up multiplot settings
+    #set up plotter settings
     mp_kwargs = dict(ds_filename=filename, ion_name=i_name,
                      cut_region_filter=cut_list,
                      center_gal = center,
@@ -103,6 +103,7 @@ def create_frames(rays,
                   slice_width=None,
                   slice_height=None,
                   out_dir='./',
+                  save_data=False,
                   multi_plot_kwargs={}):
     """
     creates a movie by combining all the plots made from the ray in ray_dir
@@ -112,6 +113,7 @@ def create_frames(rays,
         slice_width : float : define width of slice in multi plot. in units kpc
         slice_height : float : define height of slice in multi plot. in units kpc
         out_dir : string/path : path to directory where frames will be saved
+        save_data : bool : Whether to save absorber information or not
         multi_plot_kwargs : dict : dictionary of arguments to pass to the multi_plot
                 class
 
@@ -120,25 +122,12 @@ def create_frames(rays,
     """
 
     #create initial slice
-    mp = multi_plot(ray_filename=rays[0], **multi_plot_kwargs)
-    print("----------- Beginning to Create Iinitial Slice -------------")
+    mp = absorber_plotter(ray_filename=rays[0], **multi_plot_kwargs)
     mp.create_slice(cmap='cividis')
 
-    #clear annotations
+    #clear any annotations
     mp.slice.annotate_clear()
 
-    print("----------- Finished Creating Initial Slice -------------")
-    absorber_head=np.array(['ray_num',
-                            'start_interval',
-                            'end_intervals',
-                            'col density',
-                            'x_location',
-                            'y_location',
-                            'z_location',
-                            'avg metallicity',
-                            'avg velocity',
-                            'avg_temperature'])
-    np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load in new ray
         mp.load_ray(ray_fname)
@@ -152,48 +141,21 @@ def create_frames(rays,
         outfile = f"{out_dir}/mp{ray_num}.png"
         mp.create_multi_plot(outfile)
 
+        if save_data:
+            # save absorber data
+            if mp.ice_table is not None:
+                outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.ecsv"
+                mp.ice_table.write(outfile, overwrite=True)
+
+            if mp.spectacle_table is not None:
+                outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.ecsv"
+                mp.ice_table.write(outfile, overwrite=True)
+
         #close ray files and clear axes/annoations
         mp.ray.close()
-
         mp.fig.clear()
         mp.slice.annotate_clear()
 
-        #save interval information
-        interval_list, lcd_list = mp.get_iterative_cloud(coldens_fraction=mp.frac, min_logN=mp.cloud_min)
-        abs_num=0
-        for interval, lcd in zip(interval_list, lcd_list):
-            #Create np array to store absorber data
-            absorber_info = np.empty(len(absorber_head), dtype=np.float64)
-            absorber_info[0] = ray_num
-            absorber_info[1] = interval[0]
-            absorber_info[2] = interval[1]
-            absorber_info[3] = lcd
-
-            absorber_info[4:] = calc_absorber_props(mp.ray, interval[0], interval[1])
-
-            np.save(f"{out_dir}/ray{ray_num}_absorber{abs_num:02d}.npy", absorber_info)
-            abs_num+=1
-def calc_absorber_props(ray, start, end):
-    """
-    Calculate the weighted average of a list of absorber properties
-    using the total gas column density as the weight.
-
-    Parameters:
-        ray : yt.ray : lightray with the fields
-        start : int: beginning of interval along light ray
-        end : end: end of the intervals along the light ray
-    """
-    dl = ray.data['dl'][start:end]
-    density = ray.data[('gas', 'density')][start:end]
-    col_dense = np.sum(dl*density)
-    props = ('x', 'y', 'z', 'metallicity', 'velocity_los', 'temperature')
-    avg_props = []
-    for prop in props:
-        #compute weighted sum of property
-        avg = np.sum(dl*density*ray.data[prop][start:end])/col_dense
-        avg_props.append(avg)
-
-    return avg_props
 
 def get_ray_num(file_path):
     """

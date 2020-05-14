@@ -8,7 +8,7 @@ import h5py
 import astropy.units  as u
 
 from CGM.general_utils.center_finder import find_center
-from CGM.absorber_extraction_class.multi_plot import multi_plot
+from CGM.absorber_extraction_class.absorber_plotter import absorber_plotter
 from CGM.general_utils.filter_definitions import parse_cut_filter
 
 def main(filename, ray_dir, i_name, out_dir, frac, cut_filters):
@@ -46,7 +46,7 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filters):
     comm.Barrier()
 
 
-    #set up multiplot settings
+    #set up plotter settings
     mp_kwargs = dict(ds_filename=filename, ion_name=i_name,
     				    absorber_fields=line_list,
                                     center_gal = center,
@@ -145,7 +145,7 @@ def create_frames(rays,
     np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load new multi plot and ray
-        mp = multi_plot(ray_filename=ray_fname, **multi_plot_kwargs)
+        mp = absorber_plotter(ray_filename=ray_fname, **multi_plot_kwargs)
         if mp.data['l'].size == 0:
             continue
 
@@ -173,95 +173,18 @@ def create_frames(rays,
             mp.fig.savefig(f"{out_dir}/plots{ray_num}.png", **savefig_kwargs)
 
         ray_index = int(ray_num)
-        #save ice information
-        interval_list, lcd_list = mp.get_iterative_cloud(coldens_fraction=mp.frac, min_logN=mp.cloud_min)
-        abs_num=0
-        for interval, lcd in zip(interval_list, lcd_list):
-            if impact_parameter is None:
-                impact = np.nan
-            else:
-                impact = impact_parameter[ray_index]
-            #Create np array to store absorber data
-            absorber_info = np.empty(len(absorber_head), dtype=np.float64)
-            absorber_info[0] = ray_index
-            absorber_info[1] = 0.
-            absorber_info[2] = 1.
-            absorber_info[3] = interval[0]
-            absorber_info[4] = interval[1]
-            absorber_info[5] = lcd
-            absorber_info[6] = impact
+        # save absorber data
+        if mp.ice_table is not None:
+            outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.ecsv"
+            mp.ice_table.write(outfile, overwrite=True)
 
-            absorber_info[7:-1] = calc_ice_absorber_props(mp.data, interval[0], interval[1])
-            absorber_info[-1] = np.nan
-            np.save(f"{out_dir}/ray{ray_num}_ice_absorber{abs_num:02d}.npy", absorber_info)
-            abs_num+=1
-
-        # save spectacle information
-        if mp.spectacle_model is not None:
-            lcd, del_vel, vel_doppler = calc_spectacle_absorber_props(mp.spectacle_model)
-            abs_num=0
-            for i in range(lcd.size):
-                absorber_info = np.empty(len(absorber_head), dtype=np.float64)
-                absorber_info[0] =ray_index
-                absorber_info[1] = 1.
-                absorber_info[2] = 0.
-                absorber_info[3] = np.nan
-                absorber_info[4] = np.nan
-                absorber_info[5] = lcd[i]
-                absorber_info[6] = impact
-                absorber_info[7] = del_vel[i]
-                absorber_info[8:-1] = np.nan
-                absorber_info[-1] = vel_doppler[i]
-
-                np.save(f"{out_dir}/ray{ray_num}_spectacle_absorber{abs_num:02d}.npy", absorber_info)
-                abs_num+=1
-
+        if mp.spectacle_table is not None:
+            outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.ecsv"
+            mp.ice_table.write(outfile, overwrite=True)
 
         # close files/figures
         mp.close()
 
-def calc_spectacle_absorber_props(spec_model):
-    """
-    Calculate/gather data from spectacle model including absorber inforamtion
-    like column density, velocity, etc.
-
-    Parameters:
-        spectacle model
-    Returns:
-        list of absorbers with properties
-    """
-    vel_array = np.linspace(-1500, 1500, 1000)*u.Unit('km/s')
-    line_stats = spec_model.line_stats(vel_array)
-
-    lcd = line_stats['col_dens']
-    delta_v = line_stats['delta_v'].value
-    v_doppler = line_stats['v_dop'].value
-
-
-    return lcd, delta_v, v_doppler
-
-def calc_ice_absorber_props(data, start, end):
-    """
-    Calculate the weighted average of a list of absorber properties
-    using the total gas column density as the weight.
-
-    Parameters:
-        data : yt data object : yt data object of ray
-        start : int: beginning of interval along light ray
-        end : end: end of the intervals along the light ray
-    """
-    dl = data['dl'][start:end]
-    density = data[('gas', 'density')][start:end]
-    col_dense = np.sum(dl*density)
-    props = ('velocity_los', 'x', 'y', 'z','radius', 'density', 'metallicity', 'temperature', 'radial_velocity')
-    props_units=('km/s', 'kpc', 'kpc', 'kpc','kpc', 'g/cm**3', 'Zsun','K', 'km/s')
-    avg_props = []
-    for prop, units in zip(props, props_units):
-        #compute weighted sum of property
-        avg = np.sum(dl*density*data[prop][start:end])/col_dense
-        avg_props.append(avg.in_units(units))
-
-    return avg_props
 
 def get_ray_num(file_path):
     """
@@ -330,8 +253,6 @@ def get_num_density_range(ion_name, comm, my_rays, use_defaults=True):
         num_density_range = np.array( [0.01*avg_med, 1000*avg_med] , dtype=np.float64)
 
     return num_density_range
-
-
 
 
 if __name__ == '__main__':

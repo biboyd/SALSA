@@ -40,6 +40,6 @@ then
 #	rm -rf $outDir/*
 fi
 srun -n 32							\
-	python ~/Repo/CGM/CGM/extract_sample_absorbers/collect_random_ray_info.py\
+	python ~/Repo/CGM/CGM/extract_sample_absorbers/collect_features.py\
 		$dataFile $rayDir "$ionName" $outDir $frac "$cuts"
 scontrol show job $SLURM_JOB_ID
