@@ -24,13 +24,7 @@ rayDir="$mainDir/rays"
 ionLabel=${ionName% *}_${ionName#* }
 
 # check if just CGM filter
-if [ "$cuts" == "cgm" ];
-then
-    echo "just cgm"
-	outDir="$mainDir/output_CGM$frac/ion_$ionLabel"
-else
-	outDir="$mainDir/output_$frac/ion_$ionLabel"
-fi
+outDir="$mainDir/output_$frac/ion_$ionLabel"
 
 out_data_dir="~/Repo/data/absorber_data/$dataDir/ion_$ionLabel/"
 
