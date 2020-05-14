@@ -122,27 +122,6 @@ def create_frames(rays,
         none
     """
 
-
-    # define info to collect
-    absorber_head=np.array(['ray_num',
-                            'spectacle',
-                            'ice',
-                            'start_interval',
-                            'end_intervals',
-                            'col density',
-                            'impact_parameter',
-                            'avg_velocity',
-                            'x_location',
-                            'y_location',
-                            'z_location',
-                            'radius',
-                            'avg_density',
-                            'avg_metallicity',
-                            'avg_temperature',
-                            'radial_velocity',
-                            'vel_doppler'])
-
-    np.save(f"{out_dir}/absorber_info_header.npy", absorber_head)
     for ray_fname in rays:
         #load new multi plot and ray
         mp = absorber_plotter(ray_filename=ray_fname, **multi_plot_kwargs)
