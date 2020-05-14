@@ -54,7 +54,7 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filters):
                                     redshift=rshift[0],
                                     frac = frac,
                                     bulk_velocity=bulk_vel,
-                                    plot_cloud=True,
+                                    plot_ice=True,
                                     cut_region_filters=cut_filters,
                                     use_spectacle= True,
                                     plot_spectacle=True,

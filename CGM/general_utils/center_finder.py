@@ -134,9 +134,9 @@ def search_center_norm(file, ds_name, refinement):
             pass
         elif refinement == sline[0] and ds_name == sline[1]:
             #convert to floats then stop reading file
-            center = [ float(val) for val in sline[2:5] ]
-            n_vec = [ float(val) for val in sline[5:8] ]
-            bulk_vel = [ float(val) for val in sline[8:11]]
+            center = [ float(val) for val in sline[3:6] ]
+            n_vec = [ float(val) for val in sline[6:9] ]
+            bulk_vel = [ float(val) for val in sline[9:12]]
             break
 
     f.close()

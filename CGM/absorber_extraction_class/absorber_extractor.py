@@ -360,8 +360,8 @@ class absorber_extractor():
                 self.num_spectacle = len(good_lines)
                 line_stats=self.spectacle_model.line_stats(vel_array*u.Unit('km/s'))
 
-            self.spectacle_table = line_stats
-            return line_stats
+        self.spectacle_table = line_stats
+        return line_stats
 
     def run_ice(self):
         """

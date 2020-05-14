@@ -137,7 +137,7 @@ def movie_rays( dataset,
              validators=[yt.fields.api.ValidateParameter(['center'])])
 
     #collect sightlines
-    start_points, end_poits, norm_vector = movie_sightlines(dataset,
+    start_points, end_points, norm_vector = movie_sightlines(dataset,
                                                 length=length,
                                                 n_rays=n_rays,
                                                 norm_vector=norm_vector,
@@ -151,7 +151,7 @@ def movie_rays( dataset,
 
     #construct lightrays
     construct_rays(ds, start_points, end_points,
-                   center=center, bulk_velocity=bulk_velocity,
+                   center=center, bulk_velocity=bulk_vel,
                    line_list=line_list,
                    other_fields=other_fields,
                    out_dir=out_dir,

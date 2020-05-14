@@ -549,39 +549,40 @@ class absorber_plotter(absorber_extractor):
                 if self.num_ice is None:
                     self.get_ice_absorbers()
 
+                #plot ice intervals  
+                if self.num_ice > 0:
+                    for i in range(self.num_ice):
+                        b, e = self.ice_intervals[i]
+                        curr_lcd = self.ice_table['col_dens'][i]
+    
+                        #plot interval
+                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
+    
+                        #plot on 2nd prop if axis exists
+                        if ax_prop2 is not None:
+                            ax_prop2.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
+    
+                    #plot number of intervals found
+                    box_props = dict(boxstyle='square', facecolor='white')
+                    ax_num_dense.text(0.9, 0.85, f"{self.num_ice} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
+    
+                    #take three largest absorbers and sort by position
+                    max_indices = self.ice_table.argsort('col_dens')
+                    max_indices = max_indices[-3:]
+                    max_indices.sort()
 
-                for i in range(self.num_ice):
-                    b, e = self.ice_intervals[i]
-                    curr_lcd = self.ice_table['col_dens'][i]
+                    #plot markers from left to right
+                    colors=['black', 'magenta', 'yellow']
+                    for i,c in zip(max_indices, colors):
+                        b, e = self.ice_intervals[i]
+                        lcd = self.ice_table['col_dens'][i]
+                        mid_point = (l_list[b]+l_list[e])/2
 
-                    #plot interval
-                    ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
+                        ax_num_dense.scatter(mid_point, 0.75*self.num_dense_max,
+                                             marker='v',color=c, edgecolors='black',
+                                             label=f"logN={lcd:.1f}", zorder=3)
 
-                    #plot on 2nd prop if axis exists
-                    if ax_prop2 is not None:
-                        ax_prop2.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
-
-                #plot number of intervals found
-                box_props = dict(boxstyle='square', facecolor='white')
-                ax_num_dense.text(0.9, 0.85, f"{self.num_ice} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
-
-                #take three largest absorbers and sort by position
-                max_indices = self.ice_table.argsort('col_dens')
-                max_indices = max_indices[-3:]
-                max_indices.sort()
-
-                #plot markers from left to right
-                colors=['black', 'magenta', 'yellow']
-                for i,c in zip(max_indices, colors):
-                    b, e = self.ice_intervals[i]
-                    lcd = self.ice_table['col_dens'][i]
-                    mid_point = (l_list[b]+l_list[e])/2
-
-                    ax_num_dense.scatter(mid_point, 0.75*self.num_dense_max,
-                                         marker='v',color=c, edgecolors='black',
-                                         label=f"logN={lcd:.1f}", zorder=3)
-
-                ax_num_dense.legend(loc='lower left', bbox_to_anchor=(-0.015, 0.95))
+                    ax_num_dense.legend(loc='lower left', bbox_to_anchor=(-0.015, 0.95))
 
         #make second plot
         if ax_prop2 is not None:
