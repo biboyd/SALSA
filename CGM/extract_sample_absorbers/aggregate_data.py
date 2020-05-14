@@ -14,4 +14,5 @@ outDir += f"/{cut_dir}"
 makedirs(outDir, exist_ok=True)
 
 outfile=f"{outDir}/{ds}_absorbers.h5"
+print(outfile)
 combine_astropy_files(inDir, outfile=outfile)

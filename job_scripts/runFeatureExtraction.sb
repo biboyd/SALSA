@@ -26,7 +26,7 @@ ionLabel=${ionName% *}_${ionName#* }
 # check if just CGM filter
 outDir="$mainDir/output_$frac/ion_$ionLabel"
 
-out_data_dir="~/Repo/data/absorber_data/$dataDir/ion_$ionLabel/"
+out_data_dir=~/data/absorber_data/$dataDir/ion_$ionLabel/
 
 if ! [ -d $outDir ];
 then
