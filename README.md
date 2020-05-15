@@ -1,6 +1,7 @@
 # Code Related to analyzing the CGM by creating Synthetic Spectra
 using yt, trident and spectacle projects
 
+Begin using by running `pip install -e ./`
 # Directory layout
 ## CGM
 holds code to construct a python package that includes `absorber_extractor` and `absorber_plotter` classes that can extract absorbers from a simulation given trident lightrays. Also contains scripts for extracting distribution of absorbers and analyzing them as well as scripts seperate from that main class for visualizing simulation.  
