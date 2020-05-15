@@ -28,6 +28,6 @@ else
 	rm -rf $outDir/*
 fi
 srun -n 32							\
-	python ~/Repo/CGM/multi_plot_movie/capture_movie_frames.py	\
+	python ~/Repo/CGM/CGM/extract_sample_absorbers/capture_movie_frames.py	\
 		$dataFile $rayDir "$ionName" $outDir False $frac 'cgm'
 scontrol show job $SLURM_JOB_ID

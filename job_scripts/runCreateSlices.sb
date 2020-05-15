@@ -21,7 +21,7 @@ then
 else
 	rm -rf $outDir/*
 fi
-srun -n 16 python ~/Repo/CGM/multi_plot_movie/create_slices.py \
+srun -n 16 python ~/Repo/CGM/CGM/visualize_gal/create_slices.py \
 			$dsPath $len $outDir
 
 scontrol show job $SLURM_JOB_ID
