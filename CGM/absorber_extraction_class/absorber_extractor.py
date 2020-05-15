@@ -248,10 +248,10 @@ class absorber_extractor():
             unit_dict = default_units_dict
             unit_dict.update(user_unit_dict)
 
-        print(unit_dict)
         # line information for absorbers
         line_info = [('name', 'S8'),
                      ('wave', np.float64),
+                     ('redshift', np.float64),
                      ('col_dens', np.float64),
                      ('delta_v', np.float64)]
 
@@ -270,8 +270,9 @@ class absorber_extractor():
         stats_table = QTable(np.empty(n_abs , dtype=name_type))
 
         #add ion name and wavelength
-        stats_table['name']= np.full(n_abs, self.ion_name)
-        stats_table['wave'] = np.full(n_abs, self.wavelength_center)
+        stats_table['name']= self.ion_name
+        stats_table['wave'] = self.wavelength_center
+        stats_table['redshift'] = self.ds.current_redshift
 
         # fill table with absorber features
         for i in range(n_abs):
@@ -361,6 +362,9 @@ class absorber_extractor():
                 self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
                 self.num_spectacle = len(good_lines)
                 line_stats=self.spectacle_model.line_stats(vel_array*u.Unit('km/s'))
+                
+                #add redshift
+                line_stats['redshift'] = self.ds.current_redshift
 
         self.spectacle_table = line_stats
         return line_stats
