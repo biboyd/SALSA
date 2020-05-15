@@ -107,10 +107,10 @@ if __name__ == '__main__':
     if len(sys.argv) == 6:
         cut2 = sys.argv[5]
         cut2_u = "_".join( cut2.split(" ") )
-        outdir+=f"{cut1_u}_v_{cut2_u}/"
+        outdir+=f"/{cut1_u}_v_{cut2_u}/"
     else:
         cut2=None
-        outdir+=f"{cut1_u}/"
+        outdir+=f"/{cut1_u}/"
 
     makedirs(outdir, exist_ok=True)
 

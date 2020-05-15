@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from CGM.general_utils.construct_rays import construct_rays
 from CGM.general_utils.center_finder import find_center
-from CGM.general_utils.filter_definitions import radius_function
+from CGM.general_utils.filter_definitions import radius_function, ion_p
 
 def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
     """
@@ -116,6 +116,9 @@ def random_rays(dsname, center,
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=line_list, ftype='gas')
 
+    for line in line_list:
+        ion_frac = ('gas', f"{ion_p(line)}_ion_fraction")
+        other_fields.append(ion_frac)
     # add radius field to dataset
     ds.add_field(('gas', 'radius'),
              function=radius_function,
@@ -141,7 +144,6 @@ def random_rays(dsname, center,
                    other_fields=other_fields,
                    out_dir=out_dir,
                    parallel=parallel)
-
 
 
 

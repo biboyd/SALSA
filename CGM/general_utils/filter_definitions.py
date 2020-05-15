@@ -74,10 +74,10 @@ ovi_hist_dict = dict(col_dens=(13., 16.),
                       log_density=(-28.75, -25))
 hist_range_dict = {"O VI":ovi_hist_dict}
 
-def ion_p_num(ion_name):
+def ion_p(ion_name):
     """
     convert ion species name from trident style to one that
-    matches YT's (ie 'H I' --> 'H_p0_number_density')
+    matches YT's (ie 'H I' --> 'H_p0')
     """
     #split up the words in ion species name
     ion_split = ion_name.split()
@@ -85,7 +85,16 @@ def ion_p_num(ion_name):
     num = trident.from_roman(ion_split[1])-1
 
     #combine all the names
-    outname = f"{ion_split[0]}_p{num}_number_density"
+    return f"{ion_split[0]}_p{num}"
+
+def ion_p_num(ion_name):
+    """
+    convert ion species name from trident style to one that
+    matches YT's (ie 'H I' --> 'H_p0_number_density')
+    """
+    ip = ion_p(ion_name)
+    #combine all the names
+    outname = f"{ip}_number_density"
     return outname
 
 #ice extraction defaults
