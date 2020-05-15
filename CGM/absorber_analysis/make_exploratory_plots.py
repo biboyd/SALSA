@@ -9,60 +9,8 @@ import sys
 from os import makedirs
 import seaborn as sns
 
-
-# plot functions
-
-def double_hist(data1, data2, bins, hist_range=None, ax=None, color1='tab:blue', color2='tab:orange',label1='Spectacle', label2="ICE"):
-    if ax is None:
-        fig, ax = plt.subplots(1)
-    else:
-        fig = ax.figure
-
-    data1_histo, data1_edges= np.histogram(data1, range=hist_range, bins=bins)
-    data1_histo = data1_histo/data1.size *100
-
-    ax.hist(data1_edges[:-1], data1_edges, weights=data1_histo, color=color1, label=f"{label1}: {data1.size}")
-
-    data2_histo, data2_edges= np.histogram(data2, range=hist_range, bins=bins)
-    data2_histo = data2_histo/data2.size *100
-
-    ax.hist(data2_edges[:-1], data2_edges, weights=data2_histo, histtype='step',color=color2, label=f"{label2}: {data2.size}")
-
-    return fig, ax
-
-## MAKE COLUMN DENSITY HISTO comparing Spectacle and Cloudy
-def col_dense_histo(spect_df, ice_df, z,ion="O VI", bins=20, hist_range=None, outdir='./'):
-    ion_u=f"{ion.split()[0]}_{ion.split()[1]}"
-    spect_cd = spect_df['col density']
-    ice_cd = ice_df['col density']
-
-    fig, ax = plt.subplots(1)
-    double_hist(spect_cd, ice_cd, bins, hist_range, ax=ax, color1='tab:purple', color2='black')
-
-    ax.set_title(f"{ion} Column Density for Spectacle and ICE (z={z:0.2f})")
-    ax.set_ylabel("% of absorbers")
-    ax.set_xlabel(f"Log( $N_{ {ion} }$ )")
-    ax.legend()
-
-    fig.savefig(f"{outdir}/col_density_{ion_u}_{z:0.2f}.png", dpi=400)
-
-## MAKE VELOCITY HISTO
-def los_velocity_histo(spect_df, ice_df, z,ion="O VI", bins=25, hist_range=None,outdir='./'):
-    ion_u=f"{ion.split()[0]}_{ion.split()[1]}"
-    spect_vel = spect_df['avg_velocity']
-    ice_vel = ice_df['avg_velocity']
-
-    fig, ax = plt.subplots(1)
-    double_hist(spect_vel, ice_vel, bins, hist_range, ax=ax, color1='tab:purple', color2='black')
-
-    ax.set_title(f"{ion} Velocity for Spectacle and ICE (z={z:0.2f})")
-    ax.set_ylabel("% of absorbers")
-    ax.set_xlabel("Line of Sight Velocity (km/s)")
-    ax.legend()
-
-    fig.savefig(f"{outdir}/velocity_{ion_u}_{z:0.2f}.png", dpi=400)
-
-#### make col density vs b scatter plot
+from CGM.absorber_analysis.helper_functions import double_hist, load_files, homeDir
+from CGM.general_utils.filter_definitions import cut_alias_dict, axis_labels_dict, hist_range_dict
 
 #MAKE b histogram
 def b_histo(spect_df, z, b_lim=None, bins=15, ion="O VI",outdir='./', filtered=False):
@@ -90,139 +38,113 @@ def b_histo(spect_df, z, b_lim=None, bins=15, ion="O VI",outdir='./', filtered=F
     ax.legend()
     fig.savefig(f"{outdir}/b_inflow_outflow_{ion_u}_{z:0.2f}.png", dpi=400)
 
-## MAKE VELOCITY HISTO
-def inflow_outflow_histos(ice_df, z,ion="O VI", bins=15, hist_range=None, outdir='./'):
-    ion_u=f"{ion.split()[0]}_{ion.split()[1]}"
 
-    titles=['Metallicity', 'Radius', 'Density', 'Temperature']
-    fields=['log_avg_metallicity', 'radius', 'log_avg_density', 'log_avg_temperature']
-    xlabels=["Log( $Z_{\odot}$ )", 'Radius (kpc)', 'Log Density (g/cm^3)', 'Log Temperature (K)']
+def plot_histo(df, var, ion="O VI", bins=15, hist_range=None, outdir='./'):
 
-    for title, fld, xlabel, curr_range in zip(titles, fields, xlabels, hist_range):
-        #extract inflow metal and outflow metal information
-        inflow = ice_df[ ice_df['flow'] == 'Inflow'][fld]
-        outflow = ice_df[ ice_df['flow'] == 'Outflow'][fld]
+    #default hist_range to min/max
+    if hist_range is None:
+        hist_range = [df[var].min(), df[var].max()]
 
-        fig, ax = plt.subplots(1)
-        double_hist(inflow, outflow, bins, curr_range, ax=ax, label1='Inflow', label2='Outflow')
+    #return cut titles
+    cut1, cut2 = df['cuts'].unique()
+    cut1_dat = df[ df['cuts'] == cut1 ][var]
+    cut2_dat = df[ df['cuts'] == cut2 ][var]
+    z = df['redshift'][0]
 
-        ax.set_title(f"{ion} {title} for Inflows and Outflows (z={z:0.2f})")
-        ax.set_ylabel("% of absorbers")
-        ax.set_xlabel(xlabel)
-        ax.set_ylim(0, 50)
-        ax.legend(loc='upper left')
+    if var in axis_labels_dict.keys():
+        xlabel=axis_labels_dict[var]
+    else:
+        xlabel=var
 
-        fig.savefig(f"{outdir}/{title}_inflow_outflow_{ion_u}_{z:0.2f}.png", dpi=400)
+    fig, ax = plt.subplots(1)
+    double_hist(cut1_dat, cut2_dat, bins, hist_range, ax=ax, label1=cut1, label2=cut2)
+    ax.set_title(f"{ion} {var} for {cut1} and {cut2} (z={z:0.2f})")
+    ax.set_ylabel("% of absorbers")
+    ax.set_xlabel(xlabel)
+    ax.set_ylim(0, 50)
+    ax.legend(loc='upper left')
 
-# run plot functions
+    return fig
 
-if __name__ == '__main__':
-
-    #define data set info
-    dsname=sys.argv[1]
-    max_b=200
-    frac=0.8
-    ion=sys.argv[2]
-
-
-    ion_u = "_".join(ion.split(" "))
-    cgm='CGM'
-    ds_fname = f"/mnt/gs18/scratch/users/boydbre1/cosmological/foggie/{dsname}/{dsname}"
-    if len(sys.argv) == 3:
-        arr_dir=f"/mnt/gs18/scratch/users/boydbre1/analysis/foggie/{dsname}/max_impact{max_b}/output_{cgm}{frac}/ion_{ion_u}"
-        ray_dir=f"/mnt/gs18/scratch/users/boydbre1/analysis/foggie/{dsname}/max_impact{max_b}/rays"
-
-        #define the outdirectory
-        outdir=f"plots/{ion_u}_plots"
-        makedirs(outdir, exist_ok=True)
-        filtered=False
-
-    elif len(sys.argv) ==4 and sys.argv[3] == 'filtered':
-        arr_dir=f"/mnt/home/boydbre1/data/O_VI_analysis/{dsname}_flow/ion_{ion_u}"
-
-        ray_dir=f"/mnt/gs18/scratch/users/boydbre1/analysis/foggie/{dsname}/max_impact{max_b}/rays"
-
-        #define the outdirectory
-        outdir=f"plots_filtered/{ion_u}_plots"
-        makedirs(outdir, exist_ok=True)
-        filtered=True
-
-    #load in files
-    absorber_array=np.load(f"{arr_dir}/all_absorbers.npy")
-    ds = yt.load(ds_fname)
-    all_impact_param = np.load(f"{ray_dir}/impact_parameter.npy")
-    header = np.load(f"{arr_dir}/absorber_info_header.npy")
-    df = pd.DataFrame(data=absorber_array, columns=header)
-    z = ds.current_redshift
-
-    #divide data into spectacle and ice
-    spect_df = df[ df['spectacle'] == 1.]
-    ice_df = df[ df['ice'] == 1.]
-    print('z:',z,
-          '\nspec #:',spect_df['ray_num'].count(),
-          '\nice #:',ice_df['ray_num'].count(),
-          )
-
-    if filtered is False:
-        # DEFINE INFLOW OUTLFOW STUFF
-        ice_df['flow'] = ice_df['radial_velocity'].apply(lambda r : "Inflow" if (r < 0) else "Outflow" )
-    elif filtered is True:
-        #set flow for already filtered data
-        ice_df['flow'] = ice_df['inflow'].apply(lambda i : "Inflow" if (i == 1.) else "Outflow")
-        spect_df['flow'] = spect_df['inflow'].apply(lambda i : "Inflow" if (i == 1.) else "Outflow")
-
-    # LOG SOME VARS FOR PAIRPLOT
-    variables =['avg_density', 'avg_metallicity', 'avg_temperature']
-    for v in variables:
-        logv = 'log_' + v
-        ice_df[logv] = np.log10(df[v])
-    log_var = ['col density', 'log_avg_density', 'log_avg_temperature', 'log_avg_metallicity', 'radius', 'radial_velocity']
-
-    # labels to use in final plot instead
-    axis_labels={'log_avg_density':"Log( Density ) ($g/cm^3$)",
-                      'log_avg_metallicity':"Log( Metallicity ) ($Z_{\odot}$)",
-                      'radius':'Radial Distance ($kpc$)',
-                      'log_avg_temperature':"Log( Temperature ) ($K$)",
-                      'radial_velocity': "Radial Velocity ($km/s$)"}
+def create_pairplot(df, plot_var):
 
     #create pairplot
     # MAKE AND SAVE PAIRPLOT
     sns.set_palette('colorblind')
-    pp= sns.pairplot(ice_df, vars=log_var, hue='flow', markers='o', diag_kind='hist', diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
-    pp.fig.suptitle(f"{ion} properties for z= {z:0.2f}",size=18, y=1.05)
+    pp= sns.pairplot(df, vars=plot_var, hue='cuts', markers='o', diag_kind='hist', corner=True, diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
+    pp.fig.suptitle(f"{ion} properties for z= {df['redshift'][0]:0.2f}",size=18, y=1.05)
 
     # change the axis labels
-    n_var=len(log_var)
+    n_var=len(plot_var)
     for i in range(n_var):
-        for j in range(n_var):
+        for j in range(i+1):
             #find x/y label
             xlabel = pp.axes[i][j].get_xlabel()
             ylabel = pp.axes[i][j].get_ylabel()
 
             # replace if found in labels dict
-            if xlabel in axis_labels.keys():
-                pp.axes[i][j].set_xlabel(axis_labels[xlabel])
+            if xlabel in axis_labels_dict.keys():
+                pp.axes[i][j].set_xlabel(axis_labels_dict[xlabel])
 
-            if ylabel in axis_labels.keys():
-                pp.axes[i][j].set_ylabel(axis_labels[ylabel])
+            if ylabel in axis_labels_dict.keys():
+                pp.axes[i][j].set_ylabel(axis_labels_dict[ylabel])
 
-    # save pairplot
-    pp.savefig(f"{outdir}/pairplot_{ion_u}_{z:0.2f}.png")
+    return pp
 
+# run plot functions
+if __name__ == '__main__':
 
-    hist_range_dict = {"O VI":[(13., 16.), (-300, 200), (0, 150), (-2, 0.05), (-28.75, -25), (4, 7)],
-                       "H II":None
-                      }
-    if ion in hist_range_dict.keys():
-        cd_lim, los_vel_lim, b_lim, Z_lim, dense_lim, temp_lim = hist_range_dict[ion]
+    #define data set info
+    dsname=sys.argv[1]
+    ion=sys.argv[2]
+    ref = sys.argv[3]
+    cut1 = sys.argv[4]
+
+    ion_u="_".join(ion.split(" "))
+    outdir=f"{homeDir}/data/absorber_data/{ref}_refinement/ion_{ion_u}/plots"
+
+    cut1_u = "_".join( cut1.split(" ") )
+    if len(sys.argv) == 6:
+        cut2 = sys.argv[5]
+        cut2_u = "_".join( cut2.split(" ") )
+        outdir+=f"{cut1_u}_v_{cut2_u}/"
     else:
-        cd_lim = None
-        los_vel_lim=None
-        b_lim = None
-        Z_lim = None
-    #run plot functions
-    print(f"creating plotting stuff rn, goin into {outdir}")
-    col_dense_histo(spect_df, ice_df, z, ion=ion,  hist_range=cd_lim, outdir=outdir)
-    los_velocity_histo(spect_df, ice_df, z, ion=ion,  hist_range=los_vel_lim, outdir=outdir)
-    b_histo(spect_df, z, ion=ion, b_lim=b_lim,outdir=outdir, filtered=filtered)
-    inflow_outflow_histos(ice_df, z, ion=ion, bins=10,hist_range=(Z_lim, (0, 200), dense_lim, temp_lim),outdir=outdir)
+        cut2=None
+        outdir+=f"{cut1_u}/"
+
+    makedirs(outdir, exist_ok=True)
+
+    #load dataframe
+    df = load_files(dsname, ion=ion, refinement=ref, cut1=cut1, cut2=cut2)
+    z=df['redshift'][0]
+
+    # LOG SOME VARS FOR PAIRPLOT
+    variables =['density', 'metallicity', 'temperature']
+    for v in variables:
+        logv = 'log_' + v
+        df[logv] = np.log10(df[v])
+
+    plot_var = ['col_dens', 'log_density', 'log_temperature', 'log_metallicity', 'radius', 'radial_velocity']
+
+    #plot pairplot
+    pp =create_pairplot(df, plot_var=plot_var)
+    pp.savefig(f"{outdir}/pairplot_{z:0.2f}.png")
+
+    if cut2 is not None:
+        # check general_utils for dictionary of limits
+        if ion in hist_range_dict:
+            my_hist_dict=hist_range_dict[ion]
+        else:
+            #empty dictionary
+            my_hist_dict={}
+
+        #plot histograms of plot_vars
+        for var in plot_var:
+            if var in my_hist_dict.keys():
+                hist_range = my_hist_dict[var]
+            else:
+                hist_range=None
+
+            fig = plot_histo(df, var, ion=ion, bins=15, hist_range=hist_range)
+            fig.savefig(f"{outdir}/{var}_{z:0.2f}.png", dpi=400)
+            plt.close(fig)

@@ -275,8 +275,8 @@ class absorber_extractor():
         for i in range(n_abs):
             #load data for calculating properties
             start, end = self.ice_intervals[i]
-            dl = self.data['dl'][start:end]
-            density = self.data[('gas', 'density')][start:end]
+            dl = self.data['dl'][start:end].in_units('cm')
+            density = self.data[('gas', 'density')][start:end].in_units('g/cm**3')
             tot_density = np.sum(dl*density)
 
             #calculate column density
