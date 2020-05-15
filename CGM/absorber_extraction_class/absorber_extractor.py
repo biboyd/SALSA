@@ -211,7 +211,7 @@ class absorber_extractor():
         self.ds.close()
         self.ray.close()
 
-    def get_ice_absorbers(self, fields=None, unit_dict=None):
+    def get_ice_absorbers(self, fields=None, user_unit_dict=None):
         """
         Use the ICE method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
@@ -224,7 +224,7 @@ class absorber_extractor():
                     absorbers. None defaults to default_ice_fields in
                     general_utils.filter_definitions
 
-            unit_dict : dict : dictionary of fields and corresponding units to
+            user_unit_dict : dict : dictionary of fields and corresponding units to
                     use for each field. None defaults to default_units
                     _dict in
                     general_utils.filter_definitions
@@ -241,12 +241,14 @@ class absorber_extractor():
             fields = default_ice_fields
 
         #use default unit dict
-        if unit_dict is None:
+        if user_unit_dict is None:
             unit_dict = default_units_dict
         #update default dict with specified units
         else:
-            unit_dict = default_units_dict.update(unit_dict)
+            unit_dict = default_units_dict
+            unit_dict.update(user_unit_dict)
 
+        print(unit_dict)
         # line information for absorbers
         line_info = [('name', 'S8'),
                      ('wave', np.float64),
@@ -290,9 +292,9 @@ class absorber_extractor():
 
             #calculate other field averages
             for fld in fields:
-                fld_data = self.data[fld][start:end].in_units( unit_dict[fld] )
+                fld_data = self.data[fld][start:end]
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
-                stats_table[fld][i] = avg_fld
+                stats_table[fld][i] = avg_fld.in_units( unit_dict[fld] )
 
         self.ice_table = stats_table
         return stats_table
