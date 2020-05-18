@@ -83,7 +83,7 @@ def random_rays(dsname, center,
                 length=200,
                 bulk_velocity=None,
                 line_list=['H I', 'C IV', 'O VI'],
-                other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius'), 'radial_velocity'],
+                other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius'), 'radial_velocity', ('index', 'grid_indices')],
                 out_dir='./',
                 parallel=True,
                 seed=None):
