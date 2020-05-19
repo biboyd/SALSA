@@ -159,7 +159,7 @@ def create_frames(rays,
 
         if mp.spectacle_table is not None:
             outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.h5"
-            mp.ice_table.write(outfile, overwrite=True)
+            mp.spectacle_table.write(outfile, overwrite=True)
 
         # close files/figures
         mp.close()

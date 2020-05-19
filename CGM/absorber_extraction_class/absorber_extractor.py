@@ -295,7 +295,11 @@ class absorber_extractor():
             for fld in fields:
                 fld_data = self.data[fld][start:end]
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
-                stats_table[fld][i] = avg_fld.in_units( unit_dict[fld] )
+
+                if fld in unit_dict.keys():
+                    stats_table[fld][i] = avg_fld.in_units( unit_dict[fld] )
+                else:
+                    stats_table[fld][i] = avg_fld
 
         self.ice_table = stats_table
         return stats_table
@@ -362,7 +366,7 @@ class absorber_extractor():
                 self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
                 self.num_spectacle = len(good_lines)
                 line_stats=self.spectacle_model.line_stats(vel_array*u.Unit('km/s'))
-                
+
                 #add redshift
                 line_stats['redshift'] = self.ds.current_redshift
 
