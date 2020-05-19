@@ -33,31 +33,25 @@ def double_hist(data1, data2, bins, hist_range=None, ax=None, color1='tab:blue',
     return fig, ax
 
 
-def load_files(ds, refinement='cool', ion="O VI", cut1="cgm", cut2=None):
+def load_files(ds, refinement='cool', ion="O VI", cuts=["cgm"]):
     ds_fname = f"/mnt/gs18/scratch/users/boydbre1/cosmological/{refinement}_refinement/{ds}/{ds}"
 
     ion_u = "_".join(ion.split(" "))
     #load data
     dataDir= f"{homeDir}/data/absorber_data/{refinement}_refinement/ion_{ion_u}/"
 
-    # read in cut1 file
-    cut1_u = "_".join(cut1.split(" "))
-    cut1_file = f"{dataDir}/{cut1_u}/{ds}_absorbers.h5"
-    cut1_table = Table.read(cut1_file)
+    # load tables
+    table_list=[]
+    for c in cuts:
+        c_u = "_".join(c.split(" "))
+        c_file = f"{dataDir}/{c_u}/{ds}_absorbers.h5"
+        c_table = Table.read(c_file)
+        c_table['cuts'] = cut_alias_dict[c_u]
 
-    cut1_table['cuts'] = cut_alias_dict[cut1_u]
+        table_list.append(c_table)
 
-    #read in cut1 file
-    if cut2 is None:
-        final_table = cut1_table
-
-    else:
-        cut2_u = "_".join(cut2.split(" "))
-        cut2_file = f"{dataDir}/{cut2_u}/{ds}_absorbers.h5"
-        cut2_table = Table.read(cut2_file)
-        cut2_table['cuts'] = cut_alias_dict[cut2_u]
-
-        final_table = vstack([cut1_table, cut2_table])
+    #combine tables 
+    final_table = vstack(table_list)
 
     #try to convert to pandas
     try:

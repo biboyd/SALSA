@@ -4,13 +4,49 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import yt
-import sys
+import argparse
 
 from os import makedirs
 import seaborn as sns
 
 from CGM.absorber_analysis.helper_functions import double_hist, load_files, homeDir
 from CGM.general_utils.filter_definitions import cut_alias_dict, axis_labels_dict, hist_range_dict
+
+def main(df, ion, cuts, outdir):
+    #load dataframe
+    z=df['redshift'][0]
+
+    # LOG SOME VARS FOR PAIRPLOT
+    variables =['density', 'metallicity', 'temperature']
+    for v in variables:
+        logv = 'log_' + v
+        df[logv] = np.log10(df[v])
+
+    plot_var = ['col_dens', 'log_density', 'log_temperature', 'log_metallicity', 'radius', 'radial_velocity']
+
+    #plot pairplot
+    pp =create_pairplot(df, plot_var=plot_var)
+    pp.savefig(f"{outdir}/pairplot_{z:0.2f}.png")
+
+    #make double hist if just two cuts
+    if len(cuts)==2:
+        # check general_utils for dictionary of limits
+        if ion in hist_range_dict:
+            my_hist_dict=hist_range_dict[ion]
+        else:
+            #empty dictionary
+            my_hist_dict={}
+
+        #plot histograms of plot_vars
+        for var in plot_var:
+            if var in my_hist_dict.keys():
+                hist_range = my_hist_dict[var]
+            else:
+                hist_range=None
+
+            fig = plot_histograms(df, var, ion=ion, bins=15, hist_range=hist_range)
+            fig.savefig(f"{outdir}/{var}_{z:0.2f}.png", dpi=400)
+            plt.close(fig)
 
 #MAKE b histogram
 def b_histo(spect_df, z, b_lim=None, bins=15, ion="O VI",outdir='./', filtered=False):
@@ -39,7 +75,7 @@ def b_histo(spect_df, z, b_lim=None, bins=15, ion="O VI",outdir='./', filtered=F
     fig.savefig(f"{outdir}/b_inflow_outflow_{ion_u}_{z:0.2f}.png", dpi=400)
 
 
-def plot_histo(df, var, ion="O VI", bins=15, hist_range=None, outdir='./'):
+def plot_histograms(df, var, ion="O VI", bins=15, hist_range=None, outdir='./'):
 
     #default hist_range to min/max
     if hist_range is None:
@@ -94,57 +130,35 @@ def create_pairplot(df, plot_var):
 # run plot functions
 if __name__ == '__main__':
 
+    #create parser
+    parser = argparse.ArgumentParser(description='Process cuts and stuff')
+    parser.add_argument("--ds", type=str, help="The dataset name (ie RD0020)",
+                        required=True)
+    parser.add_argument("-i", "--ion", type=str,
+                        help='The ion to look at (ie "H I", "O VI")',
+                        required=True)
+    parser.add_argument("-r", "--refinement", type=str,
+                        help="Refinement scheme, cool or nat",
+                        choices=['cool', 'nat'], default='cool')
+    parser.add_argument("-c", "--cut", type=str, default='cgm', nargs="*")
+
+    parser.parse_args()
     #define data set info
-    dsname=sys.argv[1]
-    ion=sys.argv[2]
-    ref = sys.argv[3]
-    cut1 = sys.argv[4]
+    dsname=parser.ds
+    ion=parser.ion
+    ref = parser.refinement
+    cuts = parser.cut
 
     ion_u="_".join(ion.split(" "))
     outdir=f"{homeDir}/data/absorber_data/{ref}_refinement/ion_{ion_u}/plots"
 
-    cut1_u = "_".join( cut1.split(" ") )
-    if len(sys.argv) == 6:
-        cut2 = sys.argv[5]
-        cut2_u = "_".join( cut2.split(" ") )
-        outdir+=f"/{cut1_u}_v_{cut2_u}/"
-    else:
-        cut2=None
-        outdir+=f"/{cut1_u}/"
+    cut_u = []
+    for c in cuts:
+        cut_u.append("_".join( c.split() ))
+
+    outcut="_v_".join(cut_u)
+    outdir+=f"/{outcut}"
 
     makedirs(outdir, exist_ok=True)
 
-    #load dataframe
-    df = load_files(dsname, ion=ion, refinement=ref, cut1=cut1, cut2=cut2)
-    z=df['redshift'][0]
-
-    # LOG SOME VARS FOR PAIRPLOT
-    variables =['density', 'metallicity', 'temperature']
-    for v in variables:
-        logv = 'log_' + v
-        df[logv] = np.log10(df[v])
-
-    plot_var = ['col_dens', 'log_density', 'log_temperature', 'log_metallicity', 'radius', 'radial_velocity']
-
-    #plot pairplot
-    pp =create_pairplot(df, plot_var=plot_var)
-    pp.savefig(f"{outdir}/pairplot_{z:0.2f}.png")
-
-    if cut2 is not None:
-        # check general_utils for dictionary of limits
-        if ion in hist_range_dict:
-            my_hist_dict=hist_range_dict[ion]
-        else:
-            #empty dictionary
-            my_hist_dict={}
-
-        #plot histograms of plot_vars
-        for var in plot_var:
-            if var in my_hist_dict.keys():
-                hist_range = my_hist_dict[var]
-            else:
-                hist_range=None
-
-            fig = plot_histo(df, var, ion=ion, bins=15, hist_range=hist_range)
-            fig.savefig(f"{outdir}/{var}_{z:0.2f}.png", dpi=400)
-            plt.close(fig)
+    main(df, ion, cuts, outdir)
