@@ -142,12 +142,12 @@ if __name__ == '__main__':
                         choices=['cool', 'nat'], default='cool')
     parser.add_argument("-c", "--cut", type=str, default='cgm', nargs="*")
 
-    parser.parse_args()
+    args = parser.parse_args()
     #define data set info
-    dsname=parser.ds
-    ion=parser.ion
-    ref = parser.refinement
-    cuts = parser.cut
+    dsname= args.ds
+    ion= args.ion
+    ref = args.refinement
+    cuts = args.cut
 
     ion_u="_".join(ion.split(" "))
     outdir=f"{homeDir}/data/absorber_data/{ref}_refinement/ion_{ion_u}/plots"
@@ -160,5 +160,7 @@ if __name__ == '__main__':
     outdir+=f"/{outcut}"
 
     makedirs(outdir, exist_ok=True)
-
+    
+    #load dataframe 
+    df = load_files(dsname, ion=ion, refinement=ref, cuts=cuts)
     main(df, ion, cuts, outdir)
