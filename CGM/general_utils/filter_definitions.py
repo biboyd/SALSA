@@ -57,7 +57,9 @@ def parse_cut_filter(cuts):
 cut_alias_dict = dict(cgm="CGM", ism="ISM",
                  cgm_hot="Hot T>1e5", cgm_cold="Cold T<1e5",
                  cgm_inflow="Inflow", cgm_outflow="Outflow",
-                 cgm_high_OVI="f_ovi > 0.1", cgm_low_OVI="f_ovi < 0.1")
+                 cgm_high_OVI="f_ovi > 0.1", cgm_low_OVI="f_ovi < 0.1",
+                 cgm_hot_inflow="Hot Inflow T>1e5", cgm_hot_outflow="Hot Outflow T>1e5",
+                 cgm_cold_inflow="Cold Inflow T>1e5", cgm_cold_outflow="Cold Outflow T<1e5")
 # labels to use in final plot instead
 
 axis_labels_dict={'log_density':"Log( Density ) ($g/cm^3$)",
