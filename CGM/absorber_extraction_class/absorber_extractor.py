@@ -253,7 +253,8 @@ class absorber_extractor():
                      ('wave', np.float64),
                      ('redshift', np.float64),
                      ('col_dens', np.float64),
-                     ('delta_v', np.float64)]
+                     ('delta_v', np.float64),
+                     ('interval', np.int32, (2,))]
 
         # get name of columns and type of data for each
         name_type = line_info.copy()
@@ -278,6 +279,7 @@ class absorber_extractor():
         for i in range(n_abs):
             #load data for calculating properties
             start, end = self.ice_intervals[i]
+            stats_table['interval'][i] = [start, end]
             dl = self.data['dl'][start:end].in_units('cm')
             density = self.data[('gas', 'density')][start:end].in_units('g/cm**3')
             tot_density = np.sum(dl*density)
