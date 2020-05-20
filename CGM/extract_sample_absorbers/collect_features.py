@@ -154,6 +154,7 @@ def create_frames(rays,
         ray_index = int(ray_num)
         # save absorber data
         if mp.ice_table is not None:
+            mp.ice_table['absorber_index']=np.empty(mp.num_ice, dtype="S8")
             # add absorber index
             start = 65 # Ascii number for 'A'
             for i in range(mp.num_ice):
@@ -163,6 +164,7 @@ def create_frames(rays,
             mp.ice_table.write(outfile, overwrite=True)
 
         if mp.spectacle_table is not None:
+            mp.spectacle_table['absorber_index']=np.empty(mp.num_spectacle, dtype=f"S{len(ray_num)+1}")
             # add absorber index
             start = 65 # Ascii number for 'A'
             for i in range(mp.num_spectacle):
