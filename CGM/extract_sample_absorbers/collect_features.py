@@ -154,10 +154,20 @@ def create_frames(rays,
         ray_index = int(ray_num)
         # save absorber data
         if mp.ice_table is not None:
+            # add absorber index
+            start = 65 # Ascii number for 'A'
+            for i in range(mp.num_ice):
+                mp.ice_table['absorber_index'][i] = f"{ray_num}{chr(start+i)}"
+
             outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.h5"
             mp.ice_table.write(outfile, overwrite=True)
 
         if mp.spectacle_table is not None:
+            # add absorber index
+            start = 65 # Ascii number for 'A'
+            for i in range(mp.num_spectacle):
+                mp.spectacle_table['absorber_index'][i] = f"{ray_num}{chr(start+i)}"
+
             outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.h5"
             mp.spectacle_table.write(outfile, overwrite=True)
 
