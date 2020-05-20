@@ -45,13 +45,19 @@ def load_files(ds, refinement='cool', ion="O VI", cuts=["cgm"]):
     for c in cuts:
         c_u = "_".join(c.split(" "))
         c_file = f"{dataDir}/{c_u}/{ds}_absorbers.h5"
-        c_table = Table.read(c_file)
-        c_table['cuts'] = cut_alias_dict[c_u]
+        try: 
+            c_table = Table.read(c_file)
+            c_table['cuts'] = cut_alias_dict[c_u]
 
-        table_list.append(c_table)
+            table_list.append(c_table)
+        except OSError:
+            print(f"couldn't load {c_file}")
 
-    #combine tables 
-    final_table = vstack(table_list)
+    if len(table_list) == 0:
+        raise FileNotFoundError("Could not find any h5 files to load")
+    else:
+        #combine tables 
+        final_table = vstack(table_list)
 
     #try to convert to pandas
     try:

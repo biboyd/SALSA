@@ -107,7 +107,7 @@ def create_pairplot(df, plot_var):
     #create pairplot
     # MAKE AND SAVE PAIRPLOT
     sns.set_palette('colorblind')
-    pp= sns.pairplot(df, vars=plot_var, hue='cuts', markers='o', diag_kind='hist', corner=True, diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
+    pp= sns.pairplot(df, vars=plot_var, hue='cuts', markers='o', diag_kind='hist', corner=True)#, diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
     pp.fig.suptitle(f"{ion} properties for z= {df['redshift'][0]:0.2f}",size=18, y=1.05)
 
     # change the axis labels

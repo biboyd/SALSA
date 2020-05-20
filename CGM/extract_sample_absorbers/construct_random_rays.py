@@ -161,7 +161,7 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("Takes in 5 Arguments. Dataset_filename num_rays ray_lenght max_impact_param out_directory")
 
-    my_seed = 2020
+    my_seed = 2020 + 16*int(filename[-2:]) # this way each dataset has its own seed
     print(f"My seed is: {my_seed}")
     center, n_vec, rshift, bv = find_center(filename)
     random_rays(filename,
