@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --ntasks=32
+#SBATCH --ntasks=16
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4G
 #SBATCH -t 00:30:00
@@ -34,7 +34,7 @@ then
 #else
 #	rm -rf $outDir/*
 fi
-srun -n 32							\
+srun -n 16							\
 	python ~/Repo/CGM/CGM/extract_sample_absorbers/collect_features.py\
 		$dataFile $rayDir "$ionName" $outDir $frac "$cuts"
 
