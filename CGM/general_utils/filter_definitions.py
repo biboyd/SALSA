@@ -72,8 +72,8 @@ axis_labels_dict={'log_density':"Log( Density ) ($g/cm^3$)",
 # Histogram limits dictionary
 ovi_hist_dict = dict(col_dens=(13., 16.),
                       log_metallicity=(-2., 0.05),
-                      log_temperature=(4., 7.),
-                      log_density=(-28.75, -25))
+                      log_temperature=(4., 6.),
+                      log_density=(-28.75, -25.5))
 hist_range_dict = {"O VI":ovi_hist_dict}
 
 def ion_p(ion_name):
