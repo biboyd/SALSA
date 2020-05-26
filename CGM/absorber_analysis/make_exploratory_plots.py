@@ -12,7 +12,7 @@ import seaborn as sns
 from CGM.absorber_analysis.helper_functions import double_hist, load_files, homeDir
 from CGM.general_utils.filter_definitions import cut_alias_dict, axis_labels_dict, hist_range_dict
 
-def main(df, ion, cuts, outdir):
+def main(df, ion, cuts, cut_names_list, outdir):
     #load dataframe
     z=df['redshift'][0]
 
@@ -25,7 +25,7 @@ def main(df, ion, cuts, outdir):
     plot_var = ['col_dens', 'log_density', 'log_temperature', 'log_metallicity', 'radius', 'radial_velocity']
 
     #plot pairplot
-    pp =create_pairplot(df, plot_var=plot_var)
+    pp =create_pairplot(df, plot_var=plot_var, plot_order=cut_names_list)
     pp.savefig(f"{outdir}/pairplot_{z:0.2f}.png")
 
     #make double hist if just two cuts
@@ -102,21 +102,32 @@ def plot_histograms(df, var, ion="O VI", bins=15, hist_range=None, outdir='./'):
 
     return fig
 
-def create_pairplot(df, plot_var):
+def create_pairplot(df, plot_var, plot_order=None):
 
+    if
     #create pairplot
     # MAKE AND SAVE PAIRPLOT
     sns.set_palette('colorblind')
-    pp= sns.pairplot(df, vars=plot_var, hue='cuts', markers='o', diag_kind='hist', corner=True)#, diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
+    pp= sns.pairplot(df, vars=plot_var,
+                     hue='cuts', hue_order=plot_order,
+                     markers='o', diag_kind='hist', corner=True)#, diag_kws=dict(alpha=0.7), plot_kws=dict(alpha=0.7))
+
     pp.fig.suptitle(f"{ion} properties for z= {df['redshift'][0]:0.2f}",size=18, y=1.05)
 
-    # change the axis labels
+    # change the axis labels/ set axis limits
     n_var=len(plot_var)
     for i in range(n_var):
         for j in range(i+1):
             #find x/y label
             xlabel = pp.axes[i][j].get_xlabel()
             ylabel = pp.axes[i][j].get_ylabel()
+
+            # Set axis limits
+            if xlabel in hist_range_dict.keys():
+                pp.axes[i][j].set_xlim(hist_range_dict[xlabel])
+
+            if ylabel in hist_range_dict.keys():
+                pp.axes[i][j].set_ylim(hist_range_dict[ylabel])
 
             # replace if found in labels dict
             if xlabel in axis_labels_dict.keys():
@@ -160,7 +171,7 @@ if __name__ == '__main__':
     outdir+=f"/{outcut}"
 
     makedirs(outdir, exist_ok=True)
-    
-    #load dataframe 
-    df = load_files(dsname, ion=ion, refinement=ref, cuts=cuts)
-    main(df, ion, cuts, outdir)
+
+    #load dataframe
+    df, cut_names_list = load_files(dsname, ion=ion, refinement=ref, cuts=cuts, count_absorbers=True)
+    main(df, ion, cuts, cut_names_list, outdir)
