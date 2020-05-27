@@ -52,12 +52,20 @@ def combine_astropy_files(directory, kw='ice', outfile=None):
     for f in files:
         tables.append(QTable.read(f"{directory}/{f}"))
 
-    #combine tables
-    main_table = vstack(tables)
+    if len(tables) >0:
+        #combine tables
+        main_table = vstack(tables)
 
-    #write table
-    if outfile is not None:
-        main_table.write(outfile, overwrite=True)
+        #write table
+        if outfile is not None:
+            main_table.write(outfile, overwrite=True)
+    else:
+        out_err = outfile.split('.')[0] + ".out"
+        #write out dummy 
+        f= open(out_err, 'w')
+        f.write(f"No files found in {directory} using key_words= ['ray', {kw}]")
+        f.close()
+        main_table = None
     return main_table
 
 if __name__ == '__main__':

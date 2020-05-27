@@ -24,18 +24,18 @@ def main(df, ion, cuts, cut_names_list, outdir):
 
     plot_var = ['col_dens', 'log_density', 'log_temperature', 'log_metallicity', 'radius', 'radial_velocity']
 
+    # check general_utils for dictionary of limits
+    if ion in hist_range_dict:
+        my_hist_dict=hist_range_dict[ion]
+    else:
+        #empty dictionary
+        my_hist_dict={}
     #plot pairplot
-    pp =create_pairplot(df, plot_var=plot_var, plot_order=cut_names_list)
+    pp =create_pairplot(df, plot_var=plot_var, plot_order=cut_names_list, range_dict=my_hist_dict)
     pp.savefig(f"{outdir}/pairplot_{z:0.2f}.png")
 
     #make double hist if just two cuts
     if len(cuts)==2:
-        # check general_utils for dictionary of limits
-        if ion in hist_range_dict:
-            my_hist_dict=hist_range_dict[ion]
-        else:
-            #empty dictionary
-            my_hist_dict={}
 
         #plot histograms of plot_vars
         for var in plot_var:
@@ -102,9 +102,8 @@ def plot_histograms(df, var, ion="O VI", bins=15, hist_range=None, outdir='./'):
 
     return fig
 
-def create_pairplot(df, plot_var, plot_order=None):
+def create_pairplot(df, plot_var, plot_order=None, range_dict={}):
 
-    if
     #create pairplot
     # MAKE AND SAVE PAIRPLOT
     sns.set_palette('colorblind')
@@ -123,11 +122,11 @@ def create_pairplot(df, plot_var, plot_order=None):
             ylabel = pp.axes[i][j].get_ylabel()
 
             # Set axis limits
-            if xlabel in hist_range_dict.keys():
-                pp.axes[i][j].set_xlim(hist_range_dict[xlabel])
+            if xlabel in range_dict.keys():
+                pp.axes[i][j].set_xlim(range_dict[xlabel])
 
-            if ylabel in hist_range_dict.keys():
-                pp.axes[i][j].set_ylim(hist_range_dict[ylabel])
+            if ylabel in range_dict.keys():
+                pp.axes[i][j].set_ylim(range_dict[ylabel])
 
             # replace if found in labels dict
             if xlabel in axis_labels_dict.keys():
@@ -151,6 +150,8 @@ if __name__ == '__main__':
     parser.add_argument("-r", "--refinement", type=str,
                         help="Refinement scheme, cool or nat",
                         choices=['cool', 'nat'], default='cool')
+    parser.add_argument("-m", "--max-impact", type=int, 
+                        help="Max impact parameter sampled", default=200)
     parser.add_argument("-c", "--cut", type=str, default='cgm', nargs="*")
 
     args = parser.parse_args()
@@ -158,10 +159,12 @@ if __name__ == '__main__':
     dsname= args.ds
     ion= args.ion
     ref = args.refinement
+    max_impact= args.m
     cuts = args.cut
 
     ion_u="_".join(ion.split(" "))
-    outdir=f"{homeDir}/data/absorber_data/{ref}_refinement/ion_{ion_u}/plots"
+    maindir=f"{homeDir}/data/absorber_data/{ref}_refinement/max_impact{max_impact}/ion_{ion_u}"
+    outdir=f"{homeDir}/{maindir}/plots"
 
     cut_u = []
     for c in cuts:
@@ -173,5 +176,5 @@ if __name__ == '__main__':
     makedirs(outdir, exist_ok=True)
 
     #load dataframe
-    df, cut_names_list = load_files(dsname, ion=ion, refinement=ref, cuts=cuts, count_absorbers=True)
+    df, cut_names_list = load_files(dsname, maindir, cuts=cuts, count_absorbers=True)
     main(df, ion, cuts, cut_names_list, outdir)

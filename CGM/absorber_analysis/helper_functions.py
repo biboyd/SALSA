@@ -33,12 +33,8 @@ def double_hist(data1, data2, bins, hist_range=None, ax=None, color1='tab:blue',
     return fig, ax
 
 
-def load_files(ds, refinement='cool', ion="O VI", cuts=["cgm"], count_absorbers=False):
-    ds_fname = f"/mnt/gs18/scratch/users/boydbre1/cosmological/{refinement}_refinement/{ds}/{ds}"
+def load_files(ds, dataDir, cuts=["cgm"], count_absorbers=False):
 
-    ion_u = "_".join(ion.split(" "))
-    #load data
-    dataDir= f"{homeDir}/data/absorber_data/{refinement}_refinement/ion_{ion_u}/"
 
     # load tables
     table_list=[]
