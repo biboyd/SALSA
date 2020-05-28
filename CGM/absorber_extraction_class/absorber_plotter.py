@@ -14,7 +14,7 @@ from numpy.linalg import norm
 import astropy.units  as u
 
 path.insert(0, "/mnt/home/boydbre1/Repo")
-from CGM.general_utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict
+from CGM.general_utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict, default_cloud_dict
 from CGM.general_utils.center_finder import find_center
 from CGM.absorber_extraction_class.absorber_extractor import absorber_extractor
 
@@ -131,10 +131,9 @@ class absorber_plotter(absorber_extractor):
         self.plot_spectacle = plot_spectacle
 
         if cloud_min is None:
-            min_defaults = {'H I': 12.5, 'Si II': 11, 'Si IV': 12,
-                            'C IV':13, 'O VI':13}
-            if self.ion_name in min_defaults.keys():
-                self.cloud_min = min_defaults[self.ion_name]
+
+            if self.ion_name in default_cloud_dict.keys():
+                self.cloud_min = default_cloud_dict[self.ion_name]
             else:
                 self.cloud_min=13
         else:

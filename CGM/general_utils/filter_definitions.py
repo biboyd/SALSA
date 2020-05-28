@@ -117,3 +117,6 @@ default_limits_dict = dict(velocity_los=[-600, 600],
                            metallicity=[0, 1],
                            temperature=[1e4, 1e9],
                            density=[1e-30, 1e-26])
+
+default_cloud_dict = {'H I': 12.5, 'Si II': 11, 'Si IV': 12,
+                      'C IV':13, 'O VI':12.8}
