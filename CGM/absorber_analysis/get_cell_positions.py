@@ -1,6 +1,7 @@
 import numpy as np
 import yt
 from astropy.table import Table
+import sys
 
 from CGM.general_utils.filter_definitions import parse_cut_filter
 
@@ -11,7 +12,7 @@ def main(table_file,raydir, cut_str, outdir):
     table = Table.read(table_file)
 
     positions =[]
-    for index, start, end in table[['absorber_index', 'interval_start', 'interval_end']]:
+    for index, s, e in table[['absorber_index', 'interval_start', 'interval_end']]:
         ray_num=index[:-1]
 
         ray = yt.load(f"{raydir}/ray{ray_num}.h5")
@@ -20,7 +21,7 @@ def main(table_file,raydir, cut_str, outdir):
 
         data = ray.all_data()
         for fil in cut_filters:
-            data = curr_data.cut_region(fil)
+            data = data.cut_region(fil)
 
         coords, =np.dstack([data['x'][s:e].in_units('code_length'),
                             data['y'][s:e].in_units('code_length'),
@@ -43,4 +44,4 @@ if __name__ == '__main__':
     raydir=f"/mnt/gs18/scratch/users/boydbre1/analysis/cool_refinement/{ds}/max_impact200/rays/"
 
     pos = main(table_file, raydir, "cgm", data_dir)
-    np.save(f"{data_dir}/{ds}_positions.npy", pos)
+    np.save(f"{data_dir}/cgm/{ds}_positions.npy", pos)
