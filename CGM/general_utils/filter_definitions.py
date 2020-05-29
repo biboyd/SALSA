@@ -54,6 +54,7 @@ def parse_cut_filter(cuts):
 
     return cut_filters
 
+#Plotting defaults/dictionaries
 cut_alias_dict = dict(cgm="CGM", ism="ISM",
                  cgm_hot="Hot T>1e5", cgm_cold="Cold T<1e5",
                  cgm_inflow="Inflow", cgm_outflow="Outflow",
@@ -70,13 +71,16 @@ axis_labels_dict={'log_density':"Log( Density ) ($g/cm^3$)",
                   'radial_velocity': "Radial Velocity ($km/s$)"}
 
 # Histogram limits dictionary
-ovi_hist_dict = dict(col_dens=(13., 16.),
+ovi_range_dict = dict(col_dens=(13., 16.),
+                      metallicity=(1e-2, 10**0.05),
                       log_metallicity=(-2., 0.05),
+                      temperature=(1e4, 1e6),
                       log_temperature=(4., 6.),
+                      density=(10**-28.75, 10**-25.5),
                       log_density=(-28.75, -25.5),
                       radius=(0, 200),
                       radial_velocity=(-300,300))
-hist_range_dict = {"O VI":ovi_hist_dict}
+hist_range_dict = {"O VI":ovi_range_dict}
 
 def ion_p(ion_name):
     """
