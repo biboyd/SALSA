@@ -252,6 +252,7 @@ class absorber_extractor():
                      ('redshift', np.float64),
                      ('col_dens', np.float64),
                      ('delta_v', np.float64),
+                     ('vel_dispersion', np.float64),
                      ('interval_start', np.int32),
                      ('interval_end', np.int32)]
 
@@ -293,6 +294,9 @@ class absorber_extractor():
             avg_vel_los = np.sum(dl*density*vel_los_dat)/tot_density
             stats_table['delta_v'][i] = avg_vel_los
 
+            #calculate velocity dispersion (unweighted for now)
+            stats_table['vel_dispersion'] = np.std(vel_los_dat)
+            
             #calculate other field averages
             for fld in fields:
                 fld_data = self.data[fld][start:end]
