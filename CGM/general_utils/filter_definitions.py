@@ -71,7 +71,7 @@ axis_labels_dict={'log_density':"Log( Density ) ($g/cm^3$)",
                   'radial_velocity': "Radial Velocity ($km/s$)"}
 
 # Histogram limits dictionary
-ovi_range_dict = dict(col_dens=(13., 16.),
+ovi_range_dict = dict(col_dens=(12.8, 16.),
                       metallicity=(1e-2, 10**0.05),
                       log_metallicity=(-2., 0.05),
                       temperature=(1e4, 1e6),

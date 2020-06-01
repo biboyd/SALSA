@@ -159,12 +159,12 @@ if __name__ == '__main__':
     dsname= args.ds
     ion= args.ion
     ref = args.refinement
-    max_impact= args.m
+    max_impact= args.max_impact
     cuts = args.cut
 
     ion_u="_".join(ion.split(" "))
     maindir=f"{homeDir}/data/absorber_data/{ref}_refinement/max_impact{max_impact}/ion_{ion_u}"
-    outdir=f"{homeDir}/{maindir}/plots"
+    outdir=f"{maindir}/plots"
 
     cut_u = []
     for c in cuts:
@@ -173,6 +173,7 @@ if __name__ == '__main__':
     outcut="_v_".join(cut_u)
     outdir+=f"/{outcut}"
 
+    print(outdir)
     makedirs(outdir, exist_ok=True)
 
     #load dataframe

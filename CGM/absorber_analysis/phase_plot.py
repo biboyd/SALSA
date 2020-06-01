@@ -16,6 +16,7 @@ def main(args):
     max_impact = args.m
     cut = args.cut
 
+    yt.enable_parallelism()
     ion_u = "_".join(ion.split())
     cut_u = "_".join(cut.split())
 

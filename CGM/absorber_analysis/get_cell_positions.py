@@ -39,7 +39,7 @@ def main(table_file,raydir, cut_str, outdir):
 if __name__ == '__main__':
     ds=sys.argv[1]
 
-    data_dir="/mnt/home/boydbre1/data/absorber_data/cool_refinement/ion_O_VI/"
+    data_dir="/mnt/home/boydbre1/data/absorber_data/cool_refinement/max_impact200/ion_O_VI/"
     table_file = f"{data_dir}/cgm/{ds}_absorbers.h5"
     raydir=f"/mnt/gs18/scratch/users/boydbre1/analysis/cool_refinement/{ds}/max_impact200/rays/"
 
