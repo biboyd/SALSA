@@ -295,7 +295,7 @@ class absorber_extractor():
             stats_table['delta_v'][i] = avg_vel_los
 
             #calculate velocity dispersion (unweighted for now)
-            stats_table['vel_dispersion'] = np.std(vel_los_dat)
+            stats_table['vel_dispersion'][i] = np.std(vel_los_dat)
             
             #calculate other field averages
             for fld in fields:
