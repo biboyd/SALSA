@@ -23,6 +23,81 @@ class absorber_plotter(absorber_extractor):
     Create's plot to easily see where absorbers are found along the light ray
     both directly and through resulting spectra. Uses absorber extractor as base
     class.
+
+    Parameters
+    ----------
+
+    ds_filename : string
+        Path/name of the enzo dataset to be loaded
+
+    ray_filename : string
+        Path/name of the hdf5 ray file to be loaded
+
+    ion_name : string
+        Name of the ion to plot in number density plot
+
+    cut_region_filters : list of str
+        a list of filters defined by the way you use Cut Regions in YT
+
+    slice_field : string
+        Field to plot in slice plot. defaults to ion_name's number density
+
+    absorber_fields : list of strings
+        Additional ions to include in plots/Spectra, enter as list.
+
+    north_vector : array type
+        vector used to fix the orientation of the slice plot defaults to z-axis
+
+    center_gal : array type
+        center of galaxy in code_length. if None, then defaults to domain_center
+
+    wavelength_center : float
+        Wavelength to center spectrum plot on. defaults to the stringest known
+        spectral line of ion_name. in units of Angstrom
+
+    wavelength_width :float
+        sets the wavelength range of the spectrum plot. defaults to 300 Angstroms
+
+    velocity_width :float
+        sets the velocity range in spectrum plot in units of km/s
+
+    wavelegnth_res :float
+        width of wavelength bins in spectrum plot. default 0.1 Angstrom
+
+    velocity_res :float
+        width of velocity bins in spectrum plot. default 10 km/s
+
+    redshift :float
+        redshift of galaxy's motion. adjusts velocity plot calculation.
+
+    bulk_velocity : array type
+        bulk velocity of the galaxy in km/s
+
+    use_spectacle : bool
+        Choose whether to use spectacle fit to compute col dense
+
+    spectacle_res : double
+        Set minimum resolution that spectacle will attempt to fit lines to. If
+        None, default to velocity_res
+
+    markers :bool
+        whether to include markers on light ray and number density plot
+
+    mark_plot_args : dict
+        set the property of markers if they are to be plotted.
+        optional settings are:
+            marker_spacing : determines how far apart markers are in kpc
+            marker_shape : shape of marker see matplotlib for notation
+            marker_cmap : colormap used to differentiate markers any other property that can be passer to matplotlib scatter
+
+    figure :matplotlib figure
+        where the multi_plot will be plotted. creates one if none is specified.
+
+
+    Notes
+    ------
+    ion names should be in following notaion: neutral Hydrogen-->"H I",
+    5-times ionized Oxygen --> "O VI"
     """
 
     def __init__(self,
@@ -54,40 +129,7 @@ class absorber_plotter(absorber_extractor):
                 mark_plot_args=None,
                 figure=None):
         """
-        init file names and ion name
-
-        Parameters:
-        ds_filename : Path/name of the enzo dataset to be loaded
-        ray_filename : Path/name of the hdf5 ray file to be loaded
-        ion_name :string: Name of the ion to plot in number density plot
-        cut_region_filters : list of str: a list of filters defined by the way you use Cut Regions in YT
-        slice_field :string: Field to plot in slice plot. defaults to ion_name's number density
-        absorber_fields :list of strings: Additional ions to include in plots/Spectra, enter as list
-        north_vector :array type: vector used to fix the orientation of the slice plot defaults to z-axis
-        center_gal :array type: center of galaxy in code_length. if None, then defaults to domain_center
-        wavelength_center :float: Wavelength to center spectrum plot on. defaults to the stringest
-                        known spectral line of ion_name. in units of Angstrom
-        wavelength_width :float: sets the wavelength range of the spectrum plot. defaults
-                        to 300 Angstroms
-        velocity_width :float: sets the velocity range in spectrum plot in units of km/s
-        wavelegnth_res :float: width of wavelength bins in spectrum plot. default 0.1 Angstrom
-        velocity_res :float: width of velocity bins in spectrum plot. default 10 km/s
-        redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
-        bulk_velocity : array type : bulk velocity of the galaxy in km/s
-        use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
-        spectacle_res : double : Set minimum resolution that spectacle will attempt
-                                 to fit lines to. If None, default to velocity_res
-        markers :bool: whether to include markers on light ray and number density plot
-        mark_plot_args : dict : set the property of markers if they are to be plotted.
-                        optional settings are:
-                        marker_spacing : determines how far apart markers are in kpc
-                        marker_shape : shape of marker see matplotlib for notation
-                        marker_cmap : colormap used to differentiate markers
-                        any other property that can be passer to matplotlib scatter
-        ###NOTE### ion names should be in notaion:
-              Element symbol *space* roman numeral of ion level (i.e. "H I", "O VI")
-        figure :matplotlib figure: where the multi_plot will be plotted. creates one if
-                        none is specified.
+        constructor
         """
         #set file names and ion name
         self.ds_filename = ds_filename
@@ -340,14 +382,28 @@ class absorber_plotter(absorber_extractor):
         Use trident to plot the absorption spectrum of the ray in velocity
         space. Compute column densities with spectacle fits.
 
-        Parameters:
-            ax : a matplotlib axis in which to draw the velocity plot
-            annotate_column_density: bool : add a textbox reporting the calculated col
-                    densities by each method.
-        Returns:
-            velocity and flux arrays created by spectrum generator
-                units are km/s
+        Parameters
+        -----------
+        ax: matplotlib axis object, optional
+            an axis in which to draw the velocity plot. If None, no plot is
+            not drawn.
+            Default: None
+
+        annotate_column_density: bool, optional
+            if True, add a textbox reporting the calculated col densities
+            by each method to the plot.
+            Default: True
+
+        Returns
+        ----------
+            velocity: YT array
+                Array of velocity values of the generated spectra (in km/s)
+
+            flux: YT array
+                Array of the normalized flux values of the generated spectra
+
         """
+
         # add wav center first so it is set as zero point velocity by trident
         wav = int( np.round(self.wavelength_center) )
         line = f"{self.ion_name} {wav}"
@@ -420,12 +476,18 @@ class absorber_plotter(absorber_extractor):
         Use trident to plot the absorption spectrum of the ray. Plot in
         wavelegnth (lambda) space. Not formatted to be used in spectacle fitting
 
-        Parameters:
-            ax : a matplotlib axis in which to draw the spectra plot
+        Parameters
+        -----------
+        ax : matplotlib axis
+            axis in which to draw the spectra plot
 
-        Returns:
-            wavelength, flux arrays created by spectrum generator
-                units are angstrom and flux is normalized to continuum=1
+        Returns
+        --------
+            wavelength: YT array
+                Array of wavelength values of the generated spectra (in km/s)
+
+            flux: YT array
+                Array of the normalized flux values of the generated spectra
         """
         #set which ions to add to spectra
         ion_list = self.ion_list
@@ -469,14 +531,31 @@ class absorber_plotter(absorber_extractor):
 
         return wavelength, flux
 
-    def plot_num_density(self, ax_num_dense=None, ax_prop2=None, prop2_name='velocity_los', prop2_units=None, plot_kwargs={}):
+    def plot_num_density(self, ax_num_dense, ax_prop2=None,
+                         prop2_name='velocity_los', prop2_units=None,
+                         plot_kwargs={}):
         """
         Plots the number density at different lengths along the ray
 
-        Parameters:
-            ax : a matplotlib axis in which to draw the plot
-        Returns:
-            none
+        Parameters
+        ----------
+        ax_num_dense : matplotlib axis
+            axis in which to draw the number density plot
+
+        ax_prop2: matplotlib axis, optional
+            axis in which to draw the second field. if None, no plot is made
+            Default: None
+
+        prop2_name: str,optional
+            Field to plot in second plot.
+            Default:'velocity_los'
+
+        prop2_units: str, optional
+            The units to use in the second field.
+            Defaults: None
+        plot_kwargs: dict, optional
+            A Dictionary of plot kwargs to be passed to the pyplot.plot function.
+            Default: {}
         """
         #get list of num density  los velocity and corresponding lengths
         num_density = self.data[ion_p_num(self.ion_name)]
@@ -622,19 +701,28 @@ class absorber_plotter(absorber_extractor):
         combines the slice plot, number density plot, and spectrum plot into
         one image.
 
-        Parameters:
-            outfname=None : the file name/path in which to save the file defaults
-                              to being unsaved
+        Parameters
+        -----------
+        outfname: str , optional
+            the file name/path in which to save the file defaults to being unsaved.
+            Default: None
 
-            markers=True : boolean. adds markers to slice plot and number density
-                            to aid analysis between those plots.
+        markers: bool, optional
+            adds markers to slice plot and number density to aid analysis between those plots.
+            Default: True
 
-            cmap='magma' :     the color map to use for the slice plot
+        cmap:  Colormap, optional
+            the color map to use for the slice plot.
+            Default: magma
 
-        Returns:
-            fig : matplotlib figure: figure multi_plot is drawn on
-            axes : matplotlib axes: axes the three lower plots are drawn on
+        Returns
+        ---------
+        fig : matplotlib figure:
+            figure multi_plot is drawn on
+        axes : matplotlib axes
+            axes the three lower plots are drawn on
         """
+
         if (self.slice == None):
             #create the slicePlot using the field of the ion density
             self.create_slice(cmap = cmap)
@@ -662,7 +750,7 @@ class absorber_plotter(absorber_extractor):
         ax2 = self.fig.add_subplot(412)
         ax3 = self.fig.add_subplot(413)
 
-        self.plot_num_density(ax_num_dense=ax1, ax_prop2=ax2)
+        self.plot_num_density(ax1, ax_prop2=ax2)
         self.plot_vel_space(ax=ax3)
 
         axes= [ax1, ax2, ax3]

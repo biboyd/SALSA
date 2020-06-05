@@ -19,40 +19,75 @@ from CGM.general_utils.filter_definitions import ion_p_num, default_ice_fields, 
 class absorber_extractor():
     """
     Extracts absorbers from a trident lightray for a given ion species. Does This
-    through two methods, directly using ICE (Iterative Cloud Extraction) and
-    by fitting a synthetic spectra made by trident. Fit using spectacle
+    through two methods, by using ICE (Iterative Cloud Extraction) and
+    by fitting a synthetic spectra made by trident. Fit is done using spectacle
+
+    Parameters
+    --------------
+
+    ds_filename: string
+        Path/name of the enzo dataset to be loaded
+
+    ray_filename: string
+        Path/name of the hdf5 ray file to be loaded
+
+    ion_name: string, optional
+        Name of the ion to plot in number density plot
+        Default: "H I"
+
+    cut_region_filters: list of strings, optional
+        a list of filters defined by the way you use Cut Regions in YT
+        Default: None
+
+    wavelegnth_center: float, optional
+        The specific absorption line to look at (in unit Angstrom). None
+        defaults to strongest absorption line for specified ion
+        (using tridents ion table).
+        Default: None
+
+    velocity_res: float, optional
+        width of velocity bins in spectrum plot (in km/s).
+        Default: 10
+
+    redshift: float, optional
+        redshift of galaxy's motion. adjusts bulk velocity plot calculations.
+        Default: 0.
+
+    bulk_velocity: array type, optional
+        bulk velocity of the galaxy (in km/s)
+        Default: None
+
+    spectacle_res: float, optional
+        Set minimum resolution that spectacle will attempt to fit lines to.
+        (in km/s) If None, default to value of velocity_res
+        Default: None
+
+    spectacle_defaults: dict, optional
+        Dictionary passed to spectacle defining default parameters/ranges
+        when fitting absorption lines
+        Deafult: None
+
+    absorber_min: float, optional
+        Minimum Log Column Density that will be used to define an absorber.
+        If None, defaults to either default for specific ion or 13
+        Default: None
+
+    frac: float, optional
+        Parameter defining what fraction of the number density is being
+        accounted for in each iteration of the ICE method. Must be a number
+        between 0 and 1.
+        Default: 0.8
+
     """
 
-    def __init__(self,
-                ds_filename,
-                ray_filename,
-                ion_name='H I',
-                cut_region_filters=None,
-                wavelength_center=None,
-                velocity_res = 10,
-                redshift = 0,
-                bulk_velocity=None,
-                spectacle_defaults=None,
-                spectacle_res=None,
-                cloud_min=None,
-                frac=0.8):
-        """
-        init file names and ion name
+    def __init__(self, ds_filename, ray_filename,
+                ion_name='H I', cut_region_filters=None,
+                wavelength_center=None, velocity_res = 10,
+                redshift = 0, bulk_velocity=None,
+                spectacle_defaults=None, spectacle_res=None,
+                absorber_min=None, frac=0.8):
 
-        Parameters:
-        ds_filename : Path/name of the enzo dataset to be loaded
-        ray_filename : Path/name of the hdf5 ray file to be loaded
-        ion_name :string: Name of the ion to plot in number density plot
-        cut_region_filters : list of str: a list of filters defined by the way you use Cut Regions in YT
-        wavelegnth_center : bool : The specific absorption line to look at. None defaults to strongest
-                absorption line for specified ion (using tridents ion table). In angstrom
-        velocity_res :float: width of velocity bins in spectrum plot. default 10 km/s
-        redshift :float: redshift of galaxy's motion. adjusts velocity plot calculation.
-        bulk_velocity : array type : bulk velocity of the galaxy in km/s
-        use_spectacle : bool: Choose whether to use spectacle fit to compute col dense
-        spectacle_res : double : Set minimum resolution that spectacle will attempt
-                                 to fit lines to. If None, default to velocity_res
-        """
+
 
         #set file names and ion name
         self.ds_filename = ds_filename
@@ -76,17 +111,17 @@ class absorber_extractor():
             self.bulk_velocity = np.dot(ray_u, bulk_velocity)
             self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
-        if cloud_min is None:
+        if absorber_min is None:
             if self.ion_name in default_cloud_dict.keys():
-                self.cloud_min = default_cloud_dict[self.ion_name]
+                self.absorber_min = default_cloud_dict[self.ion_name]
             else:
-                self.cloud_min=13
+                self.absorber_min=13
         else:
-            self.cloud_min = cloud_min
+            self.absorber_min = absorber_min
 
         self.defaults_dict = {
             'bounds' :{
-                'column_density' : (self.cloud_min-0.5, 23)
+                'column_density' : (self.absorber_min-0.5, 23)
             },
             'fixed' : {
                 'delta_lambda' : True,
@@ -127,11 +162,14 @@ class absorber_extractor():
         """
         loads a new ray into the multi_plot class. (same dataset)
 
-        Parameters:
-            new_ray :str or yt.ray: either filename to rayfile or a trident ray
-                that's already opened
-        Returns:
-            none
+        Parameters
+        -----------
+        new_ray :str or yt.ray
+            either filename to rayfile or a trident ray that's already opened
+
+        Returns
+        ---------
+
         """
         #reset absorber extraction variables
         # variables to store raw info from the different methods
@@ -217,19 +255,24 @@ class absorber_extractor():
         weighted averages of yt fields (metallicity, temperature, etc.). All in
         a astropy QTable.
 
-        Parameters:
-            fields : list : list of yt fields to extract averages of for the
-                    absorbers. None defaults to default_ice_fields in
-                    general_utils.filter_definitions
+        Parameters
+        ----------
 
-            user_unit_dict : dict : dictionary of fields and corresponding units to
-                    use for each field. None defaults to default_units
-                    _dict in
-                    general_utils.filter_definitions
+        fields : list, optional
+            list of yt fields to extract averages of for the absorbers.
+            None defaults to default_ice_fields in general_utils.filter_definitions.
+            Defalut: None
 
-        Returns:
-            stats_table : astropy.table.QTable : QTable of all the absorbers and
-                their corresponding features.
+        user_unit_dict : dict, optional
+            dictionary of fields and corresponding units to use for each field.
+            None defaults to default_units_dict in general_utils.filter_definitions.
+            Default: None
+
+        Returns
+        ---------
+
+        stats_table : astropy.table.QTable
+            QTable of all the absorbers and their corresponding features.
         """
         # get absorber locations
         self.ice_intervals = self.run_ice()
@@ -296,7 +339,7 @@ class absorber_extractor():
 
             #calculate velocity dispersion (unweighted for now)
             stats_table['vel_dispersion'] = np.std(vel_los_dat)
-            
+
             #calculate other field averages
             for fld in fields:
                 fld_data = self.data[fld][start:end]
@@ -314,12 +357,11 @@ class absorber_extractor():
         """
         Uses spectacle to fit a trident made spectra of the specified ion.
 
-        Parameters:
-            none
-
-        Returns:
-            line_stats : astropy.QTable : Table including all line statistics
-                    found from spectacle's fit of the spectra.
+        Returns
+        ----------
+        line_stats : astropy.QTable
+            Table including all line statistics found from spectacle's fit of
+            the spectra.
         """
         #create spectra for a single line to fit
         wav = int( np.round(self.wavelength_center) )
@@ -354,8 +396,8 @@ class absorber_extractor():
         else:
             init_stats = spec_model.line_stats(vel_array*u.Unit('km/s'))
 
-            # include only lines greater than cloud_min
-            line_indxs, = np.where( init_stats['col_dens'] >= self.cloud_min)
+            # include only lines greater than absorber_min
+            line_indxs, = np.where( init_stats['col_dens'] >= self.absorber_min)
             if line_indxs.size == 0:
                 print('line could not be fit on ray ', self.ray)
                 self.spectacle_model = None
@@ -381,7 +423,14 @@ class absorber_extractor():
 
     def run_ice(self):
         """
-        iteratively do the cloud method to extract all absorption features
+        iteratively run the cloud method to extract all the absorbers in the
+        lightray.
+
+        Returns
+        --------
+
+        final_intervals: list of tuples of int
+            List of the indices that indicate the start and end of each absorber.
         """
         num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
         dl_list = self.data['dl'].in_units('cm')
@@ -393,7 +442,7 @@ class absorber_extractor():
         all_intervals=[]
         curr_num_density = num_density.copy()
         curr_col_density = np.sum(num_density*dl_list)
-        min_col_density = 10**self.cloud_min
+        min_col_density = 10**self.absorber_min
         count=0
 
         while curr_col_density > min_col_density:
@@ -417,7 +466,7 @@ class absorber_extractor():
         final_intervals=[]
         for b, e in all_intervals:
             lcd = np.log10(np.sum(dl_list[b:e]*num_density[b:e]))
-            if lcd > self.cloud_min:
+            if lcd > self.absorber_min:
                 final_intervals.append((b, e))
         return final_intervals
 
@@ -426,11 +475,14 @@ class absorber_extractor():
         Use trident to create the absorption spectrum of the ray in velocity
         space for use in fitting.
 
-        Parameters:
-            none
-        Returns:
-            velocity and flux arrays created by spectrum generator
-                units are km/s
+        Returns
+        --------
+        velocity: YT array
+            Array of velocity values of the generated spectra (in km/s)
+
+        flux: YT array
+            Array of the normalized flux values of the generated spectra
+
         """
         #set which ions to add to spectra
         wav = int( np.round(self.wavelength_center) )
@@ -458,7 +510,7 @@ class absorber_extractor():
         return velocity, flux
 
     def _cloud_method(self, num_density_arr, coldens_fraction):
-
+        "run the cloud method"
         cut = 0.999
         total = np.sum(num_density_arr)
         ratio = 0.001
@@ -475,16 +527,27 @@ class absorber_extractor():
         """
         adds new intervals by taking into account the velocities when combining them
 
-        Parameters:
-            prev_intervals : list : the intervals already calculated
-            curr_intervals : list : the intervals that need to be added/combined
-            velocity_array : array : array of the line of sight velocity along ray
-            dl_array : array : cell lengths along the ray's path.
-            density_array : array : array of gas density. used to weight avg velocity
-                        for a given interval.
-        Returns:
-            new_intervals : list : a final list of intervals where prev and curr are
-                        properly combined.
+        Parameters
+        -----------
+        prev_intervals : list
+            the intervals already calculated
+
+        curr_intervals : list
+            the intervals that need to be added/combined
+
+        velocity_array : array
+            array of the line of sight velocity along ray
+
+        dl_array : array
+            cell lengths along the ray's path.
+
+        density_array : array
+            array of gas density. used to weight avg velocity for a given interval.
+
+        Returns
+        --------
+        new_intervals : list
+            a final list of intervals where prev and curr are properly combined.
         """
         # first check no region jumping (from use of cut_regions)
         if self.cut_region_filters is not None:
@@ -524,15 +587,13 @@ class absorber_extractor():
         #check if there are any previous intervals to combine with
         if prev_intervals == []:
             return curr_intervals
-        #import pdb; pdb.set_trace()
+
         new_intervals=prev_intervals.copy()
         del_v = self.ds.quan(self.spectacle_res, 'km/s')
 
         #loop through current intervals
         for curr_b, curr_e in curr_intervals:
-            #print("all the current intervals", curr_intervals)
-            #print("all the new intervals", new_intervals)
-            #print("current interval ", curr_b, curr_e)
+
             overlap_intervals=[]
             #loop through all previous intervals
             for b,e in new_intervals:
@@ -602,13 +663,17 @@ class absorber_extractor():
         Find the intervals for absorbers using some cutoff on a
         field (generally number density) along lightray.
 
-        Parameters:
-            field : array/list : list of values to compare to cutoff
-            cutoff : double : threshold defining where absorbers are.
+        Parameters
+        -----------
+        field : array/list
+            list of values to compare to cutoff
+        cutoff : double
+            threshold defining where absorbers are.
 
-        Returns:
-            intervals : list of tuples : list of the intervals defining the
-                    absorbers in this ray.
+        Returns
+        -----------
+        intervals : list of tuples
+            list of the intervals defining the absorbers in this ray.
         """
         in_absorber = False
         intervals = []
