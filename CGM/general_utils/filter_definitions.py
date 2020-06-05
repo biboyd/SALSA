@@ -79,7 +79,8 @@ ovi_range_dict = dict(col_dens=(12.8, 16.),
                       density=(10**-28.75, 10**-25.5),
                       log_density=(-28.75, -25.5),
                       radius=(0, 200),
-                      radial_velocity=(-300,300))
+                      radial_velocity=(-300,300),
+                      vel_dispersion=(0, 80))
 hist_range_dict = {"O VI":ovi_range_dict}
 
 def ion_p(ion_name):

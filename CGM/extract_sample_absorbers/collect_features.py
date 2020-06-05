@@ -11,7 +11,7 @@ from CGM.general_utils.center_finder import find_center
 from CGM.absorber_extraction_class.absorber_plotter import absorber_plotter
 from CGM.general_utils.filter_definitions import parse_cut_filter
 
-def main(filename, ray_dir, i_name, out_dir, frac, cut_filters):
+def main(filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10):
     #init mpi
     comm = MPI.COMM_WORLD
 
@@ -58,6 +58,7 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filters):
                                     cut_region_filters=cut_filters,
                                     use_spectacle= True,
                                     plot_spectacle=True,
+                                    velocity_res = velocity_res,
                                     wavelength_width=20)
 
 
