@@ -120,7 +120,7 @@ class absorber_plotter(absorber_extractor):
                 plot_spectacle=False,
                 spectacle_defaults=None,
                 plot_ice=False,
-                cloud_min=None,
+                absorber_min=None,
                 spectacle_res=None,
                 frac=0.8,
                 num_dense_min=None,
@@ -172,19 +172,19 @@ class absorber_plotter(absorber_extractor):
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
 
-        if cloud_min is None:
+        if absorber_min is None:
 
             if self.ion_name in default_cloud_dict.keys():
-                self.cloud_min = default_cloud_dict[self.ion_name]
+                self.absorber_min = default_cloud_dict[self.ion_name]
             else:
-                self.cloud_min=13
+                self.absorber_min=13
         else:
-            self.cloud_min = cloud_min
+            self.absorber_min = absorber_min
 
         # define defaults for spectacle fit
         self.defaults_dict = {
             'bounds' :{
-                'column_density' : (self.cloud_min-0.5, 23)
+                'column_density' : (self.absorber_min-0.5, 23)
             },
             'fixed' : {
                 'delta_lambda' : True,
@@ -887,7 +887,7 @@ if __name__ == '__main__':
 
     mp = absorber_plotter(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
                     center_gal=center, north_vector=nvec, bulk_velocity=None,plot_ice=True,use_spectacle=True,plot_spectacle=True,
-                    redshift=rshift, cloud_min=12.5,wavelength_width = 30, cut_region_filters=cut_filters)
+                    redshift=rshift, absorber_min=12.5,wavelength_width = 30, cut_region_filters=cut_filters)
     makedirs("mp_frames", exist_ok=True)
     outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
     mp.create_multi_plot(cmap='cividis',outfname=outfile)
