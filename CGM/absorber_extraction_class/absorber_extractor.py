@@ -330,20 +330,27 @@ class absorber_extractor():
 
             #calculate column density
             ion_field = ion_p_num(self.ion_name)
-            ion_density=self.data[ion_field][start:end].in_units('cm**-2')
+            ion_density=self.data[ion_field][start:end].in_units('cm**-3')
             col_density = np.sum(dl*ion_density)
 
             stats_table['col_dens'][i] = np.log10(col_density)
 
             #calculate delta_v of absorber
             vel_los_dat = self.data['velocity_los'][start:end].in_units('km/s')
-            stats_table['delta_v'][i] = np.sum(dl*ion_density*vel_los_dat)/col_density
+            central_vel = np.sum(dl*ion_density*vel_los_dat)/col_density
+            stats_table['delta_v'][i] = central_vel
 
             #calculate velocity dispersion
             #weighted std dev. weight=dl*ion_density
-            vel_variance=col_density \
-                     *np.sum(dl*ion_density * (vel_los_dat - stats_table['delta_v'][i])**2) \
+            
+            # set single cell absorber to zero velocity variance
+            if end-start == 1:
+                vel_variance=0.
+            else:
+                vel_variance=col_density \
+                     *np.sum(dl*ion_density * ( vel_los_dat - self.ds.quan(central_vel, 'km/s') )**2) \
                      /(col_density**2 - np.sum( (dl*ion_density)**2 ))
+
             stats_table['vel_dispersion'][i] = np.sqrt(vel_variance)
 
             #calculate other field averages

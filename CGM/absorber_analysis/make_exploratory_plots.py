@@ -22,7 +22,7 @@ def main(df, ion, cuts, cut_names_list, outdir):
         logv = 'log_' + v
         df[logv] = np.log10(df[v])
 
-    plot_var = ['col_dens', 'log_density', 'log_temperature', 'log_metallicity', 'radius', 'radial_velocity', 'vel_dispersion']
+    plot_var = ['col_dens', 'log_density', 'log_temperature', 'log_metallicity', 'radius', 'radial_velocity']
 
     # check general_utils for dictionary of limits
     if ion in hist_range_dict:
