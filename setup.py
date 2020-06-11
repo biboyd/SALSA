@@ -1,12 +1,13 @@
 from setuptools import setup
-setup(name="CGM",
+setup(name="SALS",
       version="0.0.0",
       author="Brendan Boyd",
-      packages=["CGM"],
+      packages=["SALS"],
       install_requires=[
         'numpy',
         'yt',
         'trident',
         'spectacle',
-        'matplotlib'
+        'matplotlib',
+		'pandas'
       ])
