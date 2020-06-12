@@ -4,7 +4,7 @@ import numpy as np
 
 from mpi4py import MPI
 
-def construct_rays(ds,
+def construct_rays(ds_file,
         start_points,
         end_points,
         center=None,
@@ -16,18 +16,36 @@ def construct_rays(ds,
     """
     Construct rays using trident. (parallelism is optional)
 
-    Parameters:
-        ds : str/path : path to dataset to be used to create rays
-        start_points : numpy array : 1d array of starting points for each ray (code_length)
-        end_points : numpy array : 1d array of end points for each ray (code_length)
-        center : yt arr : the center of the galaxy.
-        bulk_velocity : yt arr : bulk velocity to set as field parameter
-        line_list : list : list of ions to add to light rays. None defaults to
+    Parameters
+    ----------
+        :ds_file : str or YT dataset
+            path to dataset to be used to create rays
+
+        :start_points : numpy array
+            1d array of starting points for each ray (code_length)
+
+        :end_points : numpy array
+            1d array of end points for each ray (code_length)
+
+        :center : yt arr
+            the center of the galaxy.
+
+        :bulk_velocity : yt arr
+            bulk velocity to set as field parameter
+
+        :line_list : list
+            list of ions to add to light rays. None defaults to
             H I, C IV, and O VI
-        other_fields : list : other yt fields to add to light rays. None defaults
+
+        :other_fields : list
+            other yt fields to add to light rays. None defaults
             to density, metallicity, and temperature
-        out_dir : str/path : where to save all of the lightrays
-        parallel : bool : whether to use MPI to create lightrays in parallel
+
+        :out_dir : str/path
+            where to save all of the lightrays
+
+        :parallel : bool
+            whether to use MPI to create lightrays in parallel
     """
     #set defaults
     if line_list is None:
@@ -62,7 +80,7 @@ def construct_rays(ds,
     for i in my_ray_nums:
         #construct ray
         ray_filename = f"{out_dir}/ray{i:0{pad}d}.h5"
-        trident.make_simple_ray(ds,
+        trident.make_simple_ray(ds_file,
                                 start_points[i],
                                 end_points[i],
                                 lines=line_list,

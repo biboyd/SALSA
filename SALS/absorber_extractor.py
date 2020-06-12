@@ -14,7 +14,10 @@ from numpy.linalg import norm
 import astropy.units  as u
 from astropy.table import QTable
 
-from CGM.general_utils.filter_definitions import ion_p_num, default_ice_fields, default_units_dict, default_cloud_dict
+from yt.data_objects.static_output import \
+    Dataset
+    
+from SALS.utils.filter_definitions import ion_p_num, default_ice_fields, default_units_dict, default_cloud_dict
 
 class absorber_extractor():
     """
@@ -25,14 +28,14 @@ class absorber_extractor():
     Parameters
     --------------
 
-    ds_filename: string
-        Path/name of the enzo dataset to be loaded
+    ds_filename: str or YT dataset
+        Either Path/name of the dataset to be loaded or the dataset itself
 
-    ray_filename: string
-        Path/name of the hdf5 ray file to be loaded
+    ray_filename: str or Trident ray
+        Path/name of the hdf5 ray file to be loaded or the ray already loaded
 
     ion_name: string, optional
-        Name of the ion to plot in number density plot
+        Name of the ion to extract absorbers of
         Default: "H I"
 
     cut_region_filters: list of strings, optional
@@ -42,7 +45,7 @@ class absorber_extractor():
     wavelegnth_center: float, optional
         The specific absorption line to look at (in unit Angstrom). None
         defaults to strongest absorption line for specified ion
-        (using tridents ion table).
+        (using trident's ion table).
         Default: None
 
     velocity_res: float, optional
@@ -90,7 +93,11 @@ class absorber_extractor():
 
 
         #set file names and ion name
-        self.ds_filename = ds_filename
+        if isinstance(ds_filename, str):
+            self.ds = yt.load(ds_filename)
+        elif isinstance(ds_filename, Dataset):
+            self.ds = yt.load(ds_filename)
+
         self.ray_filename = ray_filename
         self.ion_name = ion_name
         self.cut_region_filters = cut_region_filters
@@ -100,7 +107,6 @@ class absorber_extractor():
         self.ion_list = [ion_name]
 
         #open up the dataset and ray files
-        self.ds = yt.load(self.ds_filename)
         self.load_ray(self.ray_filename)
 
         # set bulk velocity
@@ -342,7 +348,7 @@ class absorber_extractor():
 
             #calculate velocity dispersion
             #weighted std dev. weight=dl*ion_density
-            
+
             # set single cell absorber to zero velocity variance
             if end-start == 1:
                 vel_variance=0.

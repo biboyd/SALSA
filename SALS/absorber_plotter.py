@@ -13,10 +13,11 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 import astropy.units  as u
 
-path.insert(0, "/mnt/home/boydbre1/Repo")
-from CGM.general_utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict, default_cloud_dict
-from CGM.general_utils.center_finder import find_center
-from CGM.absorber_extraction_class.absorber_extractor import absorber_extractor
+from yt.data_objects.static_output import \
+    Dataset
+    
+from SALS.utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict, default_cloud_dict
+from SALS.absorber_extractor import absorber_extractor
 
 class absorber_plotter(absorber_extractor):
     """
@@ -27,14 +28,15 @@ class absorber_plotter(absorber_extractor):
     Parameters
     ----------
 
-    ds_filename : string
-        Path/name of the enzo dataset to be loaded
+    ds_filename: str or YT dataset
+        Either Path/name of the dataset to be loaded or the dataset itself
 
-    ray_filename : string
-        Path/name of the hdf5 ray file to be loaded
+    ray_filename: str or Trident ray
+        Path/name of the hdf5 ray file to be loaded or the ray already loaded
 
-    ion_name : string
-        Name of the ion to plot in number density plot
+    ion_name: string, optional
+        Name of the ion to extract absorbers of and plot
+        Default: "H I"
 
     cut_region_filters : list of str
         a list of filters defined by the way you use Cut Regions in YT
@@ -132,7 +134,10 @@ class absorber_plotter(absorber_extractor):
         constructor
         """
         #set file names and ion name
-        self.ds_filename = ds_filename
+        if isinstance(ds_filename, str):
+            self.ds = yt.load(ds_filename)
+        elif isinstance(ds_filename, Dataset):
+            self.ds = yt.load(ds_filename)
         self.ray_filename = ray_filename
         self.ion_name = ion_name
 
@@ -147,8 +152,7 @@ class absorber_plotter(absorber_extractor):
         self.north_vector = north_vector
         self.center_gal= center_gal
 
-        #open up the dataset and ray files
-        self.ds = yt.load(self.ds_filename)
+        #open up the ray files
         self.load_ray(self.ray_filename)
 
 
@@ -879,7 +883,7 @@ if __name__ == '__main__':
     ion = argv[3]
     num=int(argv[4])
     absorbers = [ion] #['H I', 'O VI']
-    center, nvec, rshift, bv = find_center(data_set_fname)
+    center, nvec, rshift, bv = (None, None, None, None)#find_center(data_set_fname)
     cut_filters = ["((obj[('gas', 'radius')].in_units('kpc') > 10) & \
                    (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
                    ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \

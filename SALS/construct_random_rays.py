@@ -2,21 +2,24 @@ import yt
 import trident
 import numpy as np
 
+from yt.data_objects.static_output import \
+    Dataset
+
 from mpi4py import MPI
 from sys import argv
 from os import makedirs
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 
-from CGM.general_utils.construct_rays import construct_rays
-from CGM.general_utils.center_finder import find_center
-from CGM.general_utils.filter_definitions import radius_function, ion_p
+from SALS.utils.construct_rays import construct_rays
+from SALS.utils.filter_definitions import radius_function, ion_p
 
-def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
+def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
     """
     randomly sample impact parameter to get random sightlines from a given galaxy center
 
     Parameters:
+        : ds_file: str or YT dataset
         center : arr: coordinates of the center of the galaxy
         num_sightlines : int : number of sightlines to return
         max_impact_param : float : maximum impact param to sample from in kpc
@@ -31,7 +34,13 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
     """
     # define random seed, put length properties in code_length
     np.random.seed(seed)
-    ds = yt.load(dsname)
+
+    #set file names and ion name
+    if isinstance(ds_file, str):
+        ds = yt.load(ds_file)
+    elif isinstance(ds_file, Dataset):
+        ds = ds_file
+
     length = ds.quan(length, 'kpc').in_units('code_length')
     length = length.value
     min_impact_param = ds.quan(min_impact_param, 'kpc').in_units('code_length')
@@ -77,38 +86,65 @@ def random_sightlines(dsname, center, num_sightlines, max_impact_param, min_impa
 
     return start_point, end_point, impact_param
 
-def random_rays(dsname, center,
+def random_rays(ds_file, center,
                 n_rays, max_impact_param,
                 min_impact_param=0.,
                 length=200,
                 bulk_velocity=None,
                 line_list=['H I', 'C IV', 'O VI'],
-                other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius'), 'radial_velocity', ('index', 'grid_indices')],
+                other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius'), 'radial_velocity'],
                 out_dir='./',
                 parallel=True,
                 seed=None):
     """
 
-    Parameters:
-        dsname : string : path to dataset
-        center : arr: coordinates of the center of the galaxy
-        n_rays : int : number of light rays to construct
-        max_impact_param : float : maximum impact param to sample from in kpc
-        min_impact_param : float : minimum impact param to sample from in kpc
-        length : float : length of the sightline in kpc
-        line_list : list : ions to add to lightray
-        other_fields : list : fields to add to lightray
-        out_dir : string : path to where ray files will be written
-        parallel : bool : runs in parallel by evenly dividing rays to processes
-        seed : int : seed to use in random number generate. If None, then seed will
+    Parameters
+    ----------
+        :ds_file : str or YT Dataset
+            path to dataset or already loaded, YT dataset
+
+        :center : arr
+            coordinates of the center of the galaxy
+
+        :n_rays : int
+            number of light rays to construct
+
+        :max_impact_param : float
+            maximum impact param to sample from in kpc
+
+        :min_impact_param : float
+            minimum impact param to sample from in kpc
+
+        :length : float
+            length of the sightline in kpc
+
+        :line_list : list
+            ions to add to lightray
+
+        :other_fields : list
+            fields to add to lightray
+
+        :out_dir : string
+            path to where ray files will be written
+
+        :parallel : bool
+            runs in parallel by evenly dividing rays to processes
+
+        :seed : int
+            seed to use in random number generate. If None, then seed will
             be chosen randomly by numpy
 
-    Returns:
+    Returns
+    -------
         none
     """
 
     # get start/end points for light rays
-    ds = yt.load(dsname)
+    #set file names and ion name
+    if isinstance(ds_file, str):
+        ds = yt.load(ds_file)
+    elif isinstance(ds_file, Dataset):
+        ds = ds_file
 
     if bulk_velocity is not None:
         bulk_velocity = ds.arr(bulk_velocity, 'km/s')
@@ -127,7 +163,7 @@ def random_rays(dsname, center,
              validators=[yt.fields.api.ValidateParameter(['center'])])
 
     #collect sightlines
-    start_points, end_points, impact_param = random_sightlines(dsname, center,
+    start_points, end_points, impact_param = random_sightlines(ds, center,
                                                  n_rays,
                                                  max_impact_param,
                                                  min_impact_param=min_impact_param,
@@ -163,7 +199,7 @@ if __name__ == '__main__':
 
     my_seed = 2020 + 16*int(filename[-2:]) # this way each dataset has its own seed
     print(f"My seed is: {my_seed}")
-    center, n_vec, rshift, bv = find_center(filename)
+    center, n_vec, rshift, bv = (None, None, None, None)
     random_rays(filename,
                 center,
                 num_rays,

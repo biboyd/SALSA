@@ -7,11 +7,13 @@ from os import makedirs, listdir
 import h5py
 import astropy.units  as u
 
-from CGM.general_utils.center_finder import find_center
-from CGM.absorber_extraction_class.absorber_plotter import absorber_plotter
-from CGM.general_utils.filter_definitions import parse_cut_filter
+from yt.data_objects.static_output import \
+    Dataset
 
-def main(filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10):
+from SALS.absorber_plotter import absorber_plotter
+from SALS.utils.filter_definitions import parse_cut_filter
+
+def main(ds_filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10):
     #init mpi
     comm = MPI.COMM_WORLD
 
@@ -19,7 +21,7 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10)
     line_list = []#['H I', 'O VI', 'C IV']
 
     if comm.rank == 0:
-        center, nvec, rshift, bulk_vel = find_center(filename)
+        center, nvec, rshift, bulk_vel = (None, None, None, None)
         center = np.array( center.in_units('code_length'), dtype=np.float64)
         nvec = np.array(nvec, dtype=np.float64)
         rshift = np.array([rshift], dtype=np.float64)
@@ -47,19 +49,19 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10)
 
 
     #set up plotter settings
-    mp_kwargs = dict(ds_filename=filename, ion_name=i_name,
-    				    absorber_fields=line_list,
-                                    center_gal = center,
-                                    north_vector = nvec,
-                                    redshift=rshift[0],
-                                    frac = frac,
-                                    bulk_velocity=bulk_vel,
-                                    plot_ice=True,
-                                    cut_region_filters=cut_filters,
-                                    use_spectacle= True,
-                                    plot_spectacle=True,
-                                    velocity_res = velocity_res,
-                                    wavelength_width=20)
+    mp_kwargs = dict(ion_name=i_name,
+    				 absorber_fields=line_list,
+                     center_gal = center,
+                     north_vector = nvec,
+                     redshift=rshift[0],
+                     frac = frac,
+                     bulk_velocity=bulk_vel,
+                     plot_ice=True,
+                     cut_region_filters=cut_filters,
+                     use_spectacle= True,
+                     plot_spectacle=True,
+                     velocity_res = velocity_res,
+                     wavelength_width=20)
 
 
     #collect only ray files in ray_dir
@@ -97,11 +99,11 @@ def main(filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10)
     print("my rank ", comm.rank, "my rays ", print_rays)
 
     #construct the frames
-    create_frames(my_rays, impact_parameter,out_dir=out_dir, multi_plot_kwargs=mp_kwargs)
+    create_frames(ds_filename, my_rays, impact_parameter,out_dir=out_dir, multi_plot_kwargs=mp_kwargs)
     print(f"-------------- {comm.rank} finished----------------")
 
 
-def create_frames(rays,
+def create_frames(ds_file, rays,
                   impact_parameter=None,
                   save_multi_plot=False,
                   slice_width=None,
@@ -111,8 +113,13 @@ def create_frames(rays,
     """
     creates a movie by combining all the plots made from the ray in ray_dir
 
-    Parameters:
-        rays : list : list of full paths to rays
+    Parameters
+    -----------
+        :ds_file : str or YT Dataset
+            Dataset to extract absorbers from
+
+        :rays : list
+            list of full paths to rays
         slice_width : float : define width of slice in multi plot. in units kpc
         slice_height : float : define height of slice in multi plot. in units kpc
         out_dir : string/path : path to directory where frames will be saved
@@ -122,10 +129,15 @@ def create_frames(rays,
     Returns:
         none
     """
+    #set file names and ion name
+    if isinstance(ds_file, str):
+        ds = yt.load(ds_file)
+    elif isinstance(ds_file, Dataset):
+        ds = ds_file
 
     for ray_fname in rays:
         #load new multi plot and ray
-        mp = absorber_plotter(ray_filename=ray_fname, **multi_plot_kwargs)
+        mp = absorber_plotter(ds, ray_filename=ray_fname, **multi_plot_kwargs)
         if mp.data['l'].size == 0:
             continue
 
