@@ -162,15 +162,6 @@ class absorber_plotter(absorber_extractor):
         else:
             self.slice_field = slice_field
 
-        # set bulk velocity
-        if bulk_velocity is None:
-            self.bulk_velocity = None
-        else:
-            ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
-            self.bulk_velocity = np.dot(ray_u, bulk_velocity)
-            self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
-        self.redshift = redshift
-
         # whether to use/plot these methods
         self.plot_ice = plot_ice
         self.use_spectacle = use_spectacle
@@ -413,16 +404,6 @@ class absorber_plotter(absorber_extractor):
         line = f"{self.ion_name} {wav}"
         ion_list = [line] + self.ion_list
 
-        # calc doppler redshift due to bulk motion
-        if self.bulk_velocity is None:
-            z_tot=self.redshift
-        else:
-            c = yt.units.c
-            beta = self.bulk_velocity/c
-            z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
-            z_dopp = z_dopp.value
-            z_tot = (1+self.redshift)*(1+z_dopp) - 1
-
         #set up spectra
         vel_min = -self.velocity_width/2
         vel_max = self.velocity_width/2
@@ -496,17 +477,6 @@ class absorber_plotter(absorber_extractor):
         #set which ions to add to spectra
         ion_list = self.ion_list
 
-        # calc doppler redshift due to bulk motion
-        if self.bulk_velocity is None:
-            z_tot = self.redshift
-        else:
-            c = yt.units.c
-            beta = self.bulk_velocity/c
-            z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
-            z_dopp = z_dopp.value
-            #total redshift that takes in account bulk motion if specified
-            z_tot = (1+self.redshift)*(1+z_dopp) -1
-
         #adjust wavelegnth_center for redshift
         rest_wavelength = self.wavelength_center
         wave_min = rest_wavelength - self.wavelength_width/2
@@ -514,7 +484,7 @@ class absorber_plotter(absorber_extractor):
 
         #use wavelength_width to set the range
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.wavelegnth_res)
-        spect_gen.make_spectrum(self.data, lines=ion_list, observing_redshift=z_tot)
+        spect_gen.make_spectrum(self.data, lines=ion_list, observing_redshift=self.ds.current_redshift)
 
 
         #get fields from spectra and give correct units
@@ -586,10 +556,6 @@ class absorber_plotter(absorber_extractor):
         else:
             # convert to specified units
             prop2 = prop2.in_units(prop2_units)
-
-        #add bulk velocity if wanted
-        if self.bulk_velocity is not None and prop2_name == 'velocity_los':
-            prop2 += self.bulk_velocity
 
         #get length data and define x limits
         l_list = self.data['l'].in_units('kpc')

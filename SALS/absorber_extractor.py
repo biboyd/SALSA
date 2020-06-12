@@ -55,14 +55,6 @@ class absorber_extractor():
         width of velocity bins in spectrum plot (in km/s).
         Default: 10
 
-    redshift: float, optional
-        redshift of galaxy's motion. adjusts bulk velocity plot calculations.
-        Default: 0.
-
-    bulk_velocity: array type, optional
-        bulk velocity of the galaxy (in km/s)
-        Default: None
-
     spectacle_res: float, optional
         Set minimum resolution that spectacle will attempt to fit lines to.
         (in km/s) If None, default to value of velocity_res
@@ -89,7 +81,6 @@ class absorber_extractor():
     def __init__(self, ds_filename, ray_filename,
                 ion_name='H I', cut_region_filters=None,
                 wavelength_center=None, velocity_res = 10,
-                redshift = 0, bulk_velocity=None,
                 spectacle_defaults=None, spectacle_res=None,
                 absorber_min=None, frac=0.8):
 
@@ -111,14 +102,6 @@ class absorber_extractor():
 
         #open up the dataset and ray files
         self.load_ray(self.ray_filename)
-
-        # set bulk velocity
-        if bulk_velocity is None:
-            self.bulk_velocity = None
-        else:
-            ray_b, ray_e, ray_l, ray_u = self.ray_position_prop()
-            self.bulk_velocity = np.dot(ray_u, bulk_velocity)
-            self.bulk_velocity = self.ds.quan(self.bulk_velocity, 'km/s')
 
         if absorber_min is None:
             if self.ion_name in default_cloud_dict.keys():
@@ -142,7 +125,6 @@ class absorber_extractor():
         if spectacle_defaults is not None:
             self.defaults_dict.update(spectacle_defaults)
 
-        self.redshift = redshift
         self.velocity_res = velocity_res
 
         #default spectacle resolution to velocity_res
@@ -508,16 +490,6 @@ class absorber_extractor():
         wav = int( np.round(self.wavelength_center) )
         line = f"{self.ion_name} {wav}"
         ion_list = [line]
-
-        # calc doppler redshift due to bulk motion
-        if self.bulk_velocity is None:
-            z_tot=self.redshift
-        else:
-            c = yt.units.c
-            beta = self.bulk_velocity/c
-            z_dopp = (1 - beta)/np.sqrt(1 +beta**2) -1
-            z_dopp = z_dopp.value
-            z_tot = (1+self.redshift)*(1+z_dopp) - 1
 
         #use auto feature to capture full line
         spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, bin_space="velocity")
