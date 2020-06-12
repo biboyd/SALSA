@@ -1,6 +1,6 @@
 from sys import argv
 from os import makedirs
-from CGM.general_utils.collect_files import combine_astropy_files
+from CGM.general_utils.collect_files import combine_pandas_files
 
 inDir = argv[1]
 ds = argv[2]

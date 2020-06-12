@@ -166,25 +166,25 @@ def create_frames(ds_file, rays,
 
         ray_index = int(ray_num)
         # save absorber data
-        if mp.ice_table is not None:
-            mp.ice_table['absorber_index']=np.empty(mp.num_ice, dtype="S8")
+        if mp.ice_df is not None:
+            mp.ice_df['absorber_index']=np.empty(mp.num_ice, dtype=str)
             # add absorber index
             start = 65 # Ascii number for 'A'
             for i in range(mp.num_ice):
-                mp.ice_table['absorber_index'][i] = f"{ray_num}{chr(start+i)}"
+                mp.ice_df.loc[i,'absorber_index'] = f"{ray_num}{chr(start+i)}"
 
             outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.h5"
-            mp.ice_table.write(outfile, overwrite=True)
+            mp.ice_df.to_hdf(outfile, mode='w')
 
-        if mp.spectacle_table is not None:
-            mp.spectacle_table['absorber_index']=np.empty(mp.num_spectacle, dtype=f"S{len(ray_num)+1}")
+        if mp.spectacle_df is not None:
+            mp.spectacle_df['absorber_index']=np.empty(mp.num_spectacle, dtype=str)
             # add absorber index
             start = 65 # Ascii number for 'A'
             for i in range(mp.num_spectacle):
-                mp.spectacle_table['absorber_index'][i] = f"{ray_num}{chr(start+i)}"
+                mp.spectacle_df[i, 'absorber_index'] = f"{ray_num}{chr(start+i)}"
 
             outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.h5"
-            mp.spectacle_table.write(outfile, overwrite=True)
+            mp.spectacle_df.to_hdf(outfile, mode='w')
 
         # close files/figures
         mp.close()

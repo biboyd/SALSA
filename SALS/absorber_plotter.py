@@ -15,7 +15,7 @@ import astropy.units  as u
 
 from yt.data_objects.static_output import \
     Dataset
-    
+
 from SALS.utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict, default_cloud_dict
 from SALS.absorber_extractor import absorber_extractor
 
@@ -635,7 +635,7 @@ class absorber_plotter(absorber_extractor):
                 if self.num_ice > 0:
                     for i in range(self.num_ice):
                         b, e = self.ice_intervals[i]
-                        curr_lcd = self.ice_table['col_dens'][i]
+                        curr_lcd = self.ice_df.loc[i, 'col_dens']
 
                         #plot interval
                         ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
@@ -649,15 +649,15 @@ class absorber_plotter(absorber_extractor):
                     ax_num_dense.text(0.9, 0.85, f"{self.num_ice} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
 
                     #take three largest absorbers and sort by position
-                    max_indices = self.ice_table.argsort('col_dens')
-                    max_indices = max_indices[-3:]
+                    max_indices = self.ice_df['col_dens'].argsort()
+                    max_indices = max_indices[-3:].to_numpy()
                     max_indices.sort()
 
                     #plot markers from left to right
                     colors=['black', 'magenta', 'yellow']
                     for i,c in zip(max_indices, colors):
                         b, e = self.ice_intervals[i]
-                        lcd = self.ice_table['col_dens'][i]
+                        lcd = self.ice_df.loc[i, 'col_dens']
                         mid_point = (l_list[b]+l_list[e])/2
 
                         ax_num_dense.scatter(mid_point, 0.75*self.num_dense_max,
@@ -839,7 +839,7 @@ class absorber_plotter(absorber_extractor):
         else:
             #find total column density for ICE method
             cd_sum=0
-            for lcd in self.ice_table['col_dens']:
+            for lcd in self.ice_df['col_dens']:
                 cd_sum += 10**lcd
 
             log_cd_sum = np.log10(cd_sum)
@@ -863,12 +863,12 @@ class absorber_plotter(absorber_extractor):
         """
         #compute total column density
         line_sum_cd = 0
-        for cd in self.spectacle_table['col_dens']:
+        for cd in self.spectacle_df['col_dens']:
             line_sum_cd+= 10**cd
         log_tot_cd = np.log10(line_sum_cd)
 
         line_models = []
-        indx_max = self.spectacle_table.argsort('col_dens')
+        indx_max = self.spectacle_df['col_dens'].argsort()
         for indx in indx_max[-3:]:
             line = self.spectacle_model.lines[indx]
             line_models.append( self.spectacle_model.with_line(line, reset=True))

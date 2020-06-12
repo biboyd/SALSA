@@ -3,6 +3,8 @@ mpl.use('Agg')
 import yt
 import trident
 import numpy as np
+import pandas as pd
+
 from spectacle.fitting import LineFinder1D
 from sys import argv, path
 from os import remove, listdir, makedirs
@@ -14,9 +16,10 @@ from numpy.linalg import norm
 import astropy.units  as u
 from astropy.table import QTable
 
+
 from yt.data_objects.static_output import \
     Dataset
-    
+
 from SALS.utils.filter_definitions import ion_p_num, default_ice_fields, default_units_dict, default_cloud_dict
 
 class absorber_extractor():
@@ -183,8 +186,8 @@ class absorber_extractor():
         self.ice_intervals=None
 
         # to store absorber feature table
-        self.ice_table=None
-        self.spectacle_table=None
+        self.ice_df=None
+        self.spectacle_df=None
 
         #store number of features found
         self.num_ice = None
@@ -271,14 +274,14 @@ class absorber_extractor():
 
         user_unit_dict : dict, optional
             dictionary of fields and corresponding units to use for each field.
-            None defaults to default_units_dict in general_utils.filter_definitions.
+            None defaults to default_units_dict in utils.filter_definitions.
             Default: None
 
         Returns
         ---------
 
-        stats_table : astropy.table.QTable
-            QTable of all the absorbers and their corresponding features.
+        absorber_info : pandas.DataFrame
+            Dataframe of all the absorbers and their corresponding features.
         """
         # get absorber locations
         self.ice_intervals = self.run_ice()
@@ -296,7 +299,7 @@ class absorber_extractor():
             unit_dict.update(user_unit_dict)
 
         # line information for absorbers
-        line_info = [('name', 'S8'),
+        name_type = [('name', str),
                      ('wave', np.float64),
                      ('redshift', np.float64),
                      ('col_dens', np.float64),
@@ -306,18 +309,16 @@ class absorber_extractor():
                      ('interval_end', np.int32)]
 
         # get name of columns and type of data for each
-        name_type = line_info.copy()
         for f in fields:
             name_type.append( (f, np.float64) )
 
-        n_feat = len(line_info)+len(fields)
         n_abs = len(self.ice_intervals)
 
         if n_abs == 0:
             print("No absorbers in ray: ", self.ray)
             return None
         #initialize empty table
-        stats_table = QTable(np.empty(n_abs , dtype=name_type))
+        stats_table = pd.DataFrame(np.empty(n_abs , dtype=name_type))
 
         #add ion name and wavelength
         stats_table['name']= self.ion_name
@@ -328,8 +329,8 @@ class absorber_extractor():
         for i in range(n_abs):
             #load data for calculating properties
             start, end = self.ice_intervals[i]
-            stats_table['interval_start'][i] = start
-            stats_table['interval_end'][i] = end
+            stats_table.loc[i, 'interval_start'] = start
+            stats_table.loc[i, 'interval_end'] = end
             dl = self.data['dl'][start:end].in_units('cm')
             density = self.data[('gas', 'density')][start:end].in_units('g/cm**3')
             tot_density = np.sum(dl*density)
@@ -339,12 +340,12 @@ class absorber_extractor():
             ion_density=self.data[ion_field][start:end].in_units('cm**-3')
             col_density = np.sum(dl*ion_density)
 
-            stats_table['col_dens'][i] = np.log10(col_density)
+            stats_table.loc[i, 'col_dens'] = np.log10(col_density)
 
             #calculate delta_v of absorber
             vel_los_dat = self.data['velocity_los'][start:end].in_units('km/s')
             central_vel = np.sum(dl*ion_density*vel_los_dat)/col_density
-            stats_table['delta_v'][i] = central_vel
+            stats_table.loc[i, 'delta_v'] = central_vel
 
             #calculate velocity dispersion
             #weighted std dev. weight=dl*ion_density
@@ -357,7 +358,7 @@ class absorber_extractor():
                      *np.sum(dl*ion_density * ( vel_los_dat - self.ds.quan(central_vel, 'km/s') )**2) \
                      /(col_density**2 - np.sum( (dl*ion_density)**2 ))
 
-            stats_table['vel_dispersion'][i] = np.sqrt(vel_variance)
+            stats_table.loc[i, 'vel_dispersion'] = np.sqrt(vel_variance)
 
             #calculate other field averages
             for fld in fields:
@@ -365,12 +366,12 @@ class absorber_extractor():
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
 
                 if fld in unit_dict.keys():
-                    stats_table[fld][i] = avg_fld.in_units( unit_dict[fld] )
+                    stats_table.loc[i, fld] = avg_fld.in_units( unit_dict[fld] )
                 else:
-                    stats_table[fld][i] = avg_fld
+                    stats_table.loc[i, fld] = avg_fld
 
-        self.ice_table = stats_table
-        return stats_table
+        self.ice_df = stats_table.to_pandas()
+        return self.ice_df
 
     def get_spectacle_absorbers(self):
         """
@@ -437,8 +438,8 @@ class absorber_extractor():
                 #add redshift
                 line_stats['redshift'] = self.ds.current_redshift
 
-        self.spectacle_table = line_stats
-        return line_stats
+        self.spectacle_df=line_stats.to_pandas()
+        return self.spectacle_df
 
     def run_ice(self):
         """
