@@ -137,7 +137,7 @@ class absorber_plotter(absorber_extractor):
         if isinstance(ds_filename, str):
             self.ds = yt.load(ds_filename)
         elif isinstance(ds_filename, Dataset):
-            self.ds = yt.load(ds_filename)
+            self.ds = ds_filename
         self.ray_filename = ray_filename
         self.ion_name = ion_name
 

@@ -99,7 +99,7 @@ class absorber_extractor():
         if isinstance(ds_filename, str):
             self.ds = yt.load(ds_filename)
         elif isinstance(ds_filename, Dataset):
-            self.ds = yt.load(ds_filename)
+            self.ds = ds_filename
 
         self.ray_filename = ray_filename
         self.ion_name = ion_name
@@ -370,7 +370,7 @@ class absorber_extractor():
                 else:
                     stats_table.loc[i, fld] = avg_fld
 
-        self.ice_df = stats_table.to_pandas()
+        self.ice_df = stats_table
         return self.ice_df
 
     def get_spectacle_absorbers(self):
@@ -437,8 +437,8 @@ class absorber_extractor():
 
                 #add redshift
                 line_stats['redshift'] = self.ds.current_redshift
-
-        self.spectacle_df=line_stats.to_pandas()
+                line_stats = line_stats.to_pandas()
+        self.spectacle_df=line_stats
         return self.spectacle_df
 
     def run_ice(self):
