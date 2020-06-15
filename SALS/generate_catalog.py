@@ -8,6 +8,8 @@ from SALS.utils.filter_definitions import ion_p_num
 from SALS.construct_random_rays import generate_lrays
 from mpi4py import MPI
 
+from yt.data_objects.static_output import \
+    Dataset
 
 def generate_catalog(ds_file, n_rays,
                      ray_directory,
@@ -99,9 +101,12 @@ def generate_catalog(ds_file, n_rays,
         check_fields.append(ion_p_num(i))
 
     #check if rays already made
-    ray_bool = np.array([False])
+
     if comm.rank == 0:
-        ray_bool[0] = check_rays(ray_directory, n_rays, check_fields)
+        check =check_rays(ray_directory, n_rays, check_fields)
+        ray_bool= np.array([check], dtype=bool)
+    else:
+        ray_bool = np.array([False], dtype=bool)
 
     # share if rays made already or not
     comm.Barrier()
@@ -119,7 +124,7 @@ def generate_catalog(ds_file, n_rays,
                     n_rays, impact_param_lims[1],
                     min_impact_param=impact_param_lims[0],
                     length=ray_length,
-                    fld_params=fld_params,
+                    fld_params=field_parameters,
                     ion_list=ion_list,
                     fields=fields,
                     out_dir=ray_directory)
@@ -236,7 +241,7 @@ def get_ray_num(file_path):
 
     return num
 
-def check_lrays(ray_dir, n_rays, fields):
+def check_rays(ray_dir, n_rays, fields):
     """
     Check if a directory already contains a given number of trident lrays and
     contains necessary fields
