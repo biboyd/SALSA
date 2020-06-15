@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from SALS.utils.construct_rays import construct_rays
 from SALS.utils.filter_definitions import radius_function, ion_p
 
-def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_impact_param=0, length=200, seed=None):
+def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_impact_param=0, length=200):
     """
     randomly sample impact parameter to get random sightlines from a given galaxy center
 
@@ -32,8 +32,6 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
         end_points : array : 2d array of the endpoints for
                     each sightline
     """
-    # define random seed, put length properties in code_length
-    np.random.seed(seed)
 
     #set file names and ion name
     if isinstance(ds_file, str):
@@ -86,16 +84,14 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
 
     return start_point, end_point, impact_param
 
-def random_rays(ds_file, center,
+def generate_lrays(ds, center,
                 n_rays, max_impact_param,
                 min_impact_param=0.,
                 length=200,
-                bulk_velocity=None,
-                line_list=['H I', 'C IV', 'O VI'],
-                other_fields=['density', 'metallicity', 'temperature', ('gas', 'radius'), 'radial_velocity'],
-                out_dir='./',
-                parallel=True,
-                seed=None):
+                fld_params={},
+                ion_list=['H I', 'C IV', 'O VI'],
+                fields=['density','temperature'],
+                out_dir='./'):
     """
 
     Parameters
@@ -118,95 +114,50 @@ def random_rays(ds_file, center,
         :length : float
             length of the sightline in kpc
 
-        :line_list : list
+        :ion_list : list
             ions to add to lightray
 
-        :other_fields : list
+        :fields : list
             fields to add to lightray
 
         :out_dir : string
             path to where ray files will be written
-
-        :parallel : bool
-            runs in parallel by evenly dividing rays to processes
-
-        :seed : int
-            seed to use in random number generate. If None, then seed will
-            be chosen randomly by numpy
 
     Returns
     -------
         none
     """
 
-    # get start/end points for light rays
-    #set file names and ion name
-    if isinstance(ds_file, str):
-        ds = yt.load(ds_file)
-    elif isinstance(ds_file, Dataset):
-        ds = ds_file
-
-    if bulk_velocity is not None:
-        bulk_velocity = ds.arr(bulk_velocity, 'km/s')
-
-    #add ion fields to dataset if not already there
-    trident.add_ion_fields(ds, ions=line_list, ftype='gas')
-
-    for line in line_list:
-        ion_frac = ('gas', f"{ion_p(line)}_ion_fraction")
-        other_fields.append(ion_frac)
-    # add radius field to dataset
-    ds.add_field(('gas', 'radius'),
-             function=radius_function,
-             units="code_length",
-             take_log=False,
-             validators=[yt.fields.api.ValidateParameter(['center'])])
-
+    comm = MPI.COMM_WORLD
     #collect sightlines
-    start_points, end_points, impact_param = random_sightlines(ds, center,
+    if comm.rank == 0:
+        start_pnts, end_pnts, imp_param = random_sightlines(ds, center,
                                                  n_rays,
                                                  max_impact_param,
                                                  min_impact_param=min_impact_param,
-                                                 length=length,
-                                                 seed=seed)
+                                                 length=length)
+        imp_param = ds.arr(imp_param, 'code_length').in_units('kpc')
+        np.save(f"{out_dir}/impact_parameter.npy", imp_param)
 
-    impact_param = ds.arr(impact_param, 'code_length').in_units('kpc').value
-    np.save(f"{out_dir}/impact_parameter.npy", impact_param)
-
-    #construct rays
-    construct_rays(ds, start_points, end_points,
-                   center=center, bulk_velocity=bulk_velocity,
-                   line_list=line_list,
-                   other_fields=other_fields,
-                   out_dir=out_dir,
-                   parallel=parallel)
-
-
-
-
-if __name__ == '__main__':
-    #setup conditions
-    line_list = ['H I','H II','Si II', 'Si III', 'Si IV', 'C II', 'C IV', 'O VI', 'Ne VIII', 'Mg X']
-    if len(argv) == 7:
-        filename = argv[1]
-        num_rays=int(argv[2])
-        ray_length=int(argv[3])
-        min_impact= int(argv[4])
-        max_impact=int(argv[5])
-        out_dir = argv[6]
     else:
-        raise RuntimeError("Takes in 5 Arguments. Dataset_filename num_rays ray_lenght max_impact_param out_directory")
+        start_pnts= np.empty(n_rays, dtype=np.float64)
+        end_pnts= np.empty(n_rays, dtype=np.float64)
+        #imp_param= np.empty(n_rays, dtype=np.float64)
 
-    my_seed = 2020 + 16*int(filename[-2:]) # this way each dataset has its own seed
-    print(f"My seed is: {my_seed}")
-    center, n_vec, rshift, bv = (None, None, None, None)
-    random_rays(filename,
-                center,
-                num_rays,
-                max_impact,
-                min_impact_param=min_impact,
-                bulk_velocity=bv,
-                line_list=line_list,
-                length=ray_length,
-                out_dir=out_dir,
-                seed=my_seed)
+    # share sightline points
+    comm.Barrier()
+    comm.Bcast([start_pnts, MPI.DOUBLE])
+    comm.Bcast([end_pnts, MPI.DOUBLE])
+    #comm.Bcast([imp_param, MPI.DOUBLE])
+
+    #add center to field parameters
+    fld_params['center']=center
+
+    #add ion fields to dataset if not already there
+    trident.add_ion_fields(ds, ions=ion_list)
+
+    construct_rays(ds, start_pnts, end_pnts,
+                   fld_params=fld_params,
+                   line_list=ion_list,
+                   other_fields=fields,
+                   out_dir=out_dir)

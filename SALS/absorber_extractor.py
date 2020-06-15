@@ -20,7 +20,7 @@ from astropy.table import QTable
 from yt.data_objects.static_output import \
     Dataset
 
-from SALS.utils.filter_definitions import ion_p_num, default_ice_fields, default_units_dict, default_cloud_dict
+from SALS.utils.filter_definitions import ion_p_num, default_units_dict, default_cloud_dict
 
 class absorber_extractor():
     """
@@ -238,23 +238,21 @@ class absorber_extractor():
         self.ds.close()
         self.ray.close()
 
-    def get_ice_absorbers(self, fields=None, user_unit_dict=None):
+    def get_ice_absorbers(self, fields=[], user_unit_dict=None):
         """
         Use the ICE method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
-        absorption line (delta_v) as well as default_ice_fields which are density
-        weighted averages of yt fields (metallicity, temperature, etc.). All in
+        absorption line (delta_v) as well as requested `fields` All in
         a astropy QTable.
 
         Parameters
         ----------
 
-        fields : list, optional
+        :fields : list, optional
             list of yt fields to extract averages of for the absorbers.
-            None defaults to default_ice_fields in general_utils.filter_definitions.
-            Defalut: None
+            Defalut: []
 
-        user_unit_dict : dict, optional
+        :user_unit_dict : dict, optional
             dictionary of fields and corresponding units to use for each field.
             None defaults to default_units_dict in utils.filter_definitions.
             Default: None
@@ -262,15 +260,13 @@ class absorber_extractor():
         Returns
         ---------
 
-        absorber_info : pandas.DataFrame
+        :absorber_info : pandas.DataFrame
             Dataframe of all the absorbers and their corresponding features.
         """
         # get absorber locations
         self.ice_intervals = self.run_ice()
         self.num_ice = len(self.ice_intervals)
-        if fields is None:
-            # set default fields to extract
-            fields = default_ice_fields
+
 
         #use default unit dict
         if user_unit_dict is None:
@@ -324,25 +320,25 @@ class absorber_extractor():
 
             stats_table.loc[i, 'col_dens'] = np.log10(col_density)
 
-            #calculate delta_v of absorber
+            #calculate delta_v of absorber. ion col dense weighted
             vel_los_dat = self.data['velocity_los'][start:end].in_units('km/s')
             central_vel = np.sum(dl*ion_density*vel_los_dat)/col_density
             stats_table.loc[i, 'delta_v'] = central_vel
 
             #calculate velocity dispersion
-            #weighted std dev. weight=dl*ion_density
 
             # set single cell absorber to zero velocity variance
             if end-start == 1:
-                vel_variance=0.
+                vel_variance=np.nan
             else:
+                #weighted sample variance
                 vel_variance=col_density \
                      *np.sum(dl*ion_density * ( vel_los_dat - self.ds.quan(central_vel, 'km/s') )**2) \
                      /(col_density**2 - np.sum( (dl*ion_density)**2 ))
 
             stats_table.loc[i, 'vel_dispersion'] = np.sqrt(vel_variance)
 
-            #calculate other field averages
+            #calculate other field averages. gas col density weighted
             for fld in fields:
                 fld_data = self.data[fld][start:end]
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
