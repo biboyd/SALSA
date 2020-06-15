@@ -1,6 +1,7 @@
 import numpy as np
 import yt
 import trident
+import pandas as pd
 
 from SALS.absorber_extractor import absorber_extractor
 from SALS.utils.collect_files import collect_files
@@ -132,25 +133,25 @@ def generate_catalog(ds_file, n_rays,
     #Extract Absorbers
 
     #collect and split up ray files
-    rayfiles = collect_files(ray_directory, key_words=['ray'])
+    ray_files = np.array(collect_files(ray_directory, key_words=['ray']), dtype=str)
     ray_files_split = np.array_split(ray_files, comm.size)
     my_rays = ray_files_split[ comm.rank ]
 
     #add directory path to rays
-    for i in range(len(my_rays)):
-        my_rays[i] = f"{ray_directory}/{my_rays[i]}"
+    my_ray_files=[ ray_directory+'/'+r for r in my_rays ]
 
     #create catalog for each ion
     df_list=[]
     for ion in ion_list:
         # setup absorber extractor
-        abs_ext = absorber_extractor(ds, my_rays[0], ion_name=ion,
+        abs_ext = absorber_extractor(ds, my_ray_files[0], ion_name=ion,
                                      cut_region_filters=cut_region_filters,
                                      **extractor_kwargs)
 
         # get catalogs
-        my_df = get_catalog(abs_ext, my_rays, method, fields=fields, units_dict=units_dict)
-        df_list.append(my_df)
+        my_df = get_catalog(abs_ext, my_ray_files, method, fields=fields, units_dict=units_dict)
+        if my_df is not None:
+            df_list.append(my_df)
 
     my_catalog= pd.concat(df_list)
     comm.Barrier()
@@ -199,13 +200,14 @@ def get_catalog(abs_extractor, ray_list, method, fields=None, units_dict=None):
             #load new ray and extract absorbers
             abs_extractor.load_ray(ray)
             df = abs_extractor.get_ice_absorbers(fields=fields, user_unit_dict=units_dict)
-
-            # add ray index
-            ray_num = get_ray_num(ray)
-            start = 65 # Ascii number for 'A'
-            for i in range(abs_extractor.num_ice):
-                df.loc[i,'absorber_index'] = f"{ray_num}{chr(start+i)}"
-            df_list.append(df)
+            
+            if df is not None:
+                # add ray index
+                ray_num = get_ray_num(ray)
+                start = 65 # Ascii number for 'A'
+                for i in range(abs_extractor.num_ice):
+                    df.loc[i,'absorber_index'] = f"{ray_num}{chr(start+i)}"
+                df_list.append(df)
 
     elif method == 'spectacle':
         for ray in ray_list:
@@ -213,17 +215,20 @@ def get_catalog(abs_extractor, ray_list, method, fields=None, units_dict=None):
             df = abs_extractor.get_spectacle_absorbers()
 
             #add ray index
-            ray_num = get_ray_num(ray)
-            start = 65 # Ascii number for 'A'
-            for i in range(abs_extractor.num_spectacle):
-                df.loc[i,'absorber_index'] = f"{ray_num}{chr(start+i)}"
-            df_list.append(df)
+            if df is not None:
+                ray_num = get_ray_num(ray)
+                start = 65 # Ascii number for 'A'
+                for i in range(abs_extractor.num_spectacle):
+                    df.loc[i,'absorber_index'] = f"{ray_num}{chr(start+i)}"
+                df_list.append(df)
 
     else:
         raise RuntimeError(f"method={method} is not valid. method must be 'ice' or 'spectacle'.")
 
-    full_df = pd.concat(df_list)
-
+    if len(df_list) > 0:
+        full_df = pd.concat(df_list)
+    else:
+        full_df = None
     return full_df
 
 

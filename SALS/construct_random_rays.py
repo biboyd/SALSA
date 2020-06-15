@@ -140,8 +140,8 @@ def generate_lrays(ds, center,
         np.save(f"{out_dir}/impact_parameter.npy", imp_param)
 
     else:
-        start_pnts= np.empty(n_rays, dtype=np.float64)
-        end_pnts= np.empty(n_rays, dtype=np.float64)
+        start_pnts= np.empty((n_rays, 3), dtype=np.float64)
+        end_pnts= np.empty((n_rays, 3), dtype=np.float64)
         #imp_param= np.empty(n_rays, dtype=np.float64)
 
     # share sightline points
