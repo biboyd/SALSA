@@ -111,7 +111,7 @@ def generate_catalog(ds_file, n_rays,
         #generate rays randomly
 
         #set a center
-        if center is None
+        if center is None:
             center=ds.domain_center
 
         #construct random rays in ray_directory
@@ -119,7 +119,7 @@ def generate_catalog(ds_file, n_rays,
                     n_rays, impact_param_lims[1],
                     min_impact_param=impact_param_lims[0],
                     length=ray_length,
-                    fld_params=fld_params},
+                    fld_params=fld_params,
                     ion_list=ion_list,
                     fields=fields,
                     out_dir=ray_directory)
@@ -284,5 +284,5 @@ def check_lrays(ray_dir, n_rays, fields):
         # all rays passed
         return True
     else:
-        print(f"Only found {len(ray_files} instead of {n_rays}. Reconstructing rays")
+        print(f"Only found {len(ray_files)} instead of {n_rays}. Reconstructing rays")
         return False
