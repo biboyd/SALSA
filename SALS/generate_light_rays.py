@@ -18,19 +18,38 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
     """
     randomly sample impact parameter to get random sightlines from a given galaxy center
 
-    Parameters:
-        : ds_file: str or YT dataset
-        center : arr: coordinates of the center of the galaxy
-        num_sightlines : int : number of sightlines to return
-        max_impact_param : float : maximum impact param to sample from in kpc
-        min_impact_param : float : minimum impact param to sample from in kpc
-        length : float : length of the sightline in kpc
+    Parameters
+    ----------
+    : ds_file : str or YT dataset
+        path to dataset to loar or already loaded dataset
 
-    Returns :
-        start_points : array : 2d array of the startpoints for
-                    each sightline
-        end_points : array : 2d array of the endpoints for
-                    each sightline
+    : center : array like
+        coordinates of the center of the galaxy in units code_length
+
+    : num_sightlines : int
+        number of sightlines to return
+
+    : max_impact_param : float
+        maximum impact param to sample from in kpc
+
+    : min_impact_param : float, optional
+        minimum impact param to sample from in kpc
+        Default: 0.
+
+    : length : float, optional
+         length of the sightline in kpc
+         Default: 200
+
+    Returns
+    --------
+    : start_points : array
+        2d array of the startpoints for each sightline in code_length
+
+    : end_points : array
+        2d array of the endpoints for each sightline in code_length
+
+    : impact_param : array
+        array of impact parameters for each ray created in kpc
     """
 
     #set file names and ion name
@@ -83,6 +102,76 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
     start_point = sightline_centers - length/2 *perp_vec
 
     return start_point, end_point, impact_param
+
+def construct_rays(ds_file,
+        start_points,
+        end_points,
+        fld_params=None,
+        line_list=None,
+        other_fields=None,
+        out_dir='./'):
+    """
+    Construct rays using trident.
+
+    Parameters
+    ----------
+        :ds_file : str or YT dataset
+            path to dataset to be used to create rays
+
+        :start_points : numpy array
+            1d array of starting points for each ray (code_length)
+
+        :end_points : numpy array
+            1d array of end points for each ray (code_length)
+
+        :fld_params: dict, optional
+            Dictionary of parameters that will be passed to the lightrays. (ie
+            `center`, `bulk_velocity`).
+            Default: None
+
+        :line_list : list
+            list of ions to add to light rays. None defaults to
+            H I, C IV, and O VI
+
+        :other_fields : list
+            other yt fields to add to light rays. None defaults
+            to density, metallicity, and temperature
+
+        :out_dir : str/path
+            where to save all of the lightrays
+    """
+    comm = MPI.COMM_WORLD
+
+    #set defaults
+    if line_list is None:
+        line_list=['H I', 'C IV', 'O VI']
+    if other_fields is None:
+        other_fields=['density', 'metallicity', 'temperature']
+
+    n_rays = start_points.shape[0]
+    #set padding for filenames
+    pad = np.floor( np.log10(n_rays) )
+    pad = int(pad) + 1
+
+    # distribute rays to proccesors
+    my_ray_nums = np.arange(n_rays)
+
+    #split ray numbers then take a portion based on rank
+    split_ray_nums = np.array_split(my_ray_nums, comm.size)
+    my_ray_nums = split_ray_nums[ comm.rank]
+
+    for i in my_ray_nums:
+        #construct ray
+        ray_filename = f"{out_dir}/ray{i:0{pad}d}.h5"
+        trident.make_simple_ray(ds_file,
+                                start_points[i],
+                                end_points[i],
+                                lines=line_list,
+                                fields=other_fields,
+                                field_parameters=fld_params,
+                                data_filename=ray_filename)
+
+    comm.Barrier()
 
 def generate_lrays(ds, center,
                 n_rays, max_impact_param,
