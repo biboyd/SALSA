@@ -17,35 +17,35 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
 
     Parameters
     ----------
-    : ds_file : str or YT dataset
+    ds_file : str or YT dataset
         path to dataset to loar or already loaded dataset
 
-    : center : array like
+    center : array like
         coordinates of the center of the galaxy in units code_length
 
-    : num_sightlines : int
+    num_sightlines : int
         number of sightlines to return
 
-    : max_impact_param : float
+    max_impact_param : float
         maximum impact param to sample from in kpc
 
-    : min_impact_param : float, optional
+    min_impact_param : float, optional
         minimum impact param to sample from in kpc
         Default: 0.
 
-    : length : float, optional
+    length : float, optional
          length of the sightline in kpc
          Default: 200
 
     Returns
     --------
-    : start_points : array
+    start_points : array
         2d array of the startpoints for each sightline in code_length
 
-    : end_points : array
+    end_points : array
         2d array of the endpoints for each sightline in code_length
 
-    : impact_param : array
+    impact_param : array
         array of impact parameters for each ray created in kpc
     """
 
@@ -112,30 +112,30 @@ def construct_rays(ds_file,
 
     Parameters
     ----------
-        :ds_file : str or YT dataset
-            path to dataset to be used to create rays
+    ds_file : str or YT dataset
+        path to dataset to be used to create rays
 
-        :start_points : numpy array
-            1d array of starting points for each ray (code_length)
+    start_points : numpy array
+        1d array of starting points for each ray (code_length)
 
-        :end_points : numpy array
-            1d array of end points for each ray (code_length)
+    end_points : numpy array
+        1d array of end points for each ray (code_length)
 
-        :fld_params: dict, optional
-            Dictionary of parameters that will be passed to the lightrays. (ie
-            `center`, `bulk_velocity`).
-            Default: None
+    fld_params: dict, optional
+        Dictionary of parameters that will be passed to the lightrays. (ie
+        `center`, `bulk_velocity`).
+        Default: None
 
-        :line_list : list
-            list of ions to add to light rays. None defaults to
-            H I, C IV, and O VI
+    line_list : list
+        list of ions to add to light rays. None defaults to
+        H I, C IV, and O VI
 
-        :other_fields : list
-            other yt fields to add to light rays. None defaults
-            to density, metallicity, and temperature
+    other_fields : list
+        other yt fields to add to light rays. None defaults
+        to density, metallicity, and temperature
 
-        :out_dir : str/path
-            where to save all of the lightrays
+    out_dir : str/path
+        where to save all of the lightrays
     """
     comm = MPI.COMM_WORLD
 
@@ -182,36 +182,33 @@ def generate_lrays(ds, center,
 
     Parameters
     ----------
-        :ds_file : str or YT Dataset
-            path to dataset or already loaded, YT dataset
+    ds_file : str or YT Dataset
+        path to dataset or already loaded, YT dataset
 
-        :center : arr
-            coordinates of the center of the galaxy
+    center : arr
+        coordinates of the center of the galaxy
 
-        :n_rays : int
-            number of light rays to construct
+    n_rays : int
+        number of light rays to construct
 
-        :max_impact_param : float
-            maximum impact param to sample from in kpc
+    max_impact_param : float
+        maximum impact param to sample from in kpc
 
-        :min_impact_param : float
-            minimum impact param to sample from in kpc
+    min_impact_param : float
+        minimum impact param to sample from in kpc
 
-        :length : float
-            length of the sightline in kpc
+    length : float
+        length of the sightline in kpc
 
-        :ion_list : list
-            ions to add to lightray
+    ion_list : list
+        ions to add to lightray
 
-        :fields : list
-            fields to add to lightray
+    fields : list
+        fields to add to lightray
 
-        :out_dir : string
-            path to where ray files will be written
+    out_dir : string
+        path to where ray files will be written
 
-    Returns
-    -------
-        none
     """
 
     comm = MPI.COMM_WORLD

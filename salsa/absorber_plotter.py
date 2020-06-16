@@ -254,8 +254,10 @@ class absorber_plotter(absorber_extractor):
         """
         Adds ray and marker annotations to slice plot
 
-        Parameters:
-            plot : bool : Whether to annotate ray/markers to the slice plot or to just
+        Parameters
+        -----------
+        plot : bool
+            Whether to annotate ray/markers to the slice plot or to just
             calculate the marker positions for placing on los_velocity plot
         """
 
@@ -292,12 +294,16 @@ class absorber_plotter(absorber_extractor):
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
 
-        Parameters:
-        field: The yt field to plot for the slice
-        cmap='magma' : the colormap to use for the slice
+        Parameters
+        ----------
 
-        Returns:
-        slice : yt SlicePlot with ray annotated
+        cmap: str
+            the colormap to use for the slice. Default: 'magma'
+
+        Returns
+        -------
+        slice : yt SlicePlot
+            Slice with ray annotated
         """
         #print("adding ion fields")
 
@@ -744,11 +750,11 @@ class absorber_plotter(absorber_extractor):
         """
         Zoom into the slice by specified factor
 
-        Parameters:
-            factor : factor by which to zoom in using yt's zoom mehtod
+        Parameters
+        ----------
+        factor : float
+            factor by which to zoom in using yt's zoom mehtod
 
-        Returns:
-            none
         """
 
         self.slice.zoom(factor)
@@ -768,9 +774,6 @@ class absorber_plotter(absorber_extractor):
         This is done by using spectacle if use_spectacle is True. as well as
         by summing the product of the number density for a given length by that length.
         and the ICE method
-
-        Parameters:
-            none
 
         Returns:
             line_models : list spectacle models : Individual line models for the

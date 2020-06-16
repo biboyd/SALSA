@@ -33,57 +33,60 @@ def generate_catalog(ds_file, n_rays,
 
     Parameters
     ----------
-    :ds_file: str or dataset
+    ds_file: str or dataset
         either path to a dataset or a loaded dataset
-    :n_rays: int
+
+    n_rays: int
         number of rays to sample
-    :ray_directory: str
+
+    ray_directory: str
         path to directory where rays loaded from or will be saved if they haven't
         been constructed
-    :ion_list: list str
+
+    ion_list: list str
         list of ions to find absorbers from.
 
-    :method: "ice" or "spectacle", optional
+    method: "ice" or "spectacle", optional
         Choose which method to use to extract absorbers.
 
-    :center: list or array, optional
+    center: list or array, optional
         The center of the galaxy in units 'code_length'. If None, defaults to
         domain_center.
         Default: None
 
-    :impact_param_lims: tuple or list, optional
+    impact_param_lims: tuple or list, optional
         The range on which to sample impact parameter when constructing lightrays
         Default: (0, 200)
 
-    :ray_length: float, optional
+    ray_length: float, optional
         The length of each light ray in units kpc.
         Default: 200
 
-    :field_parameters: dict, optional
+    field_parameters: dict, optional
         The parameters that will be passed to trident during ray construction.
         This can be something like "bulk_velocity" so that a radial velocity can
         be saved.
 
-    :fields: list of str
+    fields: list of str
         YT fields to add to lightrays. Will be included in catalog if "ice" method
         is selected
 
-    :cut_region_filters: list of strings, optional
+    cut_region_filters: list of strings, optional
         a list of filters defined by the way you use Cut Regions in YT
         Default: None
 
-    :extractor_kwargs: dict, optional
+    extractor_kwargs: dict, optional
         Additional key word arguments to pass to the absorber_extractor to
         modify default extraction parameters
         Default: {}
 
-    :units_dict: dict, optional
+    units_dict: dict, optional
         dictionary of units to use for the fields when extracting properties
         (only relevant for 'ice' method)
         Default: None
     Returns
     -------
-    :full_catalog: pandas.DataFrame
+    full_catalog: pandas.DataFrame
         pandas dataframe containing all of the absorbers extracted from all
         the lightrays
     """
@@ -168,27 +171,27 @@ def get_catalog(abs_extractor, ray_list, method, fields=None, units_dict=None):
 
     Parameters
     ----------
-    :abs_extractor: SALS.absorber_extractor
+    abs_extractor: SALS.absorber_extractor
         Absorber Extractor object that will be used to extract absoprtion feat.
         for the catalog
 
-    :ray_list: list of str or trident.ray objects
+    ray_list: list of str or trident.ray objects
         List of ray objects or list of trident rays whose absorbers will be
         extracted
-    :method: str
+    method: str
         Either 'ice' or 'spectacle'. specifies which method is used to extract
         absorbers
 
-    :fields: list str, optional
+    fields: list str, optional
         Fields to extract/add to catalog if using 'ice' method.
         Defaults=None
 
-    :units_dict: dict
+    units_dict: dict
         dictionary containing what units to use for each field
 
     Returns
     -------
-    :full_df: pandas.DataFrame
+    full_df: pandas.DataFrame
         Catalog of absorber properties in a pandas dataframe.
     """
     df_list=[]

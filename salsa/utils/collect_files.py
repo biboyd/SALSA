@@ -11,23 +11,22 @@ def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
 
     Parameters
     ----------
-
-    : directory : str
+    directory : str
         Directory in which to search for files
 
-    : file_ext : str
+    file_ext : str
         The file extension to look for (ie '.py', '.h5')
 
-    : key_words : list of str
+    key_words : list of str
         Key words that must in the filename to be collected
 
-    : black_list : list of str
+    black_list : list of str
         list of files to exclude from collection
 
     Returns
     -------
 
-    : files : list of str
+    files : list of str
         List of filenames in the directory that pass all requirements for file
         extension, keywords, black_list.
 
@@ -50,15 +49,15 @@ def check_file(file, key_words, black_list):
 
     Parameters
     ----------
-    : file : string
+    file : string
         filename to check
-    : key_words : list
+    key_words : list
         list of strings required to be in file name
-    : black_list : list
+    black_list : list
         list of files that are black listed, that file can't be called
     Returns
     --------
-    : : bool
+    all_files_pass : bool
         Returns True if file is not in black_list and contains all key_words
     """
     #check if ile in black list
@@ -79,18 +78,18 @@ def check_rays(ray_dir, n_rays, fields):
 
     Parameters
     ----------
-    : ray_dir : str
+    ray_dir : str
         The path to the directory where rays are held
 
-    : n_rays : int
+    n_rays : int
         The number of lrays that should be in the directory
 
-    : fields : list, str
+    fields : list, str
         List of the fields needed in each lightr ray
 
     Returns
     --------
-    : ray_bool : bool
+    ray_bool : bool
         `True` if there are `n_rays` in the `ray_dir` and each one contains
         necessary fields. Otherwise returns False
     """

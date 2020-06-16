@@ -149,9 +149,6 @@ class absorber_extractor():
         new_ray :str or yt.ray
             either filename to rayfile or a trident ray that's already opened
 
-        Returns
-        ---------
-
         """
         #reset absorber extraction variables
         # variables to store raw info from the different methods
@@ -196,13 +193,25 @@ class absorber_extractor():
         """
         returns positional/directional properties of the ray so that it can be used like a vector
 
-        Parameters:
-            units : YT defined units to return arrays in. defaults to 'code length'
-        Returns:
-            ray_begin : (YT arr): the starting coordinates of ray
-            ray_end : (YT arr): the ending coordinates of the ray
-            ray_length :(YT arr): the length of the ray
-            ray_unit :(YT arr): unit vector showing direction of the ray
+        Parameters
+        -----------
+
+        units : str, optional
+            YT defined units to return arrays in. defaults to 'code length'.
+            Default: 'code_length'
+        Returns
+        -------
+        ray_begin : yt.arr
+            the starting coordinates of ray
+
+        ray_end : yt.arr
+            the ending coordinates of the ray
+
+        ray_length : yt.arr
+            the length of the ray
+
+        ray_unit : yt.arr
+            unit vector showing direction of the ray
         """
         #get start and end points of ray. convert to defined units
         #print(self.ray)
@@ -233,17 +242,17 @@ class absorber_extractor():
         """
         Use the ICE method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
-        absorption line (delta_v) as well as requested `fields` All in
-        a pandas dataframe
+        absorption line (delta_v) as well as requested fields All in
+        a pandas dataframe.
 
         Parameters
-        ----------
+        -----------
 
-        :fields : list, optional
+        fields : list, optional
             list of yt fields to extract averages of for the absorbers.
             Defalut: []
 
-        :user_unit_dict : dict, optional
+        user_unit_dict : dict, optional
             dictionary of fields and corresponding units to use for each field.
             None defaults to default_units_dict in utils.filter_definitions.
             Default: None
@@ -251,8 +260,9 @@ class absorber_extractor():
         Returns
         ---------
 
-        :absorber_info : pandas.DataFrame
+        absorber_info : pandas.DataFrame
             Dataframe of all the absorbers and their corresponding features.
+
         """
         # get absorber locations
         self.ice_intervals = self.run_ice()
@@ -418,8 +428,7 @@ class absorber_extractor():
 
         Returns
         --------
-
-        final_intervals: list of tuples of int
+        :final_intervals: list of tuples of int
             List of the indices that indicate the start and end of each absorber.
         """
         num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
