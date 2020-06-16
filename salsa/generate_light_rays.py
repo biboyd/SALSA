@@ -108,7 +108,7 @@ def construct_rays(ds_file,
         other_fields=None,
         out_dir='./'):
     """
-    Construct rays using trident.
+    Construct rays given a set of starting points and end points.
 
     Parameters
     ----------
@@ -179,7 +179,9 @@ def generate_lrays(ds, center,
                 fields=['density','temperature'],
                 out_dir='./'):
     """
-
+    Generate a sample of trident lightrays that randomly, uniformly cover
+    impact parameter.
+    
     Parameters
     ----------
     ds_file : str or YT Dataset

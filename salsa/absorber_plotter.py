@@ -38,59 +38,62 @@ class absorber_plotter(absorber_extractor):
         Name of the ion to extract absorbers of and plot
         Default: "H I"
 
-    cut_region_filters : list of str
+    cut_region_filters : list of str, optional
         a list of filters defined by the way you use Cut Regions in YT
 
-    slice_field : string
+    slice_field : string, optional
         Field to plot in slice plot. defaults to ion_name's number density
 
-    absorber_fields : list of strings
+    absorber_fields : list of strings, optional
         Additional ions to include in plots/Spectra, enter as list.
 
-    north_vector : array type
+    north_vector : array type, optional
         vector used to fix the orientation of the slice plot defaults to z-axis
 
-    center_gal : array type
+    center_gal : array type, optional
         center of galaxy in code_length. if None, then defaults to domain_center
 
-    wavelength_center : float
+    wavelength_center : float, optional
         Wavelength to center spectrum plot on. defaults to the stringest known
         spectral line of ion_name. in units of Angstrom
 
-    wavelength_width :float
+    wavelength_width :float, optional
         sets the wavelength range of the spectrum plot. defaults to 300 Angstroms
 
-    velocity_width :float
+    velocity_width :float, optional
         sets the velocity range in spectrum plot in units of km/s
 
-    wavelegnth_res :float
+    wavelegnth_res :float, optional
         width of wavelength bins in spectrum plot. default 0.1 Angstrom
 
-    velocity_res :float
+    velocity_res :float, optional
         width of velocity bins in spectrum plot. default 10 km/s
 
-    redshift :float
+    redshift :float, optional
         redshift of galaxy's motion. adjusts velocity plot calculation.
 
-    bulk_velocity : array type
+    bulk_velocity : array type, optional
         bulk velocity of the galaxy in km/s
 
-    use_spectacle : bool
+    use_spectacle : bool, optional
         Choose whether to use spectacle fit to compute col dense
 
-    spectacle_res : double
+    spectacle_res : double, optional
         Set minimum resolution that spectacle will attempt to fit lines to. If
         None, default to velocity_res
 
-    markers :bool
+    markers :bool, optional
         whether to include markers on light ray and number density plot
 
-    mark_plot_args : dict
+    mark_plot_args : dict, optional
         set the property of markers if they are to be plotted.
         optional settings are:
-            marker_spacing : determines how far apart markers are in kpc
-            marker_shape : shape of marker see matplotlib for notation
-            marker_cmap : colormap used to differentiate markers any other property that can be passer to matplotlib scatter
+
+        `marker_spacing`: determines how far apart markers are in kpc.
+
+        `marker_shape`: shape of marker see matplotlib for notation
+
+        `marker_cmap`: colormap used to differentiate markers any other property that can be passer to matplotlib scatter
 
     figure :matplotlib figure
         where the multi_plot will be plotted. creates one if none is specified.

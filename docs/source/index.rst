@@ -18,9 +18,6 @@ Simulations.
    absorber_extraction.rst
    reference.rst
 
-Indices and tables
+Index
 ==================
-
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
