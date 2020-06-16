@@ -16,8 +16,8 @@ import astropy.units  as u
 from yt.data_objects.static_output import \
     Dataset
 
-from SALS.utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict, default_cloud_dict
-from SALS.absorber_extractor import absorber_extractor
+from salsa.utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict, default_cloud_dict
+from salsa.absorber_extractor import absorber_extractor
 
 class absorber_plotter(absorber_extractor):
     """
@@ -843,21 +843,3 @@ class absorber_plotter(absorber_extractor):
         line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
 
         return log_tot_cd, line_models
-if __name__ == '__main__':
-    data_set_fname = argv[1]
-    ray_fname = argv[2]
-    ion = argv[3]
-    num=int(argv[4])
-    absorbers = [ion] #['H I', 'O VI']
-    center, nvec, rshift, bv = (None, None, None, None)#find_center(data_set_fname)
-    cut_filters = ["((obj[('gas', 'radius')].in_units('kpc') > 10) & \
-                   (obj[('gas', 'radius')].in_units('kpc') < 200)) & \
-                   ((obj[('gas', 'temperature')].in_units('K') > 1.5e4) | \
-                   (obj[('gas', 'density')].in_units('g/cm**3') < 2e-26))"]
-
-    mp = absorber_plotter(data_set_fname, ray_fname, ion_name=ion, absorber_fields=absorbers,
-                    center_gal=center, north_vector=nvec, bulk_velocity=None,plot_ice=True,use_spectacle=True,plot_spectacle=True,
-                    redshift=rshift, absorber_min=12.5,wavelength_width = 30, cut_region_filters=cut_filters)
-    makedirs("mp_frames", exist_ok=True)
-    outfile = f"mp_frames/multi_plot_{ion[0]}_{num:02d}.png"
-    mp.create_multi_plot(cmap='cividis',outfname=outfile)

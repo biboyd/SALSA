@@ -1,26 +1,17 @@
-import matplotlib as mpl
-mpl.use('Agg')
 import yt
 import trident
 import numpy as np
 import pandas as pd
 
 from spectacle.fitting import LineFinder1D
-from sys import argv, path
-from os import remove, listdir, makedirs
-import errno
-import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
-from mpl_toolkits.axes_grid1 import AxesGrid
 from numpy.linalg import norm
 import astropy.units  as u
 from astropy.table import QTable
 
-
 from yt.data_objects.static_output import \
     Dataset
 
-from SALS.utils.filter_definitions import ion_p_num, default_units_dict, default_cloud_dict
+from salsa.utils.filter_definitions import ion_p_num, default_units_dict, default_cloud_dict
 
 class absorber_extractor():
     """
@@ -243,7 +234,7 @@ class absorber_extractor():
         Use the ICE method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
         absorption line (delta_v) as well as requested `fields` All in
-        a astropy QTable.
+        a pandas dataframe
 
         Parameters
         ----------
@@ -290,11 +281,12 @@ class absorber_extractor():
         for f in fields:
             name_type.append( (f, np.float64) )
 
+        #check if any absorbrs were found
         n_abs = len(self.ice_intervals)
-
         if n_abs == 0:
             print("No absorbers in ray: ", self.ray)
             return None
+
         #initialize empty table
         stats_table = pd.DataFrame(np.empty(n_abs , dtype=name_type))
 
@@ -357,7 +349,7 @@ class absorber_extractor():
 
         Returns
         ----------
-        line_stats : astropy.QTable
+        line_stats : pandas.DataFrame
             Table including all line statistics found from spectacle's fit of
             the spectra.
         """

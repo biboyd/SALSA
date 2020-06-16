@@ -11,8 +11,6 @@ from os import makedirs
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 
-from SALS.utils.filter_definitions import radius_function, ion_p
-
 def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_impact_param=0, length=200):
     """
     randomly sample impact parameter to get random sightlines from a given galaxy center
@@ -247,5 +245,5 @@ def generate_lrays(ds, center,
     construct_rays(ds, start_pnts, end_pnts,
                    fld_params=fld_params,
                    line_list=ion_list,
-                   other_fields=fields,
+                   other_fields=fields.copy(),
                    out_dir=out_dir)

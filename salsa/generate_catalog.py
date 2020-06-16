@@ -3,10 +3,10 @@ import yt
 import trident
 import pandas as pd
 
-from SALS.absorber_extractor import absorber_extractor
-from SALS.utils.collect_files import collect_files, check_rays
-from SALS.utils.filter_definitions import ion_p_num
-from SALS.generate_light_rays import generate_lrays
+from salsa.absorber_extractor import absorber_extractor
+from salsa.utils.collect_files import collect_files, check_rays
+from salsa.utils.filter_definitions import ion_p_num
+from salsa.generate_light_rays import generate_lrays
 from mpi4py import MPI
 
 from yt.data_objects.static_output import \

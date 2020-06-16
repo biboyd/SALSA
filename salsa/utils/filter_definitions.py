@@ -1,24 +1,10 @@
-import yt
-import trident
-import numpy as np
+from trident import from_roman
 
 
 cgm_in_radius=10 #kpc
 cgm_out_radius=200 #kpc
 cgm_density=2e-26 # g/cm^3
 cgm_temp=1.5e4 #K
-
-#function to create field in yt
-def radius_function(field, data):
-    if data.has_field_parameter("center"):
-        c = data.get_field_parameter("center")
-    else:
-        c = data.ds.domain_center
-
-    x = data[('gas', 'x')] - c[0]
-    y = data[('gas', 'y')] - c[1]
-    z = data[('gas', 'z')] - c[2]
-    return np.sqrt(x*x + y*y + z*z)
 
 def parse_cut_filter(cuts):
     """
@@ -63,7 +49,7 @@ def ion_p(ion_name):
     #split up the words in ion species name
     ion_split = ion_name.split()
     #convert num from roman numeral. subtract run b/c YT
-    num = trident.from_roman(ion_split[1])-1
+    num = from_roman(ion_split[1])-1
 
     #combine all the names
     return f"{ion_split[0]}_p{num}"

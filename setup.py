@@ -1,8 +1,8 @@
 from setuptools import setup
-setup(name="SALS",
+setup(name="salsa",
       version="0.0.0",
       author="Brendan Boyd",
-      packages=["SALS"],
+      packages=["salsa"],
       install_requires=[
         'numpy',
         'yt',

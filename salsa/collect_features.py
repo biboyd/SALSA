@@ -10,8 +10,8 @@ import astropy.units  as u
 from yt.data_objects.static_output import \
     Dataset
 
-from SALS.absorber_plotter import absorber_plotter
-from SALS.utils.filter_definitions import parse_cut_filter
+from salsa.absorber_plotter import absorber_plotter
+from salsa.utils.filter_definitions import parse_cut_filter
 
 def main(ds_filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10):
     #init mpi

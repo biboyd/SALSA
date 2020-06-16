@@ -1,4 +1,3 @@
-from sys import argv
 from os import listdir
 import yt
 from astropy.table import QTable, vstack
