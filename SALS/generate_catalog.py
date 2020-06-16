@@ -4,9 +4,9 @@ import trident
 import pandas as pd
 
 from SALS.absorber_extractor import absorber_extractor
-from SALS.utils.collect_files import collect_files
+from SALS.utils.collect_files import collect_files, check_rays
 from SALS.utils.filter_definitions import ion_p_num
-from SALS.construct_random_rays import generate_lrays
+from SALS.generate_light_rays import generate_lrays
 from mpi4py import MPI
 
 from yt.data_objects.static_output import \
@@ -233,69 +233,8 @@ def get_catalog(abs_extractor, ray_list, method, fields=None, units_dict=None):
 def get_ray_num(file_path):
     """
     extract the ray's number from it's file name by removing 'ray' and '.h5' as
-    well as preceding path 
-
-    Parameters
-    ----------
-    :file_path : string
-        full path to ray file
-    Returns
-    --------
-    :num : string
-        the number corresponding to the ray
+    well as preceding path
     """
     filename = file_path.split('/')[-1]
     num = filename[3:-3]
-
     return num
-
-def check_rays(ray_dir, n_rays, fields):
-    """
-    Check if a directory already contains a given number of trident lrays and
-    contains necessary fields
-
-    Parameters
-    ----------
-    : ray_dir : str
-        The path to the directory where rays are held
-
-    : n_rays : int
-        The number of lrays that should be in the directory
-
-    : fields : list, str
-        List of the fields needed in each lightr ray
-
-    Returns
-    --------
-    : ray_bool : bool
-        `True` if there are `n_rays` in the `ray_dir` and each one contains
-        necessary fields. Otherwise returns False
-    """
-
-    ray_files = collect_files(ray_dir, key_words=['ray'])
-
-    #check if correct number
-    if len(ray_files) == n_rays:
-        # check if fields are in each ray
-
-        for rfile in ray_files:
-            #load ray file
-            try:
-                ray = yt.load(f"{ray_dir}/{rfile}")
-            except yt.utilities.exceptions.YTOutputNotIdentified:
-                print(f"Couldn't load {rfile}. Reconstructing rays")
-                return False
-
-            # check each field is in ray
-            for fld in fields:
-                if ('all', fld) in ray.field_list:
-                    pass
-                else:
-                    print(f"Not all fields present in {rfile}. Reconstructing rays")
-                    return False
-
-        # all rays passed
-        return True
-    else:
-        print(f"Only found {len(ray_files)} instead of {n_rays}. Reconstructing rays")
-        return False

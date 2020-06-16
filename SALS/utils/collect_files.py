@@ -72,6 +72,57 @@ def check_file(file, key_words, black_list):
         #return true if passes through
         return True
 
+def check_rays(ray_dir, n_rays, fields):
+    """
+    Check if a directory already contains a given number of trident lrays and
+    contains necessary fields
+
+    Parameters
+    ----------
+    : ray_dir : str
+        The path to the directory where rays are held
+
+    : n_rays : int
+        The number of lrays that should be in the directory
+
+    : fields : list, str
+        List of the fields needed in each lightr ray
+
+    Returns
+    --------
+    : ray_bool : bool
+        `True` if there are `n_rays` in the `ray_dir` and each one contains
+        necessary fields. Otherwise returns False
+    """
+
+    ray_files = collect_files(ray_dir, key_words=['ray'])
+
+    #check if correct number
+    if len(ray_files) == n_rays:
+        # check if fields are in each ray
+
+        for rfile in ray_files:
+            #load ray file
+            try:
+                ray = yt.load(f"{ray_dir}/{rfile}")
+            except yt.utilities.exceptions.YTOutputNotIdentified:
+                print(f"Couldn't load {rfile}. Reconstructing rays")
+                return False
+
+            # check each field is in ray
+            for fld in fields:
+                if ('all', fld) in ray.field_list:
+                    pass
+                else:
+                    print(f"Not all fields present in {rfile}. Reconstructing rays")
+                    return False
+
+        # all rays passed
+        return True
+    else:
+        print(f"Only found {len(ray_files)} instead of {n_rays}. Reconstructing rays")
+        return False
+
 def combine_astropy_files(directory, kw='ice', outfile=None):
 
     #get files
@@ -123,9 +174,3 @@ def combine_pandas_files(directory, kw='ice', outfile=None):
         f.close()
         main_table = None
     return main_table
-
-if __name__ == '__main__':
-    directory= argv[1]
-    outfile= argv[2]
-
-    combine_astropy_files(directory, outfile=outfile)
