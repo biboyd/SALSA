@@ -102,20 +102,18 @@ def generate_catalog(ds_file, n_rays,
         check_fields.append(ion_p_num(i))
 
     #check if rays already made
-
     if comm.rank == 0:
         check =check_rays(ray_directory, n_rays, check_fields)
-        ray_bool= np.array([check], dtype=bool)
+        ray_bool= np.array([check], dtype=int)
     else:
-        ray_bool = np.array([False], dtype=bool)
+        ray_bool = np.array([False], dtype=int)
 
     # share if rays made already or not
     comm.Barrier()
-    comm.Bcast([ray_bool, MPI.BOOL])
+    comm.Bcast([ray_bool, MPI.INT])
 
+    #generate rays randomly
     if not ray_bool[0]:
-        #generate rays randomly
-
         #set a center
         if center is None:
             center=ds.domain_center
@@ -200,7 +198,7 @@ def get_catalog(abs_extractor, ray_list, method, fields=None, units_dict=None):
             #load new ray and extract absorbers
             abs_extractor.load_ray(ray)
             df = abs_extractor.get_ice_absorbers(fields=fields, user_unit_dict=units_dict)
-            
+
             if df is not None:
                 # add ray index
                 ray_num = get_ray_num(ray)
@@ -234,12 +232,17 @@ def get_catalog(abs_extractor, ray_list, method, fields=None, units_dict=None):
 
 def get_ray_num(file_path):
     """
-    extract the ray's number from it's file name
+    extract the ray's number from it's file name by removing 'ray' and '.h5' as
+    well as preceding path 
 
-    Parameters:
-        file_path : string: full path to ray file
-    Returns:
-        num :string : the number corresponding to the ray
+    Parameters
+    ----------
+    :file_path : string
+        full path to ray file
+    Returns
+    --------
+    :num : string
+        the number corresponding to the ray
     """
     filename = file_path.split('/')[-1]
     num = filename[3:-3]
