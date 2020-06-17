@@ -1,7 +1,6 @@
 name: salsa
 
 dependencies:
-    - python>=3.5
     - mpi4py
     - matplotlib
     - numpy
