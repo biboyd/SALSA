@@ -1,0 +1,19 @@
+name: salsa
+
+dependencies:
+    - python>=3.5
+    - mpi4py
+    - matplotlib
+    - numpy
+    - scipy
+    - yt
+    - pandas
+    - pip:
+        - sphinx
+        - sphinx-rtd-theme
+        - sphinx_automodapi
+        - trident
+        - spectacle
+        - specutils==0.5.2
+        - gwcs==0.10.0
+        - astropy
