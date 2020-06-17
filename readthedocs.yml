@@ -3,4 +3,6 @@ version: 2
 conda:
   environment: environment.yml
 python:
-   setup_py_install: true
+   install:
+      - method: setuptools
+        path: .
