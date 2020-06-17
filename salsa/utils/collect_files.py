@@ -42,6 +42,7 @@ def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
             files.append(f)
 
     return files
+
 def check_file(file, key_words, black_list):
     """
     Check the file against a black list as well as check if it has keywords in
@@ -85,42 +86,53 @@ def check_rays(ray_dir, n_rays, fields):
         The number of lrays that should be in the directory
 
     fields : list, str
-        List of the fields needed in each lightr ray
+        List of the fields needed in each light ray
 
     Returns
     --------
     ray_bool : bool
         `True` if there are `n_rays` in the `ray_dir` and each one contains
-        necessary fields. Otherwise returns False
+        necessary fields. If no rays are found then returns False. Otherwise if
+        the rays found don't match requirements an error is raised (see below).
+
+    Raises
+    ------
+    RuntimeError
+        This is raised if there are a non-zero number of rays but they don't match
+        the specified number of rays, don't contain the specified fields, or simply can't
+        be opened.
+
     """
 
     ray_files = collect_files(ray_dir, key_words=['ray'])
 
     #check if correct number
     if len(ray_files) == n_rays:
-        # check if fields are in each ray
 
+        # check if fields are in each ray
         for rfile in ray_files:
             #load ray file
             try:
                 ray = yt.load(f"{ray_dir}/{rfile}")
             except yt.utilities.exceptions.YTOutputNotIdentified:
                 print(f"Couldn't load {rfile}. Reconstructing rays")
-                return False
+                raise RuntimeError(f"Couldn't load {rfile}. Delete these rays so new ones can be constructed")
 
             # check each field is in ray
             for fld in fields:
                 if ('all', fld) in ray.field_list:
                     pass
                 else:
-                    print(f"Not all fields present in {rfile}. Reconstructing rays")
-                    return False
+                    raise RuntimeError(f"{fld} not present in {rfile}. Either delete these rays so new ones can be constructed or remove this field")
 
         # all rays passed
         return True
     else:
-        print(f"Only found {len(ray_files)} instead of {n_rays}. Reconstructing rays")
-        return False
+        if len(ray_files) == 0:
+            print(f"No rays found, Constructing new ones")
+            return False
+        else:
+            raise RuntimeError(f"found {len(ray_files)} rays instead of {n_rays}. Either delete rays or change number of rays to match")
 
 def combine_astropy_files(directory, kw='ice', outfile=None):
 

@@ -150,7 +150,7 @@ def generate_catalog(ds_file, n_rays,
                                      **extractor_kwargs)
 
         # get catalogs
-        my_df = get_catalog(abs_ext, my_ray_files, method, fields=fields, units_dict=units_dict)
+        my_df = get_absorbers(abs_ext, my_ray_files, method, fields=fields, units_dict=units_dict)
         if my_df is not None:
             df_list.append(my_df)
 
@@ -165,7 +165,7 @@ def generate_catalog(ds_file, n_rays,
 
 
 
-def get_catalog(abs_extractor, ray_list, method, fields=None, units_dict=None):
+def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None):
     """
     Create catalog of the given rays usin absorber extractor
 

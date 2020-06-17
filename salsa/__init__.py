@@ -12,8 +12,6 @@ from salsa.absorber_plotter import AbsorberPlotter
 
 from salsa.generate_light_rays import generate_lrays, construct_rays, random_sightlines
 
-from salsa.generate_catalog import generate_catalog, get_catalog
+from salsa.generate_catalog import generate_catalog, get_absorbers
 
 from salsa import utils
-
-from salsa.utils.filter_definitions import parse_cut_filter

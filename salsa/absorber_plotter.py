@@ -67,12 +67,6 @@ class AbsorberPlotter(AbsorberExtractor):
     velocity_res :float, optional
         width of velocity bins in spectrum plot. default 10 km/s
 
-    redshift :float, optional
-        redshift of galaxy's motion. adjusts velocity plot calculation.
-
-    bulk_velocity : array type, optional
-        bulk velocity of the galaxy in km/s
-
     use_spectacle : bool, optional
         Choose whether to use spectacle fit to compute col dense
 
@@ -117,8 +111,6 @@ class AbsorberPlotter(AbsorberExtractor):
                 velocity_width = 3000,
                 wavelength_res = 0.1,
                 velocity_res = 10,
-                redshift = 0,
-                bulk_velocity=None,
                 use_spectacle=False,
                 plot_spectacle=False,
                 spectacle_defaults=None,
