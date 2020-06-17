@@ -5,8 +5,6 @@ import trident
 import numpy as np
 from spectacle.fitting import LineFinder1D
 from sys import argv, path
-from os import remove, listdir, makedirs
-import errno
 import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 from mpl_toolkits.axes_grid1 import AxesGrid

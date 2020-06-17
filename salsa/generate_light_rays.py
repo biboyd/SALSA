@@ -6,8 +6,7 @@ from yt.data_objects.static_output import \
     Dataset
 
 from mpi4py import MPI
-from sys import argv
-from os import makedirs
+
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 
@@ -181,7 +180,7 @@ def generate_lrays(ds, center,
     """
     Generate a sample of trident lightrays that randomly, uniformly cover
     impact parameter.
-    
+
     Parameters
     ----------
     ds_file : str or YT Dataset

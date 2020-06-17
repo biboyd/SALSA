@@ -9,5 +9,7 @@ setup(name="salsa",
         'trident',
         'spectacle',
         'matplotlib',
-		'pandas'
+		'pandas',
+        'mpi4py',
+        'scipy'
       ])
