@@ -14,4 +14,6 @@ from salsa.generate_light_rays import generate_lrays, construct_rays, random_sig
 
 from salsa.generate_catalog import generate_catalog
 
+from salsa import utils
+
 from salsa.utils.filter_definitions import parse_cut_filter
