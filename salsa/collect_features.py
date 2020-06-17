@@ -10,7 +10,7 @@ import astropy.units  as u
 from yt.data_objects.static_output import \
     Dataset
 
-from salsa.absorber_plotter import absorber_plotter
+from salsa.absorber_plotter import AbsorberPlotter
 from salsa.utils.filter_definitions import parse_cut_filter
 
 def main(ds_filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10):
@@ -137,7 +137,7 @@ def create_frames(ds_file, rays,
 
     for ray_fname in rays:
         #load new multi plot and ray
-        mp = absorber_plotter(ds, ray_filename=ray_fname, **multi_plot_kwargs)
+        mp = AbsorberPlotter(ds, ray_filename=ray_fname, **multi_plot_kwargs)
         if mp.data['l'].size == 0:
             continue
 

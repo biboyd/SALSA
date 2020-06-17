@@ -15,9 +15,9 @@ from yt.data_objects.static_output import \
     Dataset
 
 from salsa.utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict, default_cloud_dict
-from salsa.absorber_extractor import absorber_extractor
+from salsa.absorber_extractor import AbsorberExtractor
 
-class absorber_plotter(absorber_extractor):
+class AbsorberPlotter(AbsorberExtractor):
     """
     Create's plot to easily see where absorbers are found along the light ray
     both directly and through resulting spectra. Uses absorber extractor as base

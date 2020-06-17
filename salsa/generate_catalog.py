@@ -3,7 +3,7 @@ import yt
 import trident
 import pandas as pd
 
-from salsa.absorber_extractor import absorber_extractor
+from salsa.absorber_extractor import AbsorberExtractor
 from salsa.utils.collect_files import collect_files, check_rays
 from salsa.utils.filter_definitions import ion_p_num
 from salsa.generate_light_rays import generate_lrays
@@ -145,7 +145,7 @@ def generate_catalog(ds_file, n_rays,
     df_list=[]
     for ion in ion_list:
         # setup absorber extractor
-        abs_ext = absorber_extractor(ds, my_ray_files[0], ion_name=ion,
+        abs_ext = AbsorberExtractor(ds, my_ray_files[0], ion_name=ion,
                                      cut_region_filters=cut_region_filters,
                                      **extractor_kwargs)
 
@@ -171,7 +171,7 @@ def get_catalog(abs_extractor, ray_list, method, fields=None, units_dict=None):
 
     Parameters
     ----------
-    abs_extractor: SALS.absorber_extractor
+    abs_extractor: SALS.AbsorberExtractor
         Absorber Extractor object that will be used to extract absoprtion feat.
         for the catalog
 

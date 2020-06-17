@@ -13,7 +13,7 @@ from yt.data_objects.static_output import \
 
 from salsa.utils.filter_definitions import ion_p_num, default_units_dict, default_cloud_dict
 
-class absorber_extractor():
+class AbsorberExtractor():
     """
     Extracts absorbers from a trident lightray for a given ion species. Does This
     through two methods, by using ICE (Iterative Cloud Extraction) and
