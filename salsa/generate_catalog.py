@@ -5,7 +5,7 @@ import pandas as pd
 
 from salsa.absorber_extractor import AbsorberExtractor
 from salsa.utils.collect_files import collect_files, check_rays
-from salsa.utils.filter_definitions import ion_p_num
+from salsa.utils.functions import ion_p_num
 from salsa.generate_light_rays import generate_lrays
 from mpi4py import MPI
 
@@ -29,7 +29,7 @@ def generate_catalog(ds_file, n_rays,
     Generates a catalog of absorber properties from a given number of lightrays
     through a dataset. Will look if lrays have already been made, otherwise will
     create them by uniform randomly sampling impact parameter. Uses OpenMPI to
-    split light ray creation and absorber extraction among processors.
+    split up light ray creation and absorber extraction among processors.
 
     Parameters
     ----------
@@ -77,7 +77,22 @@ def generate_catalog(ds_file, n_rays,
 
     extractor_kwargs: dict, optional
         Additional key word arguments to pass to the absorber_extractor to
-        modify default extraction parameters
+        modify default extraction parameters. Either a single dict that will be
+        passed for each ion. Or a dict of ions pointing toward individual extractor
+        kwargs.
+
+        Example: extractor_kwargs={'H I':{'absorber_min':14},
+                                   'C IV':{'absorber_min':13},
+                                   'O VI':{}}
+        or
+                 extractor_kwargs={'absorber_min':13.5}
+
+        The first will set different absober mins for each ion, with O VI taking
+        default as specified by salsa.utils.defaults.default_cloud_dict. The
+        second example will set the minimum absorber as 13.5 for every ion.
+        **NOTE** if you cannot mix the two formats. If one ion is specified then
+        all ions must be specified (This includes 'O VI' even though it is empty)
+
         Default: {}
 
     units_dict: dict, optional
@@ -144,22 +159,28 @@ def generate_catalog(ds_file, n_rays,
     #create catalog for each ion
     df_list=[]
     for ion in ion_list:
+        #check if extractor kwargs has ion specific information
+        if ion in extractor_kwargs.keys():
+            curr_kwargs = extractor_kwargs[ion]
+        else:
+            curr_kwargs=extractor_kwargs.copy()
+
         # setup absorber extractor
         abs_ext = AbsorberExtractor(ds, my_ray_files[0], ion_name=ion,
                                      cut_region_filters=cut_region_filters,
-                                     **extractor_kwargs)
+                                     **curr_kwargs)
 
         # get catalogs
         my_df = get_absorbers(abs_ext, my_ray_files, method, fields=fields, units_dict=units_dict)
         if my_df is not None:
             df_list.append(my_df)
 
-    my_catalog= pd.concat(df_list)
+    my_catalog= pd.concat(df_list, ignore_index=True)
     comm.Barrier()
 
     #gather all catalogs and creae one large
     all_dfs= comm.allgather(my_catalog)
-    full_catalog = pd.concat(all_dfs)
+    full_catalog = pd.concat(all_dfs, ignore_index=True)
 
     return full_catalog
 
@@ -200,7 +221,7 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
         for ray in ray_list:
             #load new ray and extract absorbers
             abs_extractor.load_ray(ray)
-            df = abs_extractor.get_ice_absorbers(fields=fields, user_unit_dict=units_dict)
+            df = abs_extractor.get_ice_absorbers(fields=fields, units_dict=units_dict)
 
             if df is not None:
                 # add ray index
@@ -227,7 +248,7 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
         raise RuntimeError(f"method={method} is not valid. method must be 'ice' or 'spectacle'.")
 
     if len(df_list) > 0:
-        full_df = pd.concat(df_list)
+        full_df = pd.concat(df_list, ignore_index=True)
     else:
         full_df = None
     return full_df

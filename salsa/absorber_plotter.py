@@ -14,7 +14,8 @@ import astropy.units  as u
 from yt.data_objects.static_output import \
     Dataset
 
-from salsa.utils.filter_definitions import ion_p_num, default_units_dict, default_limits_dict, default_cloud_dict
+from salsa.utils.functions import ion_p_num
+from salsa.utils.defaults import default_units_dict, default_limits_dict, default_cloud_dict
 from salsa.absorber_extractor import AbsorberExtractor
 
 class AbsorberPlotter(AbsorberExtractor):
@@ -70,9 +71,35 @@ class AbsorberPlotter(AbsorberExtractor):
     use_spectacle : bool, optional
         Choose whether to use spectacle fit to compute col dense
 
+    plot_spectacle: bool, optional
+        chooses whether individual absorption lines found by spectacle are plotted
+
     spectacle_res : double, optional
         Set minimum resolution that spectacle will attempt to fit lines to. If
         None, default to velocity_res
+
+    plot_ice : bool, optional
+        Sets whether the intervals found by the ice method are plotted on the
+        number density plot
+
+    absorber_min: float, optional
+        Minimum Log Column Density that will be used to define an absorber.
+        If None, defaults to either default for specific ion or 13
+        Default: None
+
+    frac: float, optional
+        Parameter defining what fraction of the number density is being
+        accounted for in each iteration of the ICE method. Must be a number
+        between 0 and 1.
+        Default: 0.8
+
+    num_dense_min: float, optional
+        Sets the lower limit for the number density plot. If None, defaults to
+        0.01 times the median number density
+
+    num_dense_max: float, optional
+        Sets the upper limit for the number density plot. If None, defaults to
+        100 times the median number density
 
     markers :bool, optional
         whether to include markers on light ray and number density plot
@@ -87,7 +114,7 @@ class AbsorberPlotter(AbsorberExtractor):
 
         `marker_cmap`: colormap used to differentiate markers any other property that can be passer to matplotlib scatter
 
-    figure :matplotlib figure
+    figure :matplotlib figure, optional
         where the multi_plot will be plotted. creates one if none is specified.
 
 
@@ -114,9 +141,9 @@ class AbsorberPlotter(AbsorberExtractor):
                 use_spectacle=False,
                 plot_spectacle=False,
                 spectacle_defaults=None,
+                spectacle_res=None,
                 plot_ice=False,
                 absorber_min=None,
-                spectacle_res=None,
                 frac=0.8,
                 num_dense_min=None,
                 num_dense_max=None,

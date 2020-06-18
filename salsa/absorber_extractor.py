@@ -11,7 +11,8 @@ from astropy.table import QTable
 from yt.data_objects.static_output import \
     Dataset
 
-from salsa.utils.filter_definitions import ion_p_num, default_units_dict, default_cloud_dict
+from salsa.utils.functions import ion_p_num
+from salsa.utils.defaults import default_cloud_dict
 
 class AbsorberExtractor():
     """
@@ -238,7 +239,7 @@ class AbsorberExtractor():
         self.ds.close()
         self.ray.close()
 
-    def get_ice_absorbers(self, fields=[], user_unit_dict=None):
+    def get_ice_absorbers(self, fields=[], units_dict={}):
         """
         Use the ICE method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
@@ -252,10 +253,9 @@ class AbsorberExtractor():
             list of yt fields to extract averages of for the absorbers.
             Defalut: []
 
-        user_unit_dict : dict, optional
+        units_dict : dict, optional
             dictionary of fields and corresponding units to use for each field.
-            None defaults to default_units_dict in utils.filter_definitions.
-            Default: None
+            Default: {}
 
         Returns
         ---------
@@ -268,14 +268,6 @@ class AbsorberExtractor():
         self.ice_intervals = self.run_ice()
         self.num_ice = len(self.ice_intervals)
 
-
-        #use default unit dict
-        if user_unit_dict is None:
-            unit_dict = default_units_dict
-        #update default dict with specified units
-        else:
-            unit_dict = default_units_dict
-            unit_dict.update(user_unit_dict)
 
         # line information for absorbers
         name_type = [('name', str),
@@ -345,8 +337,8 @@ class AbsorberExtractor():
                 fld_data = self.data[fld][start:end]
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
 
-                if fld in unit_dict.keys():
-                    stats_table.loc[i, fld] = avg_fld.in_units( unit_dict[fld] )
+                if fld in units_dict.keys():
+                    stats_table.loc[i, fld] = avg_fld.in_units( units_dict[fld] )
                 else:
                     stats_table.loc[i, fld] = avg_fld
 

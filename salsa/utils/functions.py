@@ -63,23 +63,3 @@ def ion_p_num(ion_name):
     #combine all the names
     outname = f"{ip}_number_density"
     return outname
-
-#ice extraction defaults
-default_ice_fields = ['x', 'y', 'z','radius', 'density', 'metallicity', 'temperature', 'radial_velocity']
-default_units_dict=dict(velocity_los='km/s',
-                       x='kpc',
-                       y='kpc',
-                       z='kpc',
-                       radius='kpc',
-                       density='g/cm**3',
-                       metallicity='Zsun',
-                       temperature='K',
-                       radial_velocity='km/s')
-
-default_limits_dict = dict(velocity_los=[-600, 600],
-                           metallicity=[0, 1],
-                           temperature=[1e4, 1e9],
-                           density=[1e-30, 1e-26])
-
-default_cloud_dict = {'H I': 12.5, 'Si II': 11, 'Si IV': 12,
-                      'C IV':13, 'O VI':12.8}

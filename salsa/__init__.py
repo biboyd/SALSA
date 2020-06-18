@@ -1,6 +1,6 @@
 """
 salsa
-Written by: Brendan Boyd boyd.brendan@stonybrook.edu
+Written by: Brendan Boyd boydbre1@msu.edu
 
 """
 
