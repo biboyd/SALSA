@@ -30,7 +30,16 @@ which uniformly, randomly sample impact parameters. This gives us a sample that
 is consistent with what the sample of observational studies. This prevents any
 sampling bias when doing comparisons.
 
-To use this function:::
+To get started we need to get a dataset. The one used in this example can be
+found `here <https://yt-project.org/data/>`_
+
+To use this function first create a directory to save rays:::
+
+  $ mkdir my_rays
+
+Now we can load in a data set and define some of the parameters that we will
+look for.
+::
 
   import yt
   import salsa
@@ -38,11 +47,11 @@ To use this function:::
   import pandas as pd
 
   # load in the simulation dataset
-  ds_file = "IsolatedGalaxy/galaxy0030/galaxy0030"
+  ds_file = "HiresIsolatedGalaxy/DD0044/DD0044"
   ds = yt.load(ds_file)
 
   # define the center of the galaxy
-  center= ds.arr([0.5, 0.5, 0.5], 'code_length')
+  center= [0.53, 0.53, 0.53]
 
   # the directory where lightrays will be saved
   ray_dir = 'my_rays'
@@ -51,16 +60,20 @@ To use this function:::
   # Choose what absorption lines to add to the dataset as well as additional
   # field data to save
   ion_list=['H I', 'C IV', 'O VI']
-  other_fields = ['density', 'temperature', 'radius']
+  other_fields = ['density', 'temperature', 'metallicity']
 
   # the maximum distance a lightray will be created (minimum default to 0)
-  max_impact = 200 #kpc
+  max_impact = 15 #kpc
+
+With the parameters set up we can now generate the lightrays. We will set the
+seed used to create the random light rays so we can reproduce these results.
+::
 
   # set a seed so the function produces the same random rays
-  np.random.seed(42)
+  np.random.seed(18)
 
   # Run the function and rays will be saved to my_rays directory
-  salsa.generate_lrays(ds, center, n_rays, max_impact, center=center,
+  salsa.generate_lrays(ds, center, n_rays, max_impact,
                        ion_list=ion_list, fields=other_fields, out_dir=ray_dir)
 
 
@@ -81,13 +94,27 @@ Now let's extract some absorbers from the Light rays we made
   abs_ext = salsa.AbsorberExtractor(ds, ray_file, ion_name='H I')
 
   # use ice method to extract absorbers into a pandas DataFrame
-  units_dict=dict(density='g/cm**3', radius='kpc')
-  df_ice = abs_ext.get_ice_absorbers(other_fields, user_unit_dict=units_dict)
+  units_dict=dict(density='g/cm**3', metallicity='Zsun')
+  df_ice = abs_ext.get_ice_absorbers(other_fields, units_dict=units_dict)
   df_ice.head()
+
+.. csv-table::
+  :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity
+
+  H I,1215.670,0.000,12.787,14.187,0.384,201,204,0.000,96469.462,1.086
+  H I,1215.670,0.000,15.367,-0.264,4.846,204,216,0.000,48429.090,1.103
+
+Can also extract using spectacle:
+::
 
   # use spectacle now
   df_spect = abs_ext.get_spectacle_absorbers()
   df_spect.head()
+
+.. csv-table::
+  :header: name,wave,col_dens,v_dop,delta_v,delta_lambda,ew,dv90,fwhm,redshift
+
+  HI1216,1215.670,15.154,31.705,-5.915,0.000,7.759,40.000,0.217,0.000
 
 Notice that both of these methods contain different information. Ice includes
 more details of the simulation data like the density and temperature of the
@@ -104,13 +131,19 @@ extract absorbers from each one. see:::
               f"{ray_dir}/ray2.h5",
               f"{ray_dir}/ray3.h5"]
 
-  # initialize a new AbsorberExtractor for looking at O VI
-  abs_ext_ovi = salsa.AbsorberExtractor(ds, ray_file, ion_name='O VI')
+  # initialize a new AbsorberExtractor for looking at C IV
+  abs_ext_civ = salsa.AbsorberExtractor(ds, ray_file, ion_name='C IV')
+  df_civ = salsa.get_absorbers(abs_ext_civ, ray_list, method='ice',
+                         fields=other_fields, units_dict=units_dict)
 
-  df_ovi = get_absorbers(abs_ext_ovi, ray_list, method='ice',
-                         fields=other_fields, user_unit_dict=units_dict)
+  df_civ.head()
 
-  df_ovi.head()
+.. csv-table::
+  :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity,absorber_index
+
+  C IV,1548.187,0.000,14.057,-2.221,13.672,201,224,0.000,53985.906,1.103,0A
+  C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2A
+  C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2B
 
 Notice that the spectacle method could also be used. Also, although the
 AbsorberExtractor takes a ray file at construction, new rays can be loaded into
@@ -139,6 +172,16 @@ Here is what you need to setup and run:::
                                       method='ice', units_dict=units_dict)
 
   df_catalog.head()
+
+.. csv-table::
+  :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity,absorber_index
+
+  H I,1215.670,0.000,18.678,108.065,1.509,107,156,0.000,16302.538,1.096,2A
+  H I,1215.670,0.000,12.787,14.187,0.384,201,204,0.000,96469.462,1.086,0A
+  H I,1215.670,0.000,15.367,-0.264,4.846,204,216,0.000,48429.090,1.103,0B
+  C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2A
+  C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2B
+  C IV,1548.187,0.000,14.057,-2.221,13.672,201,224,0.000,53985.906,1.103,0A
 
 This function looks first to see if rays have been created in the given directory.
 If there are the right number of rays and they all contain the right ions and
@@ -179,21 +222,24 @@ To create the multi-panel plot:::
   import yt
   import matplotlib.pyplot as plt
 
-  ds_file="IsolatedGalaxy/galaxy0030/galaxy0030"
+  # set the dataset path and load the light ray
+  ds_file="HiresIsolatedGalaxy/DD0044/DD0044"
+  ray = yt.load("my_rays/ray0.h5")
 
-  # using one of the rays generated in previous example.
-  # Any light ray can be used.
-  ray_file = "my_rays/ray0.h5"
-
-  plotter = salsa.AbsorberPlotter(ds_file, ray_file, "H I",
-                                  center_gal=[0.5, 0.5, 0.5],
+  # set the y limits for one of the plots
+  num_dense_min=1e-11
+  num_dense_max=1e-5
+  plotter = salsa.AbsorberPlotter(ds_file, ray, "H I",
+                                  center_gal=[0.53, 0.53, 0.53],
                                   use_spectacle=True,
                                   plot_spectacle=True,
-                                  plot_ice=True)
+                                  plot_ice=True,
+                                  num_dense_max=num_dense_max,
+                                  num_dense_min=num_dense_min)
 
-  fig, axes = plotter.create_multi_plot()
+  fig, axes = plotter.create_multi_plot(outfname='example_multiplot.png')
 
-  fig.show()
+.. image:: /_static/example_multiplot.png
 
 The grey regions on the middle two plots indicate the absorbers that the ice
 method finds. The three highest column densities are marked and displayed in a
@@ -203,3 +249,7 @@ lines are plotted with their column densities recorded in a legend).
 
 The total column density along the lightray, the total found via the ice method
 and the total found by spectacle is recorded in a legend in the spectra plot.
+
+You can see there is a discrepancy between the ice and spectacle method. Due to the
+changing velocity profile, the ice method extracts two absorbers. Spectacle cannot
+only fits one absorber because the larger absorber drowns out the smaller one.
