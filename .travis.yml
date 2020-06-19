@@ -15,7 +15,7 @@ before_install:
 install:
 
   # We just set up a conda environment with the right Python version. This
-  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION mpi4py matplotlib numpy scipy yt pandas pip
+  - conda create -y -n test-environment python=$TRAVIS_PYTHON_VERSION mpi4py matplotlib numpy scipy yt pandas pip
   - source activate test-environment
   - pip install trident
   - pip install spectacle
