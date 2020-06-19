@@ -3,8 +3,6 @@ python: "3.7.7"
 
 before_install:
 
-  - SALSA_TEST_DIR=$HOME/salsa/tests
-
   # Here we just install Miniconda, which you shouldn't have to change.
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
@@ -32,7 +30,7 @@ before_script:
   # get yt data
   - wget http://yt-project.org/data/IsolatedGalaxy.tar.gz
   - tar -zxf IsolatedGalaxy.tar.gz
-  - mv IsolatedGalaxy $SALSA_TEST_DIR
+  - mv IsolatedGalaxy tests/
 
   # get trident data
   - mkdir -p $HOME/.trident
@@ -46,5 +44,5 @@ before_script:
   - echo "ion_table_file=hm2012_hr.h5" >> $HOME/.trident/config.tri
 
 script:
-  - mkdir -p $SALSA_TEST_DIR/test_rays
-  - pytest $SALSA_TEST_DIR/test_generate_catalog.py --disable-warnings
+  - mkdir -p tests/test_rays
+  - pytest tests/test_generate_catalog.py --disable-warnings
