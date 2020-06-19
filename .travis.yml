@@ -17,7 +17,7 @@ install:
 
   # We just set up a conda environment with the right Python version. This
 
-  - conda env create -f $HOME/environment.yml --yes -n test python=$TRAVIS_PYTHON_VERSION
+  - conda env create -f $HOME/environment.yml -n test python=$TRAVIS_PYTHON_VERSION
   - source activate test
 
   # install salsa package
