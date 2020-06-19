@@ -1,0 +1,8 @@
+mpi4py
+matplotlib
+numpy==1.16.6
+scipy
+yt
+pandas
+pytest
+pip

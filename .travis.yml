@@ -15,8 +15,9 @@ before_install:
 install:
 
   # We just set up a conda environment with the right Python version. This
-  - conda create -y -n test-environment python=$TRAVIS_PYTHON_VERSION mpi4py matplotlib numpy scipy yt pandas pytest pip
+  - conda create -y -n test-environment python=$TRAVIS_PYTHON_VERSION --file=tests/requirements.txt
   - source activate test-environment
+  - conda update -c conda-forge yt
   - pip install trident
   - pip install spectacle
   - pip install specutils==0.5.2
