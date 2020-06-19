@@ -1,6 +1,7 @@
 name: salsa-env
 
 dependencies:
+    - python>=3.5
     - mpi4py
     - matplotlib
     - numpy

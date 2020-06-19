@@ -15,9 +15,13 @@ before_install:
 install:
 
   # We just set up a conda environment with the right Python version. This
-
-  - conda env create -f $HOME/environment.yml python=$TRAVIS_PYTHON_VERSION
-  - source activate salsa-env
+  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION mpi4py matplotlib numpy scipy yt pandas pip
+  - source activate test-environment
+  - pip install trident
+  - pip install spectacle
+  - pip install specutils==0.5.2
+  - pip install gwcs==0.10.0
+  - pip install astropy
 
   # install salsa package
   - python setup.py install
