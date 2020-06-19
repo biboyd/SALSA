@@ -1,4 +1,4 @@
-name: salsa
+name: salsa-env
 
 dependencies:
     - mpi4py
