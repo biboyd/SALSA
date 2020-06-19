@@ -2,14 +2,13 @@ import yt
 import salsa
 import numpy as np
 import pandas as pd
-import os
 
 def test_gen_catalog():
 
     np.random.seed(567)
 
-    ds = yt.load(f"{os.environ['HOME']}/IsolatedGalaxy/galaxy0030/galaxy0030")
-    raydir=f"{os.environ['HOME']}/test_rays/"
+    ds = yt.load(f"tests/IsolatedGalaxy/galaxy0030/galaxy0030")
+    raydir=f"tests/test_rays/"
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='ice',
                               center=[0.5, 0.5, 0.5], impact_param_lims=(0, 50),
                               ray_length=200,
@@ -23,7 +22,7 @@ def test_gen_catalog():
     assert salsa.utils.check_rays(raydir, 2, fields)
 
     # load in dataframe to compare to
-    key_df = pd.read_csv(f"{os.environ['HOME']}/key_df.csv", index_col=0)
+    key_df = pd.read_csv(f"tests/key_df.csv", index_col=0)
 
     # check number of columns/rows
     assert len(df) == len(key_df)
