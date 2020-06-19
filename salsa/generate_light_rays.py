@@ -175,7 +175,7 @@ def generate_lrays(ds, center,
                 length=200,
                 fld_params={},
                 ion_list=['H I', 'C IV', 'O VI'],
-                fields=['density','temperature'],
+                fields=None,
                 out_dir='./'):
     """
     Generate a sample of trident lightrays that randomly, uniformly cover
@@ -236,6 +236,12 @@ def generate_lrays(ds, center,
 
     #add center to field parameters
     fld_params['center']=center
+
+    #add density field. Needed in absorber calculations
+    if fields is None:
+        fields=['density']
+    elif 'density' not in fields:
+        fields.append('density')
 
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=ion_list)
