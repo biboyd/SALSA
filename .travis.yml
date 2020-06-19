@@ -45,5 +45,4 @@ before_script:
 
 script:
   - mkdir -p $HOME/tests/test_rays
-  - rm $HOME/tests/test_rays/*
-  - pytest $HOME/tests --disable-warnings
+  - pytest $HOME/tests/test_generate_catalog.py --disable-warnings
