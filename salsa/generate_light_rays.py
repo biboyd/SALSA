@@ -239,9 +239,11 @@ def generate_lrays(ds, center,
 
     #add density field. Needed in absorber calculations
     if fields is None:
-        fields=['density']
-    elif 'density' not in fields:
-        fields.append('density')
+        construct_fields=['density']
+    else:
+        construct_fields = fields.copy()
+        if 'density' not in construct_fields:
+            construct_fields.append('density')
 
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=ion_list)
@@ -249,5 +251,5 @@ def generate_lrays(ds, center,
     construct_rays(ds, start_pnts, end_pnts,
                    fld_params=fld_params,
                    line_list=ion_list,
-                   other_fields=fields.copy(),
+                   other_fields=construct_fields,
                    out_dir=out_dir)
