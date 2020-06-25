@@ -128,6 +128,7 @@ class AbsorberPlotter(AbsorberExtractor):
                 ds_filename,
                 ray_filename,
                 ion_name='H I',
+                ftype='gas',
                 cut_region_filters=None,
                 slice_field=None,
                 absorber_fields=[],
@@ -150,9 +151,6 @@ class AbsorberPlotter(AbsorberExtractor):
                 markers=True,
                 mark_plot_args=None,
                 figure=None):
-        """
-        constructor
-        """
         #set file names and ion name
         if isinstance(ds_filename, str):
             self.ds = yt.load(ds_filename)
@@ -166,6 +164,9 @@ class AbsorberPlotter(AbsorberExtractor):
 
         #add ion name to list of all ions to be plotted
         self.ion_list = [ion_name] + absorber_fields
+
+        #add ion fields to dataset if not already there
+        trident.add_ion_fields(self.ds, ions=self.ion_list, ftype=ftype)
 
         #set a value for slice
         self.slice = None
@@ -326,9 +327,6 @@ class AbsorberPlotter(AbsorberExtractor):
             Slice with ray annotated
         """
         #print("adding ion fields")
-
-        #add ion fields to dataset if not already there
-        trident.add_ion_fields(self.ds, ions=self.ion_list, ftype='gas')
 
         # runs way to slow, may add later
         if False: #self.cut_region_filters is not None:

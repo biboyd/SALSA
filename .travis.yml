@@ -28,10 +28,15 @@ install:
   - python setup.py install
 
 before_script:
-  # get yt data
+  # get yt enzo data
   - wget http://yt-project.org/data/IsolatedGalaxy.tar.gz
   - tar -zxf IsolatedGalaxy.tar.gz
   - mv IsolatedGalaxy tests/
+
+  # get yt FIRE data
+  - wget http://yt-project.org/data/FIRE_M12i_ref11.tar.gz
+  - tar -zxf FIRE_M12i_ref11.tar.gz
+  - mv FIRE_M12i_ref11 tests/
 
   # get trident data
   - mkdir -p $HOME/.trident
@@ -45,6 +50,6 @@ before_script:
   - echo "ion_table_file=hm2012_hr.h5" >> $HOME/.trident/config.tri
 
 script:
-  - mkdir -p tests/test_rays
-  - python tests/test_generate_catalog.py
+  - mkdir -p tests/test_enzo_rays
+  - mkdir -p tests/test_fire_rays
   - pytest tests/test_generate_catalog.py --disable-warnings

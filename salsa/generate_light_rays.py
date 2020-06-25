@@ -105,6 +105,7 @@ def construct_rays(ds_file,
         fld_params=None,
         line_list=None,
         other_fields=None,
+        ftype='gas',
         out_dir='./'):
     """
     Construct rays given a set of starting points and end points.
@@ -132,6 +133,13 @@ def construct_rays(ds_file,
     other_fields : list
         other yt fields to add to light rays. None defaults
         to density, metallicity, and temperature
+
+    ftype : str
+        The field to be passed to trident that ion fields will be added to, i.e.
+        ('gas', 'H_p0_number_density'). 'gas' should work for most grid-based
+        simulations. For particle-based simulations this will not work and needs
+        to be changed. 'PartType0' often works though it varies.
+        See trident.make_simple_ray() for more information
 
     out_dir : str/path
         where to save all of the lightrays
@@ -164,6 +172,7 @@ def construct_rays(ds_file,
                                 end_points[i],
                                 lines=line_list,
                                 fields=other_fields,
+                                ftype=ftype,
                                 field_parameters=fld_params,
                                 data_filename=ray_filename)
 
@@ -176,6 +185,7 @@ def generate_lrays(ds, center,
                 fld_params={},
                 ion_list=['H I', 'C IV', 'O VI'],
                 fields=None,
+                ftype='gas',
                 out_dir='./'):
     """
     Generate a sample of trident lightrays that randomly, uniformly cover
@@ -206,6 +216,13 @@ def generate_lrays(ds, center,
 
     fields : list
         fields to add to lightray
+
+    ftype : str
+        The field to be passed to trident that ion fields will be added to, i.e.
+        ('gas', 'H_p0_number_density'). 'gas' should work for most grid-based
+        simulations. For particle-based simulations this will not work and needs
+        to be changed. 'PartType0' often works though it varies.
+        See trident.add_ion_fields() for more information
 
     out_dir : string
         path to where ray files will be written
@@ -246,10 +263,11 @@ def generate_lrays(ds, center,
             construct_fields.append('density')
 
     #add ion fields to dataset if not already there
-    trident.add_ion_fields(ds, ions=ion_list)
+    trident.add_ion_fields(ds, ions=ion_list, ftype=ftype)
 
     construct_rays(ds, start_pnts, end_pnts,
                    fld_params=fld_params,
                    line_list=ion_list,
                    other_fields=construct_fields,
+                   ftype=ftype,
                    out_dir=out_dir)

@@ -21,6 +21,7 @@ def generate_catalog(ds_file, n_rays,
                      ray_length=200,
                      field_parameters={},
                      fields=[],
+                     ftype='gas',
                      cut_region_filters=[],
                      extractor_kwargs={},
                      units_dict={}):
@@ -71,6 +72,13 @@ def generate_catalog(ds_file, n_rays,
         YT fields to add to lightrays. Will be included in catalog if "ice" method
         is selected
 
+    ftype : str
+        The field to be passed to trident that ion fields will be added to, i.e.
+        ('gas', 'H_p0_number_density'). 'gas' should work for most grid-based
+        simulations. For particle-based simulations this will not work and needs
+        to be changed. 'PartType0' often works though it varies.
+        See trident.add_ion_fields() for more information
+
     cut_region_filters: list of strings, optional
         a list of filters defined by the way you use Cut Regions in YT
         Default: None
@@ -103,7 +111,7 @@ def generate_catalog(ds_file, n_rays,
     -------
     full_catalog: pandas.DataFrame
         pandas dataframe containing all of the absorbers extracted from all
-        the lightrays
+        the lightrays. If no absorbers are found, None is returned
     """
     comm = MPI.COMM_WORLD
 
@@ -144,6 +152,7 @@ def generate_catalog(ds_file, n_rays,
                     fld_params=field_parameters,
                     ion_list=ion_list,
                     fields=fields,
+                    ftype=ftype,
                     out_dir=ray_directory)
 
     #Extract Absorbers
@@ -175,12 +184,21 @@ def generate_catalog(ds_file, n_rays,
         if my_df is not None:
             df_list.append(my_df)
 
-    my_catalog= pd.concat(df_list, ignore_index=True)
+    # Return Nonetype if no absorbers found
+    if df_list == []:
+        my_catalog = None
+    else:
+        my_catalog= pd.concat(df_list, ignore_index=True)
     comm.Barrier()
 
     #gather all catalogs and creae one large
     all_dfs= comm.allgather(my_catalog)
-    full_catalog = pd.concat(all_dfs, ignore_index=True)
+
+    # check if any absorbers were found
+    if all(v is None for v in all_dfs):
+        full_catalog = None
+    else:
+        full_catalog = pd.concat(all_dfs, ignore_index=True)
 
     return full_catalog
 
