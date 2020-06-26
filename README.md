@@ -1,5 +1,7 @@
 # SALSA
-[![Build Status](https://travis-ci.com/biboyd/SALSA.svg?branch=master)](https://travis-ci.com/biboyd/SALSA) [![Documentation Status](https://readthedocs.org/projects/salsa/badge/?version=latest)](https://salsa.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://travis-ci.com/biboyd/SALSA.svg?branch=master)](https://travis-ci.com/biboyd/SALSA)
+[![Documentation Status](https://readthedocs.org/projects/salsa/badge/?version=latest)](https://salsa.readthedocs.io/en/latest/?badge=latest)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/biboyd/SALSA/master?filepath=notebooks%2FExample_notebook.ipynb)
 
 SALSA: Synthetic Absorption Line Surveyor Application. Python tool that combines YT, Trident, Spectacle and other python packages to create a steamlined pipeline to construct absorber catalogs from galactic simulations. Currently only ENZO datasets have been used/tested.
 
