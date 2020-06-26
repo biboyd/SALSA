@@ -425,10 +425,6 @@ class AbsorberExtractor():
         """
         num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
         dl_list = self.data['dl'].in_units('cm')
-        l_list = self.data['l'].in_units('cm')
-        vel_los = self.data['velocity_los'].in_units('km/s')
-        density_array = self.data[('gas', 'density')]
-
 
         all_intervals=[]
         curr_num_density = num_density.copy()
@@ -442,7 +438,7 @@ class AbsorberExtractor():
 
             #extract intervals this would cover
             curr_intervals = self._identify_intervals(num_density, curr_thresh)
-            new_intervals = self._sensible_combination(all_intervals, curr_intervals, vel_los, dl_list,l_list, density_array)
+            new_intervals = self._sensible_combination(all_intervals, curr_intervals)
             all_intervals = new_intervals.copy()
 
             #mask density array above threshold and apply mask to dl
@@ -504,7 +500,7 @@ class AbsorberExtractor():
 
         return threshold
 
-    def _sensible_combination(self, prev_intervals, curr_intervals, velocity_array, dl_array, l_array, density_array):
+    def _sensible_combination(self, prev_intervals, curr_intervals):
         """
         adds new intervals by taking into account the velocities when combining them
 
@@ -516,20 +512,16 @@ class AbsorberExtractor():
         curr_intervals : list
             the intervals that need to be added/combined
 
-        velocity_array : array
-            array of the line of sight velocity along ray
-
-        dl_array : array
-            cell lengths along the ray's path.
-
-        density_array : array
-            array of gas density. used to weight avg velocity for a given interval.
-
         Returns
         --------
         new_intervals : list
             a final list of intervals where prev and curr are properly combined.
         """
+        dl_array = self.data['dl'].in_units('cm')
+        l_array = self.data['l'].in_units('cm')
+        velocity_array = self.data['velocity_los'].in_units('km/s')
+        density_array = self.data['density']
+
         # first check no region jumping (from use of cut_regions)
         if self.cut_region_filters is not None:
             #make sure spatially connected
