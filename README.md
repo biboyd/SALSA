@@ -20,7 +20,7 @@ Now you should be all set to code!
 For more detailed description see the [installation guide](https://salsa.readthedocs.io/en/latest/installation.html). 
 
 ## Getting Started
-For an annotated example [go here](https://salsa.readthedocs.io/en/latest/annotated_example.html). 
+For an annotated example [go here](https://salsa.readthedocs.io/en/latest/annotated_example.html). Or lanuch an interactive jupyter hosted on Binder, [here](https://mybinder.org/v2/gh/biboyd/SALSA/master?filepath=notebooks%2FExample_notebook.ipynb).
 
 The easiest way to get started is use `salsa.generate_catalog()`. This simply takes the dataset, number of light rays to make, directory to save those light rays, a list of ions and some other optional parameters. This creates a number lightrays and then extracts absorbers for each ion and returns a `pandas.DataFrame` that can then be further analyzed.
 
