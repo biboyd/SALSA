@@ -2,10 +2,21 @@
 
 set -ex
 
+# get trident data
+mkdir -p $HOME/.trident
+wget http://trident-project.org/data/ion_table/hm2012_hr.h5.gz
+gunzip hm2012_hr.h5.gz
+mv hm2012_hr.h5 $HOME/.trident
+
+# config trident
+echo "[Trident]" > $HOME/.trident/config.tri
+echo "ion_table_dir = $HOME/.trident" >> $HOME/.trident/config.tri
+echo "ion_table_file=hm2012_hr.h5" >> $HOME/.trident/config.tri
+
 pip install -e .
 
 #download data
 wget https://yt-project.org/data/IsolatedGalaxy.tar.gz
 tar -zxf IsolatedGalaxy.tar.gz
 mv IsolatedGalaxy/ notebooks
-mkdir notebooks/rays 
+mkdir notebooks/rays

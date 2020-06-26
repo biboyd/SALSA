@@ -1,5 +1,8 @@
 name: salsa-env
 
+channels:
+  - conda-forge
+  
 dependencies:
     - python>=3.5
     - mpi4py
