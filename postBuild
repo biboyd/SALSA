@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -ex
+
+pip install -e .
+
+#download data
+wget https://yt-project.org/data/IsolatedGalaxy.tar.gz
+tar -zxf IsolatedGalaxy.tar.gz
+mv IsolatedGalaxy/ notebooks
+mkdir notebooks/rays 
