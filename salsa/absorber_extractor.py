@@ -44,7 +44,8 @@ class AbsorberExtractor():
         Default: None
 
     velocity_res: float, optional
-        width of velocity bins in spectrum plot (in km/s).
+        width of velocity bins for spectra. Minimum threshold for combining
+        absorbers in the ice method.
         Default: 10
 
     spectacle_res: float, optional
@@ -366,8 +367,10 @@ class AbsorberExtractor():
         #constrain possible column density values
         #create line model
         line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
-                                   defaults=self.defaults_dict,fitter_args={'maxiter':2000},
-                                   threshold=0.01, output='flux', min_distance=self.velocity_res, auto_fit=True)
+                                   defaults=self.defaults_dict,
+                                   fitter_args={'maxiter':2000},
+                                   threshold=0.01, output='flux',
+                                   min_distance=self.spectacle_res, auto_fit=True)
         #fit data
         try:
             spec_model = line_finder(vel_array*u.Unit('km/s'), flux_array)
@@ -430,16 +433,14 @@ class AbsorberExtractor():
         curr_num_density = num_density.copy()
         curr_col_density = np.sum(num_density*dl_list)
         min_col_density = 10**self.absorber_min
-        count=0
 
         while curr_col_density > min_col_density:
             #calc threshold to get fraction from current num density
             curr_thresh = self._cloud_method(curr_num_density, coldens_fraction=self.frac)
 
             #extract intervals this would cover
-            curr_intervals = self._identify_intervals(num_density, curr_thresh)
-            new_intervals = self._sensible_combination(all_intervals, curr_intervals)
-            all_intervals = new_intervals.copy()
+            curr_intervals = self._identify_intervals(curr_thresh)
+            all_intervals = self._sensible_combination(all_intervals, curr_intervals)
 
             #mask density array above threshold and apply mask to dl
             curr_num_density = np.ma.masked_greater_equal(num_density, curr_thresh)
@@ -447,7 +448,6 @@ class AbsorberExtractor():
 
             #calc leftover column density
             curr_col_density = np.sum(curr_num_density*curr_dl)
-            count+=1
 
         #make sure intervals have high enough col density
         final_intervals=[]
@@ -562,7 +562,7 @@ class AbsorberExtractor():
             return curr_intervals
 
         new_intervals=prev_intervals.copy()
-        del_v = self.ds.quan(self.spectacle_res, 'km/s')
+        del_v = self.ds.quan(self.velocity_res, 'km/s')
 
         #loop through current intervals
         for curr_b, curr_e in curr_intervals:
@@ -631,15 +631,13 @@ class AbsorberExtractor():
 
         return new_intervals
 
-    def _identify_intervals(self, field, cutoff):
+    def _identify_intervals(self, cutoff):
         """
-        Find the intervals for absorbers using some cutoff on a
-        field (generally number density) along lightray.
+        Find the intervals for absorbers using some cutoff on the number density
+        field along lightray.
 
         Parameters
         -----------
-        field : array/list
-            list of values to compare to cutoff
         cutoff : double
             threshold defining where absorbers are.
 
@@ -648,11 +646,12 @@ class AbsorberExtractor():
         intervals : list of tuples
             list of the intervals defining the absorbers in this ray.
         """
+        num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
         in_absorber = False
         intervals = []
 
         #Iterate over values in field
-        for i,value in enumerate(field):
+        for i,value in enumerate(num_density):
             #Check if started an absorber and if above cutoff
             if in_absorber and value < cutoff:
                 in_absorber = False
