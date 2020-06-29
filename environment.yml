@@ -2,19 +2,17 @@ name: salsa-env
 
 channels:
   - conda-forge
-  
+
 dependencies:
     - python>=3.5
+    - pip
     - mpi4py
     - matplotlib
-    - numpy
+    - numpy==1.16.6
     - scipy
     - yt
     - pandas
     - pip:
-        - sphinx
-        - sphinx-rtd-theme
-        - sphinx_automodapi
         - trident
         - spectacle
         - specutils==0.5.2

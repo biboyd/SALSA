@@ -17,7 +17,7 @@ from salsa.utils.defaults import default_cloud_dict
 class AbsorberExtractor():
     """
     Extracts absorbers from a trident lightray for a given ion species. Does This
-    through two methods, by using ICE (Iterative Cloud Extraction) and
+    through two methods, by using the ice (Iterative Cloud Extraction) method and
     by fitting a synthetic spectra made by trident. Fit is done using spectacle
 
     Parameters
@@ -65,7 +65,7 @@ class AbsorberExtractor():
 
     frac: float, optional
         Parameter defining what fraction of the number density is being
-        accounted for in each iteration of the ICE method. Must be a number
+        accounted for in each iteration of the ice method. Must be a number
         between 0 and 1.
         Default: 0.8
 
@@ -242,7 +242,7 @@ class AbsorberExtractor():
 
     def get_ice_absorbers(self, fields=[], units_dict={}):
         """
-        Use the ICE method to extract absorbers and then find features of
+        Use the ice method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
         absorption line (delta_v) as well as requested fields All in
         a pandas dataframe.
