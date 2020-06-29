@@ -1,5 +1,0 @@
-sphinx
-sphinx_rtd_theme
-sphinx_automodapi
-specutils==0.5.2
-gwcs==0.10.0
