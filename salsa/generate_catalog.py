@@ -129,11 +129,12 @@ def generate_catalog(ds_file, n_rays,
 
     #check if rays already made
     check =check_rays(ray_directory, n_rays, check_fields)
-    ray_bool= np.array([check], dtype=int)
+    my_ray_bool= np.array([check], dtype=int)
+    ray_bool = np.array([0], dtype=int)
 
     # share if rays made already or not
     comm.Barrier()
-    comm.Allreduce([ray_bool, MPI.INT],[ray_bool, MPI.INT], op=MPI.LAND)
+    comm.Allreduce([my_ray_bool, MPI.INT],[ray_bool, MPI.INT], op=MPI.LAND)
 
     #generate rays randomly
     if not ray_bool[0]:
