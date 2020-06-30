@@ -128,15 +128,12 @@ def generate_catalog(ds_file, n_rays,
         check_fields.append(ion_p_num(i))
 
     #check if rays already made
-    if comm.rank == 0:
-        check =check_rays(ray_directory, n_rays, check_fields)
-        ray_bool= np.array([check], dtype=int)
-    else:
-        ray_bool = np.array([False], dtype=int)
+    check =check_rays(ray_directory, n_rays, check_fields)
+    ray_bool= np.array([check], dtype=int)
 
     # share if rays made already or not
     comm.Barrier()
-    comm.Bcast([ray_bool, MPI.INT])
+    comm.Allreduce([ray_bool, MPI.INT],[ray_bool, MPI.INT], op=MPI.LAND)
 
     #generate rays randomly
     if not ray_bool[0]:
@@ -155,6 +152,7 @@ def generate_catalog(ds_file, n_rays,
                     ftype=ftype,
                     out_dir=ray_directory)
 
+    comm.Barrier()
     #Extract Absorbers
 
     #collect and split up ray files

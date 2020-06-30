@@ -1,8 +1,9 @@
 from os import listdir
 import yt
 from astropy.table import QTable, vstack
-
+from mpi4py import MPI
 import pandas as pd
+import numpy as np
 
 def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
     """
@@ -72,7 +73,7 @@ def check_file(file, key_words, black_list):
         #return true if passes through
         return True
 
-def check_rays(ray_dir, n_rays, fields):
+def check_rays(ray_dir, n_rays, fields, parallel=True):
     """
     Check if a directory already contains a given number of trident lrays and
     contains necessary fields
@@ -104,13 +105,22 @@ def check_rays(ray_dir, n_rays, fields):
 
     """
 
-    ray_files = collect_files(ray_dir, key_words=['ray'])
+    ray_files = np.array(collect_files(ray_dir, key_words=['ray']))
 
     #check if correct number
     if len(ray_files) == n_rays:
 
+        if parallel:
+            comm = MPI.COMM_WORLD
+
+            #split up rays across processes
+            ray_files_split = np.array_split(ray_files, comm.size)
+            my_ray_files = ray_files_split[comm.rank]
+        else:
+            my_ray_files = ray_files
+
         # check if fields are in each ray
-        for rfile in ray_files:
+        for rfile in my_ray_files:
             #load ray file
             try:
                 ray = yt.load(f"{ray_dir}/{rfile}")
