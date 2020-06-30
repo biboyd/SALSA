@@ -262,6 +262,11 @@ def generate_lrays(ds, center,
         if 'density' not in construct_fields:
             construct_fields.append('density')
 
+        # remove x/y/z b/c will cause problems with trident
+        for coord in ['x', 'y', 'z']:
+            if coord in construct_fields:
+                construct_fields.remove(coord)
+
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=ion_list, ftype=ftype)
 
