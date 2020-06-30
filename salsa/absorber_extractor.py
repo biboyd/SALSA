@@ -569,7 +569,7 @@ class AbsorberExtractor():
 
             overlap_intervals=[]
             #loop through all previous intervals
-            for b,e in new_intervals:
+            for b,e in prev_intervals:
                 #check if previous interval is nested in curr interval
                 if curr_b <= b and curr_e >= b:
                     #print(f"interval ({curr_b}, {curr_e}) overlap with ", b, e)
@@ -612,8 +612,10 @@ class AbsorberExtractor():
                 for i in range(len(points)-1):
                     pnt1, pnt2 = points[i], points[i+1]
                     #find weighted avg velocity
-                    vel = np.sum(density_array[pnt1:pnt2]*dl_array[pnt1:pnt2]*velocity_array[pnt1:pnt2]) \
-                          /np.sum(density_array[pnt1:pnt2]*dl_array[pnt1:pnt2])
+                    curr_dense = density_array[pnt1:pnt2]
+                    curr_dl = dl_array[pnt1:pnt2]
+                    vel = np.sum(curr_dense*curr_dl*velocity_array[pnt1:pnt2]) \
+                          /np.sum(curr_dense*curr_dl)
                     avg_v.append((vel, pnt1, pnt2))
 
                 start_b = curr_b
@@ -623,9 +625,10 @@ class AbsorberExtractor():
                         #create new interval
                         new_intervals.append((start_b, avg_v[i][2]))
                         #change start of next interval
-                        start_b = avg_v[i][2]
+                        start_b = avg_v[i+1][1]
                     #check if this is the last two intervals to check
-                    elif i == len(avg_v) -2:
+                    if i == len(avg_v) -2:
+                        print('whoa', start_b, curr_e)
                         new_intervals.append((start_b, curr_e))
 
 
