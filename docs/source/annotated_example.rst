@@ -81,7 +81,7 @@ Step 2: Extract Absorbers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For more details on absorber extraction see :ref:`absorber-extraction`. But the
-quick synopsis is there is the ice method and the spectacle method. Ice looks at
+quick synopsis is there is the Ice method and the spectacle method. Ice looks at
 cell level data while spectacle fits lines to a synthetic spectra that is generated
 by trident. The :class:`~salsa.AbsorberExtractor` class can use both methods.
 
@@ -93,7 +93,7 @@ Now let's extract some absorbers from the Light rays we made
   # construct absorber extractor
   abs_ext = salsa.AbsorberExtractor(ds, ray_file, ion_name='H I')
 
-  # use ice method to extract absorbers into a pandas DataFrame
+  # use Ice method to extract absorbers into a pandas DataFrame
   units_dict=dict(density='g/cm**3', metallicity='Zsun')
   df_ice = abs_ext.get_ice_absorbers(other_fields, units_dict=units_dict)
   df_ice.head()
@@ -247,9 +247,9 @@ legend. In the last plot, the solid lines indicate the "raw" spectra while the
 dotted lines show the absorption lines that spectacle fit (only the three largest
 lines are plotted with their column densities recorded in a legend).
 
-The total column density along the lightray, the total found via the ice method
+The total column density along the lightray, the total found via the Ice method
 and the total found by spectacle is recorded in a legend in the spectra plot.
 
 You can see there is a discrepancy between the ice and spectacle method. Due to the
-changing velocity profile, the ice method extracts two absorbers. Spectacle cannot
+changing velocity profile, the Ice method extracts two absorbers. Spectacle
 only fits one absorber because the larger absorber drowns out the smaller one.

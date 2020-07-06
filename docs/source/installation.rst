@@ -35,6 +35,8 @@ You may install the dependencies on your own, and you may have some of them inst
 already (ie numpy, matplotlib) depending on your environment. To make installation
 easier, we advise using conda and a conda environment to install.
 
+.. _conda-install:
+
 Conda Environment
 -----------------
 
@@ -52,26 +54,41 @@ and then run the following: ::
 
 Now you should be able to painlessly install salsa as described above!
 
+.. note::
+  This installs mpi4py using conda. This may cause problems if you already have
+  an MPI Library already installed because conda will try to install one itself.
+  If you already have an MPI library it is best to use pip see
+  :ref:`install-mpi4py` for more details.
+
+.. _manual_install:
+
 Manually Installing Dependencies
 ---------------------------------
 
 If you have a different, preferred method for installing dependencies you are more
 than welcome to go with that route. See the ``environment.yml`` and/or ``setup.py``
-for specifics about what packages you need. Below are some advice/guides to installing
-a couple of the trickier packages.
+in the `Github repo <https://github.com/biboyd/SALSA>`_ for specifics about what
+packages you need. Below is some advice/guides to installing a couple of the
+trickier packages.
 
-Installing YT
+.. _install-yt:
+
+Install yt
 *************
 
-The first step is to install YT. This can be done in many ways but one of the
-easier ways is using conda. Just run: ::
+yt can be installed in a few different ways but one of the easier ways is by
+using conda. First
+`install conda <https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>`_
+then run: ::
 
   $ conda install -c http://use.yt/with_conda/ -c conda-forge yt
 
-For full details about the different ways you can install YT, see
-`YT's documentation <https://yt-project.org/doc/>`_ .
+For full details about the different ways you can install yt, see
+`yt's documentation <https://yt-project.org/doc/>`_ .
 
-Install trident
+.. _install-trident:
+
+Install Trident
 ****************
 
 Trident can be installed via ``pip install trident``. The first time trident runs
@@ -83,3 +100,24 @@ is running properly. ::
   >>> import trident; trident.verify()
 
 For more details see `trident's documentation <https://trident.readthedocs.io/>`_
+
+.. _install-mpi4py:
+
+Install mpi4py
+**************
+
+`mpi4py <https://mpi4py.readthedocs.io/en/stable/index.html>`_ is a package that
+enables use of MPI parallelism with python. Salsa uses this to split up lightray
+creation and absorber extraction across multiple processors which becomes necessary
+for large numbers of lightrays.
+
+mpi4py can be installed either using pip or conda. If you want to pip install
+mpi4py, you need to have an MPI library already installed, like
+`OpenMPI <https://www.open-mpi.org/>`_ . Otherwise just: ::
+
+  $ pip install mpi4py
+
+If you want to use conda to install mpi4py, you need to be careful because there
+may be problems if you have an MPI library already installed. Otherwise just: ::
+
+  $ conda install mpi4py

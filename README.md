@@ -5,7 +5,7 @@
 
 SALSA: Synthetic Absorption Line Surveyor Application is a Python tool that
 constructs synthetic absorber catalogs from hydrodynamic galaxy simulations.
-Salsa heavily utilizes [YT](https://yt-project.org/) to access simulation data
+Salsa heavily utilizes [yt](https://yt-project.org/) to access simulation data
 and [Trident](http://trident-project.org/) to create light rays/sight lines and
 generate synthetic spectra.
 
@@ -58,7 +58,7 @@ If you want to explore on your own, the easiest way to get started is use
   * Number of light rays/sightlines to make
   * Directory to save those light rays
   * A list of ions
-  * Some other optional parameters.
+  * Some other optional parameters.  
 This creates a number light rays and then extracts absorbers for each ion. A
 `pandas.DataFrame` is returned with information about all the absorbers which
 can then be further analyzed.

@@ -79,7 +79,7 @@ class AbsorberPlotter(AbsorberExtractor):
         None, default to velocity_res
 
     plot_ice : bool, optional
-        Sets whether the intervals found by the ice method are plotted on the
+        Sets whether the intervals found by the Ice method are plotted on the
         number density plot
 
     absorber_min: float, optional
@@ -89,7 +89,7 @@ class AbsorberPlotter(AbsorberExtractor):
 
     frac: float, optional
         Parameter defining what fraction of the number density is being
-        accounted for in each iteration of the ICE method. Must be a number
+        accounted for in each iteration of the Ice method. Must be a number
         between 0 and 1.
         Default: 0.8
 
@@ -791,7 +791,7 @@ class AbsorberPlotter(AbsorberExtractor):
         computes the column density along the given ray for a given ion species.
         This is done by using spectacle if use_spectacle is True. as well as
         by summing the product of the number density for a given length by that length.
-        and the ICE method
+        and the Ice method
 
         Returns:
             line_models : list spectacle models : Individual line models for the
@@ -818,13 +818,13 @@ class AbsorberPlotter(AbsorberExtractor):
             tot_spect_cd, line_models = self._get_large_spectacle()
             fit_string = "{: <14s}{:04.1f}\n".format(fit_label, tot_spect_cd)
 
-        #get sum from ICE method
-        ice_label="ICE:"
+        #get sum from Ice method
+        ice_label="Ice:"
         #check if no absorbers
         if self.num_ice == 0:
             ice_string = "{: <11s}{: >4s}\n".format(ice_label,'--')
         else:
-            #find total column density for ICE method
+            #find total column density for Ice method
             cd_sum=0
             for lcd in self.ice_df['col_dens']:
                 cd_sum += 10**lcd

@@ -74,10 +74,10 @@ def generate_catalog(ds_file, n_rays,
 
     ftype : str
         The field to be passed to trident that ion fields will be added to, i.e.
-        ('gas', 'H_p0_number_density'). 'gas' should work for most grid-based
+        ``('gas', 'H_p0_number_density')``. ``'gas'`` should work for most grid-based
         simulations. For particle-based simulations this will not work and needs
-        to be changed. 'PartType0' often works though it varies.
-        See trident.add_ion_fields() for more information
+        to be changed. ``'PartType0'`` often works though it varies.
+        See ``trident.add_ion_fields()`` for more information
 
     cut_region_filters: list of strings, optional
         a list of filters defined by the way you use Cut Regions in YT
@@ -87,19 +87,16 @@ def generate_catalog(ds_file, n_rays,
         Additional key word arguments to pass to the absorber_extractor to
         modify default extraction parameters. Either a single dict that will be
         passed for each ion. Or a dict of ions pointing toward individual extractor
-        kwargs.
+        kwargs. Examples:
 
-        Example: extractor_kwargs={'H I':{'absorber_min':14},
-                                   'C IV':{'absorber_min':13},
-                                   'O VI':{}}
-        or
-                 extractor_kwargs={'absorber_min':13.5}
+        ``extractor_kwargs={'H I':{'absorber_min':14}, 'C IV':{'absorber_min':13}, 'O VI':{}}``
+        ``extractor_kwargs={'absorber_min':13.5}``
 
         The first will set different absober mins for each ion, with O VI taking
-        default as specified by salsa.utils.defaults.default_cloud_dict. The
+        default as specified by ``salsa.utils.defaults.default_cloud_dict``. The
         second example will set the minimum absorber as 13.5 for every ion.
-        **NOTE** if you cannot mix the two formats. If one ion is specified then
-        all ions must be specified (This includes 'O VI' even though it is empty)
+        **NOTE** you cannot mix the two formats. If one ion is specified then
+        all ions must be specified (see 'O VI' included even though it's dictionary is empty)
 
         Default: {}
 
@@ -107,6 +104,7 @@ def generate_catalog(ds_file, n_rays,
         dictionary of units to use for the fields when extracting properties
         (only relevant for 'ice' method)
         Default: None
+
     Returns
     -------
     full_catalog: pandas.DataFrame
