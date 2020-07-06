@@ -17,8 +17,9 @@ from salsa.utils.defaults import default_cloud_dict
 class AbsorberExtractor():
     """
     Extracts absorbers from a trident lightray for a given ion species. Does This
-    through two methods, by using the Ice (Iterative Cloud Extraction) method and
-    by fitting a synthetic spectra made by trident. Fit is done using spectacle
+    through two methods, by using the SPICE (Simple Procedure for Iterative
+    Cloud Extraction) method and by fitting a synthetic spectra made by trident.
+    Fit is done using spectacle
 
     Parameters
     --------------
@@ -45,7 +46,7 @@ class AbsorberExtractor():
 
     velocity_res: float, optional
         width of velocity bins for spectra. Minimum threshold for combining
-        absorbers in the Ice method.
+        absorbers in the SPICE method.
         Default: 10
 
     spectacle_res: float, optional
@@ -65,7 +66,7 @@ class AbsorberExtractor():
 
     frac: float, optional
         Parameter defining what fraction of the number density is being
-        accounted for in each iteration of the Ice method. Must be a number
+        accounted for in each iteration of the SPICE method. Must be a number
         between 0 and 1.
         Default: 0.8
 
@@ -155,14 +156,14 @@ class AbsorberExtractor():
         #reset absorber extraction variables
         # variables to store raw info from the different methods
         self.spectacle_model=None
-        self.ice_intervals=None
+        self.spice_intervals=None
 
         # to store absorber feature table
-        self.ice_df=None
+        self.spice_df=None
         self.spectacle_df=None
 
         #store number of features found
-        self.num_ice = None
+        self.num_spice = None
         self.num_spectacle = None
 
         #check if str else assume is ray
@@ -240,9 +241,9 @@ class AbsorberExtractor():
         self.ds.close()
         self.ray.close()
 
-    def get_ice_absorbers(self, fields=[], units_dict={}):
+    def get_spice_absorbers(self, fields=[], units_dict={}):
         """
-        Use the Ice method to extract absorbers and then find features of
+        Use the SPICE method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
         absorption line (delta_v) as well as requested fields All in
         a pandas dataframe.
@@ -266,8 +267,8 @@ class AbsorberExtractor():
 
         """
         # get absorber locations
-        self.ice_intervals = self.run_ice()
-        self.num_ice = len(self.ice_intervals)
+        self.spice_intervals = self.run_spice()
+        self.num_spice = len(self.spice_intervals)
 
 
         # line information for absorbers
@@ -285,7 +286,7 @@ class AbsorberExtractor():
             name_type.append( (f, np.float64) )
 
         #check if any absorbrs were found
-        n_abs = len(self.ice_intervals)
+        n_abs = len(self.spice_intervals)
         if n_abs == 0:
             print("No absorbers in ray: ", self.ray)
             return None
@@ -301,7 +302,7 @@ class AbsorberExtractor():
         # fill table with absorber features
         for i in range(n_abs):
             #load data for calculating properties
-            start, end = self.ice_intervals[i]
+            start, end = self.spice_intervals[i]
             stats_table.loc[i, 'interval_start'] = start
             stats_table.loc[i, 'interval_end'] = end
             dl = self.data['dl'][start:end].in_units('cm')
@@ -343,8 +344,8 @@ class AbsorberExtractor():
                 else:
                     stats_table.loc[i, fld] = avg_fld
 
-        self.ice_df = stats_table
-        return self.ice_df
+        self.spice_df = stats_table
+        return self.spice_df
 
     def get_spectacle_absorbers(self):
         """
@@ -416,7 +417,7 @@ class AbsorberExtractor():
         self.spectacle_df=line_stats
         return self.spectacle_df
 
-    def run_ice(self):
+    def run_spice(self):
         """
         iteratively run the cloud method to extract all the absorbers in the
         lightray.

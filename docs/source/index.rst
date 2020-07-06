@@ -12,7 +12,7 @@ projects utilized to achieve this. Accessing simulation data is done using yt.
 Trident is used to generate synthetic sightlines/lightrays and generate synthetic
 spectra. Spectacle is used to fit voigt profiles to spectra and extract absorbers.
 
-In addition a novel method for extracting absorbers, the Ice method. This uses
+In addition a novel method for extracting absorbers, the SPICE method. This uses
 cell level data to extract absorbers from a Trident lightray and returns a great
 deal of information that can be further analyzed.
 

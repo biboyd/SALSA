@@ -78,8 +78,8 @@ class AbsorberPlotter(AbsorberExtractor):
         Set minimum resolution that spectacle will attempt to fit lines to. If
         None, default to velocity_res
 
-    plot_ice : bool, optional
-        Sets whether the intervals found by the Ice method are plotted on the
+    plot_spice : bool, optional
+        Sets whether the intervals found by the SPICE method are plotted on the
         number density plot
 
     absorber_min: float, optional
@@ -89,7 +89,7 @@ class AbsorberPlotter(AbsorberExtractor):
 
     frac: float, optional
         Parameter defining what fraction of the number density is being
-        accounted for in each iteration of the Ice method. Must be a number
+        accounted for in each iteration of the SPICE method. Must be a number
         between 0 and 1.
         Default: 0.8
 
@@ -143,7 +143,7 @@ class AbsorberPlotter(AbsorberExtractor):
                 plot_spectacle=False,
                 spectacle_defaults=None,
                 spectacle_res=None,
-                plot_ice=False,
+                plot_spice=False,
                 absorber_min=None,
                 frac=0.8,
                 num_dense_min=None,
@@ -184,7 +184,7 @@ class AbsorberPlotter(AbsorberExtractor):
             self.slice_field = slice_field
 
         # whether to use/plot these methods
-        self.plot_ice = plot_ice
+        self.plot_spice = plot_spice
         self.use_spectacle = use_spectacle
         self.plot_spectacle = plot_spectacle
 
@@ -615,17 +615,17 @@ class AbsorberPlotter(AbsorberExtractor):
             #add minor tick marks
             ax_num_dense.xaxis.set_minor_locator(AutoMinorLocator(2))
 
-            #check if should plot ice intervals
-            if self.plot_ice:
-                # run ice method if not already run
-                if self.num_ice is None:
-                    self.get_ice_absorbers()
+            #check if should plot spice intervals
+            if self.plot_spice:
+                # run spice method if not already run
+                if self.num_spice is None:
+                    self.get_spice_absorbers()
 
-                #plot ice intervals
-                if self.num_ice > 0:
-                    for i in range(self.num_ice):
-                        b, e = self.ice_intervals[i]
-                        curr_lcd = self.ice_df.loc[i, 'col_dens']
+                #plot spice intervals
+                if self.num_spice > 0:
+                    for i in range(self.num_spice):
+                        b, e = self.spice_intervals[i]
+                        curr_lcd = self.spice_df.loc[i, 'col_dens']
 
                         #plot interval
                         ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
@@ -636,18 +636,18 @@ class AbsorberPlotter(AbsorberExtractor):
 
                     #plot number of intervals found
                     box_props = dict(boxstyle='square', facecolor='white')
-                    ax_num_dense.text(0.9, 0.85, f"{self.num_ice} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
+                    ax_num_dense.text(0.9, 0.85, f"{self.num_spice} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
 
                     #take three largest absorbers and sort by position
-                    max_indices = self.ice_df['col_dens'].argsort()
+                    max_indices = self.spice_df['col_dens'].argsort()
                     max_indices = max_indices[-3:].to_numpy()
                     max_indices.sort()
 
                     #plot markers from left to right
                     colors=['black', 'magenta', 'yellow']
                     for i,c in zip(max_indices, colors):
-                        b, e = self.ice_intervals[i]
-                        lcd = self.ice_df.loc[i, 'col_dens']
+                        b, e = self.spice_intervals[i]
+                        lcd = self.spice_df.loc[i, 'col_dens']
                         mid_point = (l_list[b]+l_list[e])/2
 
                         ax_num_dense.scatter(mid_point, 0.75*self.num_dense_max,
@@ -791,7 +791,7 @@ class AbsorberPlotter(AbsorberExtractor):
         computes the column density along the given ray for a given ion species.
         This is done by using spectacle if use_spectacle is True. as well as
         by summing the product of the number density for a given length by that length.
-        and the Ice method
+        and the SPICE method
 
         Returns:
             line_models : list spectacle models : Individual line models for the
@@ -804,8 +804,8 @@ class AbsorberPlotter(AbsorberExtractor):
         if self.num_spectacle is None:
             # run spectacle method
             self.get_spectacle_absorbers()
-        if self.num_ice is None:
-            self.get_ice_absorbers()
+        if self.num_spice is None:
+            self.get_spice_absorbers()
 
 
         fit_label="Spect:"
@@ -818,19 +818,19 @@ class AbsorberPlotter(AbsorberExtractor):
             tot_spect_cd, line_models = self._get_large_spectacle()
             fit_string = "{: <14s}{:04.1f}\n".format(fit_label, tot_spect_cd)
 
-        #get sum from Ice method
-        ice_label="Ice:"
+        #get sum from SPICE method
+        spice_label="SPICE:"
         #check if no absorbers
-        if self.num_ice == 0:
-            ice_string = "{: <11s}{: >4s}\n".format(ice_label,'--')
+        if self.num_spice == 0:
+            spice_string = "{: <11s}{: >4s}\n".format(spice_label,'--')
         else:
-            #find total column density for Ice method
+            #find total column density for SPICE method
             cd_sum=0
-            for lcd in self.ice_df['col_dens']:
+            for lcd in self.spice_df['col_dens']:
                 cd_sum += 10**lcd
 
             log_cd_sum = np.log10(cd_sum)
-            ice_string = "{: <11s}{:04.1f}\n".format(ice_label,log_cd_sum)
+            spice_string = "{: <11s}{:04.1f}\n".format(spice_label,log_cd_sum)
 
         #get total column density along ray
         ion_field = ion_p_num(self.ion_name)
@@ -839,7 +839,7 @@ class AbsorberPlotter(AbsorberExtractor):
         total_string="{: <14s}{:04.1f}".format("full ray:", log_tot_ray)
 
         #combine strings to create "legend"
-        line_text = "Tot Sums\n"+ice_string + fit_string + total_string
+        line_text = "Tot Sums\n"+spice_string + fit_string + total_string
 
         return line_text, line_models
 

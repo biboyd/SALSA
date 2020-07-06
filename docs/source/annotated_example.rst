@@ -81,8 +81,8 @@ Step 2: Extract Absorbers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For more details on absorber extraction see :ref:`absorber-extraction`. But the
-quick synopsis is there is the Ice method and the spectacle method. Ice looks at
-cell level data while spectacle fits lines to a synthetic spectra that is generated
+quick synopsis is there is the SPICE method and the Spectacle method. SPICE looks at
+cell level data while Spectacle fits lines to a synthetic spectra that is generated
 by trident. The :class:`~salsa.AbsorberExtractor` class can use both methods.
 
 Now let's extract some absorbers from the Light rays we made
@@ -93,10 +93,10 @@ Now let's extract some absorbers from the Light rays we made
   # construct absorber extractor
   abs_ext = salsa.AbsorberExtractor(ds, ray_file, ion_name='H I')
 
-  # use Ice method to extract absorbers into a pandas DataFrame
+  # use SPICE method to extract absorbers into a pandas DataFrame
   units_dict=dict(density='g/cm**3', metallicity='Zsun')
-  df_ice = abs_ext.get_ice_absorbers(other_fields, units_dict=units_dict)
-  df_ice.head()
+  df_spice = abs_ext.get_spice_absorbers(other_fields, units_dict=units_dict)
+  df_spice.head()
 
 .. csv-table::
   :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity
@@ -104,7 +104,7 @@ Now let's extract some absorbers from the Light rays we made
   H I,1215.670,0.000,12.787,14.187,0.384,201,204,0.000,96469.462,1.086
   H I,1215.670,0.000,15.367,-0.264,4.846,204,216,0.000,48429.090,1.103
 
-Can also extract using spectacle:
+Can also extract using Spectacle:
 ::
 
   # use spectacle now
@@ -116,7 +116,7 @@ Can also extract using spectacle:
 
   HI1216,1215.670,15.154,31.705,-5.915,0.000,7.759,40.000,0.217,0.000
 
-Notice that both of these methods contain different information. Ice includes
+Notice that both of these methods contain different information. SPICE includes
 more details of the simulation data like the density and temperature of the
 absorber, something that is not easily detected from the spectra. Spectacle
 contains more information of the line like the equivalent width and the doppler
@@ -133,7 +133,7 @@ extract absorbers from each one. see:::
 
   # initialize a new AbsorberExtractor for looking at C IV
   abs_ext_civ = salsa.AbsorberExtractor(ds, ray_file, ion_name='C IV')
-  df_civ = salsa.get_absorbers(abs_ext_civ, ray_list, method='ice',
+  df_civ = salsa.get_absorbers(abs_ext_civ, ray_list, method='spice',
                          fields=other_fields, units_dict=units_dict)
 
   df_civ.head()
@@ -145,7 +145,7 @@ extract absorbers from each one. see:::
   C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2A
   C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2B
 
-Notice that the spectacle method could also be used. Also, although the
+Notice that the Spectacle method could also be used. Also, although the
 AbsorberExtractor takes a ray file at construction, new rays can be loaded into
 it.
 
@@ -169,7 +169,7 @@ Here is what you need to setup and run:::
   df_catalog = salsa.generate_catalog(ds, n_rays, ray_dir, ion_list,
                                       fields=other_fields, center=center,
                                       impact_param_lims=(0, max_impact),
-                                      method='ice', units_dict=units_dict)
+                                      method='spice', units_dict=units_dict)
 
   df_catalog.head()
 
@@ -233,7 +233,7 @@ To create the multi-panel plot:::
                                   center_gal=[0.53, 0.53, 0.53],
                                   use_spectacle=True,
                                   plot_spectacle=True,
-                                  plot_ice=True,
+                                  plot_spice=True,
                                   num_dense_max=num_dense_max,
                                   num_dense_min=num_dense_min)
 
@@ -241,15 +241,15 @@ To create the multi-panel plot:::
 
 .. image:: /_static/example_multiplot.png
 
-The grey regions on the middle two plots indicate the absorbers that the ice
+The grey regions on the middle two plots indicate the absorbers that the SPICE
 method finds. The three highest column densities are marked and displayed in a
 legend. In the last plot, the solid lines indicate the "raw" spectra while the
-dotted lines show the absorption lines that spectacle fit (only the three largest
+dotted lines show the absorption lines that Spectacle fit (only the three largest
 lines are plotted with their column densities recorded in a legend).
 
-The total column density along the lightray, the total found via the Ice method
-and the total found by spectacle is recorded in a legend in the spectra plot.
+The total column density along the lightray, the total found via the SPICE method
+and the total found by Spectacle is recorded in a legend in the spectra plot.
 
-You can see there is a discrepancy between the ice and spectacle method. Due to the
-changing velocity profile, the Ice method extracts two absorbers. Spectacle
+You can see there is a discrepancy between the SPICE and Spectacle method. Due to the
+changing velocity profile, the SPICE method extracts two absorbers. Spectacle
 only fits one absorber because the larger absorber drowns out the smaller one.

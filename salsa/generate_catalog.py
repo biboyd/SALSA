@@ -15,7 +15,7 @@ from yt.data_objects.static_output import \
 def generate_catalog(ds_file, n_rays,
                      ray_directory,
                      ion_list,
-                     method="ice",
+                     method="spice",
                      center=None,
                      impact_param_lims=(0, 200),
                      ray_length=200,
@@ -47,7 +47,7 @@ def generate_catalog(ds_file, n_rays,
     ion_list: list str
         list of ions to find absorbers from.
 
-    method: "ice" or "spectacle", optional
+    method: "spice" or "spectacle", optional
         Choose which method to use to extract absorbers.
 
     center: list or array, optional
@@ -69,7 +69,7 @@ def generate_catalog(ds_file, n_rays,
         be saved.
 
     fields: list of str
-        YT fields to add to lightrays. Will be included in catalog if "ice" method
+        YT fields to add to lightrays. Will be included in catalog if "spice" method
         is selected
 
     ftype : str
@@ -102,7 +102,7 @@ def generate_catalog(ds_file, n_rays,
 
     units_dict: dict, optional
         dictionary of units to use for the fields when extracting properties
-        (only relevant for 'ice' method)
+        (only relevant for 'spice' method)
         Default: None
 
     Returns
@@ -215,11 +215,11 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
         List of ray objects or list of trident rays whose absorbers will be
         extracted
     method: str
-        Either 'ice' or 'spectacle'. specifies which method is used to extract
+        Either 'spice' or 'spectacle'. specifies which method is used to extract
         absorbers
 
     fields: list str, optional
-        Fields to extract/add to catalog if using 'ice' method.
+        Fields to extract/add to catalog if using 'spice' method.
         Defaults=None
 
     units_dict: dict
@@ -232,17 +232,17 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
     """
     df_list=[]
 
-    if method == 'ice':
+    if method == 'spice':
         for ray in ray_list:
             #load new ray and extract absorbers
             abs_extractor.load_ray(ray)
-            df = abs_extractor.get_ice_absorbers(fields=fields, units_dict=units_dict)
+            df = abs_extractor.get_spice_absorbers(fields=fields, units_dict=units_dict)
 
             if df is not None:
                 # add ray index
                 ray_num = get_ray_num(ray)
                 start = 65 # Ascii number for 'A'
-                for i in range(abs_extractor.num_ice):
+                for i in range(abs_extractor.num_spice):
                     df.loc[i,'absorber_index'] = f"{ray_num}{chr(start+i)}"
                 df_list.append(df)
 
@@ -260,7 +260,7 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
                 df_list.append(df)
 
     else:
-        raise RuntimeError(f"method={method} is not valid. method must be 'ice' or 'spectacle'.")
+        raise RuntimeError(f"method={method} is not valid. method must be 'spice' or 'spectacle'.")
 
     if len(df_list) > 0:
         full_df = pd.concat(df_list, ignore_index=True)

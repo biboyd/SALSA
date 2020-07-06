@@ -9,7 +9,7 @@ def test_enzo_generate_catalog():
 
     ds = yt.load(f"tests/IsolatedGalaxy/galaxy0030/galaxy0030")
     raydir=f"tests/test_enzo_rays/"
-    df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='ice',
+    df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
                               center=[0.5, 0.5, 0.5], impact_param_lims=(0, 50),
                               ray_length=200,
                               fields=['temperature'],
@@ -34,7 +34,7 @@ def test_fire_generate_catalog():
     raydir=f"tests/test_fire_rays/"
 
     c=[29286.1032486 , 31049.29447174, 32589.58339691]
-    df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='ice',
+    df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
                               center=c, impact_param_lims=(0, 50),
                               ray_length=200,
                               fields=['temperature'],
