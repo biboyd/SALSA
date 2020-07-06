@@ -6,9 +6,15 @@
 Welcome to SALSA's documentation!
 =================================
 
-Salsa is a python module that combines multiple open-source software to create
-a streamlined pipeline for extracting and absorbers from cosmological and Galactic
-Simulations.
+Salsa is an open-source python module that creates a streamlined process to
+generate synthetic absorber catalogs from galactic simulations. Multiple open-source software
+projects utilized to achieve this. Accessing simulation data is done using yt.
+Trident is used to generate synthetic sightlines/lightrays and generate synthetic
+spectra. Spectacle is used to fit voigt profiles to spectra and extract absorbers.
+
+In addition a novel method for extracting absorbers, the Ice method. This uses
+cell level data to extract absorbers from a Trident lightray and returns a great
+deal of information that can be further analyzed.
 
 .. toctree::
    :maxdepth: 2
