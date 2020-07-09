@@ -1,12 +1,12 @@
 ---
-title: 'SALSA: A Python Package for Constructing Synthetic Quasar Absorption Line Catalogs from Astrophysical Hydrodynamic Simulations '
+title: 'SALSA: A Python Package for Constructing Synthetic Quasar Absorption Line Catalogs from Astrophysical Hydrodynamic Simulations'
 tags:
   - Python
   - astronomy
   - simulation
   - spectra
 authors:
-  - name: Brendan Boyd^[Custom footnotes for e.g. denoting who the corresspoinding author is can be included like this.]
+  - name: Brendan Boyd
     orcid: 0000-0003-0872-7098
     affiliation: 1
   - name: Devin W. Silvia
@@ -61,21 +61,22 @@ In order to fill this void, we introduce the Python package, SALSA (Synthetic Ab
 
 The “SPICE (Simple Procedure for Iterative Cloud Extraction) method” is a novel method that uses cell level data from the simulation to find the contiguous groups of cells which will meaningfully contribute absorption line features to the synthetic spectra. It does this through an iterative process that isolates the regions along the LightRay with the highest number density values and returns those regions with observationally detectable column densities as individual absorbers (see \autoref{fig:1}). This method provides direct access to the information contained in the simulation (e.g. temperature, velocity, metallicity, etc.) and, in turn, more information than can be provided by spectral absorption line analysis alone.
 
-![The left plot shows the SPICE method extracting two absorbers from number density profile. The left shows spectacle fitting the spectra (dotted lines are spectacle fits).\label{fig:1}](spice_spectacle_fig.png)
+![The left plot shows the number density profile of O VI along the length of the LightRay. The shaded regions were found by the SPICE method and represent the absorbers that would be extracted.  The right plot shows the synthetic spectra for that same LightRay. The dashed lines represent the two absorption lines that Spectacle fit to the spectra. \label{fig:1}](joss_paper_ex.png)
 
 Each method has its own advantages and disadvantages depending on the research goals. Spectacle extracts absorbers in a way that is much more analogous to that of observational studies and thus can more easily be used to make “apples-to-apples” comparisons between simulations and observations. The SPICE method, on the other hand, retains much of the additional information provided by simulation data, allowing for more in-depth analysis of the properties of absorbers and how those relate to the simulated galaxy as a whole.
 
-Once a synthetic absorber catalog is generated, analysis of the data can proceed from an observer’s perspective. Coupling this analysis with the unprocessed simulation data can bring powerful insights about how the CGM functions and how observations might provide a limited view into this complex medium. Current research efforts are leveraging SALSA to study O VI absorbers in the CGM. Further work will assuredly provide more discoveries and better connect the cutting-edge research done by computational and observational astronomers studying the CGM.
+Once a synthetic absorber catalog is generated, analysis of the data can proceed from an observer’s perspective. Coupling this analysis with the unprocessed simulation data can bring powerful insights about how the CGM functions and how observations might provide a limited view into this complex medium. Current research efforts, with the FOGGIE collaboration[^3], are leveraging SALSA to study O VI absorbers in the CGM. Further work will assuredly provide more discoveries and better connect the cutting-edge research done by computational and observational astronomers studying the CGM.
 
 
 [^1]: https://trident.readthedocs.io/en/latest/
 
 [^2]: https://spectacle-py.readthedocs.io/en/latest/
 
+[^3]: http://foggie.science/
 
 
 # Acknowledgements
 
-We acknowledge contributions from Funding places and other peoples.
+We acknowledge contributions from Funding places Hubble grant and FOGGIE grant.
 
 # References
