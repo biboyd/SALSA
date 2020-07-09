@@ -20,7 +20,7 @@ affiliations:
    index: 1
  - name: Department of Computational Mathematics, Science and Engineering, Michigan State University
    index: 2
- - name: National  Superconducting  CyclotronLaboratory, Michigan State University
+ - name: National Superconducting Cyclotron Laboratory, Michigan State University
    index: 3
  - name: Space Telescope Science Institute
    index: 4
@@ -28,7 +28,6 @@ affiliations:
    index: 5
 date: 8 July 2020
 bibliography: paper.bib
-
 ---
 
 # Summary
