@@ -15,6 +15,8 @@ authors:
     affiliation: "1, 2, 3"
   - name: Jason Tumlinson
     affiliation: "4, 5"
+  - name: Molly Peeples
+    affiliation: "4, 5"
 affiliations:
  - name: Department of Physics and Astronomy, Michigan State University
    index: 1
@@ -26,7 +28,7 @@ affiliations:
    index: 4
  - name: Department of Physics & Astronomy, Johns Hopkins University
    index: 5
-date: 8 July 2020
+date: 9 July 2020
 bibliography: paper.bib
 ---
 
@@ -89,17 +91,17 @@ Spectacle fit to the spectra. \label{fig:1}](spice_spectacle_fig.png)
 
 Each method has its own advantages and disadvantages depending on the research
 goals. Spectacle extracts absorbers in a way that is much more analogous to that
-of observational studies and thus can more easily be used to make “apples-to-
-apples” comparisons between simulations and observations. The SPICE method, on
+of observational studies and thus can more easily be used to make “apples-to-apples”
+comparisons between simulations and observations. The SPICE method, on
 the other hand, retains much of the additional information provided by
 simulation data, allowing for more in-depth analysis of the properties of
 absorbers and how those relate to the simulated galaxy as a whole.
 
 Once a synthetic absorber catalog is generated, analysis of the data can proceed
-from an hobserver’s perspective. Coupling this analysis with the unprocessed
+from an observer’s perspective. Coupling this analysis with the unprocessed
 simulation data can bring powerful insights about how the CGM functions and how
 observations might provide a limited view into this complex medium. Current
-research efforts, with the FOGGIE collaboration[^3], are leveraging SALSA to
+research efforts with the FOGGIE collaboration[^3] are leveraging SALSA to
 study O VI absorbers in the CGM. Further work will assuredly provide more
 discoveries and better connect the cutting-edge research done by computational
 and observational astronomers studying the CGM.
@@ -115,6 +117,9 @@ and observational astronomers studying the CGM.
 # Acknowledgements
 
 This work was supported by STScI grant HST-AR-14315.001-A and NSF grants
-AAG-1514700 and AAG-1908109.
+AAG-1514700 and AAG-1908109. The authors would also like to thank the members of
+the FOGGIE Collaboration, the developers of the Trident software package, Cameron
+Hummels and Britton Smith, and the primary developer of Spectacle, Nicholas Earl,
+for their contributions in helping to make the SALSA package a reality.
 
 # References
