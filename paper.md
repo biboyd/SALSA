@@ -40,12 +40,13 @@ The hot, low density gas surrounding galaxies, called the circumgalactic medium
 to observe by direction detection in emission, so much of our understanding
 comes from studying absorption line features in the spectra of light from
 distant quasars that pass through intervening galaxies
-[@Howk:2017; @Lehner:2018]. Since a single quasar sightline only contains a
-relatively small amount of information, observational astronomers conduct
-surveys to collect many sightlines and create large absorber catalogs that
-contain information about the variety of absorption lines found in each
-individual sightline. These catalogs create a statistical picture of the CGM and
-have proved invaluable in our understanding of the dynamics in the CGM.
+[@Howk:2017; @Lehner:2018]. A single quasar sightline only contains information 
+about a relatively small portion of gas in the halo of an individual galaxy.
+Because this,  observational astronomers conduct surveys to collect many
+sightlines and create large absorber catalogs that contain information about
+the variety of absorption lines found in each individual sightline. These
+catalogs create a statistical picture of the CGM and have proved invaluable in
+our understanding of the dynamics in the CGM.
 
 As a complement to observational surveys, hydrodynamic simulations have also
 become increasingly important for studying the CGM and efforts have been made to
