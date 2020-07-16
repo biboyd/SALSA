@@ -17,6 +17,8 @@ authors:
     affiliation: "4, 5"
   - name: Molly Peeples
     affiliation: "4, 5"
+  - name: Nicholas Earl
+    affiliation: 4
 affiliations:
  - name: Department of Physics and Astronomy, Michigan State University
    index: 1
@@ -119,8 +121,8 @@ and observational astronomers studying the CGM.
 
 This work was supported by STScI grant HST-AR-14315.001-A and NSF grants
 AAG-1514700 and AAG-1908109. The authors would also like to thank the members of
-the FOGGIE Collaboration, the developers of the Trident software package, Cameron
-Hummels and Britton Smith, and the primary developer of Spectacle, Nicholas Earl,
-for their contributions in helping to make the SALSA package a reality.
+the FOGGIE Collaboration and the developers of the Trident software package, Cameron
+Hummels and Britton Smith, for their contributions in helping to make the SALSA 
+package a reality.
 
 # References
