@@ -44,7 +44,7 @@ comes from studying absorption line features in the spectra of light from
 distant quasars that pass through intervening galaxies
 [@Howk:2017; @Lehner:2018]. A single quasar sightline only contains information 
 about a relatively small portion of gas in the halo of an individual galaxy.
-Because this,  observational astronomers conduct surveys to collect many
+Because of this,  observational astronomers conduct surveys to collect many
 sightlines and create large absorber catalogs that contain information about
 the variety of absorption lines found in each individual sightline. These
 catalogs create a statistical picture of the CGM and have proved invaluable in
@@ -80,10 +80,10 @@ groups of cells which will meaningfully contribute absorption line features to
 the synthetic spectra. It does this through an iterative process that isolates
 the regions along the LightRay with the highest number density values and
 returns those regions with observationally detectable column densities as
-individual absorbers (see \autoref{fig:1}). This method provides direct access
-to the information contained in the simulation (e.g. temperature, velocity,
-metallicity, etc.) and, in turn, more information than can be provided by
-spectral absorption line analysis alone.
+individual absorbers (see \autoref{fig:1} or for more details, the documentation[^3]). 
+This method provides direct access to the information contained in the simulation 
+(e.g. temperature, velocity, metallicity, etc.) and, in turn, more information 
+than can be provided by spectral absorption line analysis alone.
 
 ![These plots were generated using FOGGIE simulation data [@Peeples:2019]. The
 top plot shows the number density profile of O VI along the length of the
@@ -104,7 +104,7 @@ Once a synthetic absorber catalog is generated, analysis of the data can proceed
 from an observer’s perspective. Coupling this analysis with the unprocessed
 simulation data can bring powerful insights about how the CGM functions and how
 observations might provide a limited view into this complex medium. Current
-research efforts with the FOGGIE collaboration[^3] are leveraging SALSA to
+research efforts with the FOGGIE collaboration[^4] are leveraging SALSA to
 study O VI absorbers in the CGM. Further work will assuredly provide more
 discoveries and better connect the cutting-edge research done by computational
 and observational astronomers studying the CGM.
@@ -114,7 +114,9 @@ and observational astronomers studying the CGM.
 
 [^2]: https://spectacle-py.readthedocs.io/en/latest/
 
-[^3]: http://foggie.science/
+[^3]: https://salsa.readthedocs.io/en/latest/
+
+[^4]: http://foggie.science/
 
 
 # Acknowledgements
