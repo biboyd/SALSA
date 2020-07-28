@@ -6,7 +6,7 @@ tags:
   - simulation
   - spectra
 authors:
-  - name: Brendan I. S. Boyd
+  - name: Brendan I. Boyd
     orcid: 0000-0003-0872-7098
     affiliation: 1
   - name: Devin W. Silvia
