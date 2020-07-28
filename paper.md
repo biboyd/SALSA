@@ -6,7 +6,7 @@ tags:
   - simulation
   - spectra
 authors:
-  - name: Brendan Boyd
+  - name: Brendan I. S. Boyd
     orcid: 0000-0003-0872-7098
     affiliation: 1
   - name: Devin W. Silvia
@@ -15,7 +15,7 @@ authors:
     affiliation: "1, 2, 3"
   - name: Jason Tumlinson
     affiliation: "4, 5"
-  - name: Molly Peeples
+  - name: Molly S. Peeples
     affiliation: "4, 5"
   - name: Nicholas Earl
     affiliation: 4
