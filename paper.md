@@ -56,7 +56,7 @@ apply absorption line analysis to simulated data
 [@Smith:2011; @Egan:2014; @Peeples:2019]. Trident[^1] is a Python package that
 can extract an artificial sightline, referred to as a “LightRay” in the code,
 from simulation data and then generate synthetic spectra from that sightline
-[@Hummels:2017]. This provides the opportunity to explore a simulation from an
+[@Hummels:2017]. Analyses using Trident provide the opportunity to explore simulations from an
 observer’s perspective, which facilitates making direct comparisons to
 observational studies. In this way, Trident provides a new avenue of study for
 simulators. However, a straightforward, streamlined process for replicating
