@@ -1,4 +1,4 @@
-.. _annotated-example:
+lightray_index.. _annotated-example:
 
 Annotated Example
 ==================
@@ -139,28 +139,27 @@ extract absorbers from each one. see:::
   df_civ.head()
 
 .. csv-table::
-  :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity,absorber_index
+  :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity,lightray_index
 
-  C IV,1548.187,0.000,14.057,-2.221,13.672,201,224,0.000,53985.906,1.103,0A
-  C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2A
-  C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2B
+  C IV,1548.187,0.000,14.057,-2.221,13.672,201,224,0.000,53985.906,1.103,0
+  C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2
+  C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2
 
 Notice that the Spectacle method could also be used. Also, although the
 AbsorberExtractor takes a ray file at construction, new rays can be loaded into
 it.
 
-To retain information on where each absorber came from, an ``absorber_index`` is
-given. The number represents the ray it was extracted from and the letter
-signifies the order in which the absorber was extracted. So the first absorber
-to be extracted from ray2.h5 would have an index of ``2A`` and the next would be
-``2B``. This can be useful for comparing/analyzing absorbers on the same sightline.
+To retain information on where each absorber came from, an ``lightray_index`` is
+given. The number represents the ray it was extracted from. So all absorbers
+extracted from ray2.h5 would have an index of ``2``. This can be useful for
+comparing/analyzing absorbers on the same sightline.
 
 .. _catalog-generation-example:
 
 Catalog Generation
 -------------------
 To generate a full catalog of absorbers we can use the
-`:class:~salsa.generate_catalog` function to both generate a sample of
+:class:`~salsa.generate_catalog` function to both generate a sample of
 ``trident.LightRay`` objects and then :class:`~salsa.AbsorberExtractor` to extract
 absorbers of a list of ions.
 
@@ -176,12 +175,12 @@ Here is what you need to setup and run:::
 .. csv-table::
   :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity,absorber_index
 
-  H I,1215.670,0.000,18.678,108.065,1.509,107,156,0.000,16302.538,1.096,2A
-  H I,1215.670,0.000,12.787,14.187,0.384,201,204,0.000,96469.462,1.086,0A
-  H I,1215.670,0.000,15.367,-0.264,4.846,204,216,0.000,48429.090,1.103,0B
-  C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2A
-  C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2B
-  C IV,1548.187,0.000,14.057,-2.221,13.672,201,224,0.000,53985.906,1.103,0A
+  H I,1215.670,0.000,18.678,108.065,1.509,107,156,0.000,16302.538,1.096,2
+  H I,1215.670,0.000,12.787,14.187,0.384,201,204,0.000,96469.462,1.086,0
+  H I,1215.670,0.000,15.367,-0.264,4.846,204,216,0.000,48429.090,1.103,0
+  C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2
+  C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2
+  C IV,1548.187,0.000,14.057,-2.221,13.672,201,224,0.000,53985.906,1.103,0
 
 This function looks first to see if rays have been created in the given directory.
 If there are the right number of rays and they all contain the right ions and
@@ -191,7 +190,7 @@ created using :class:`~salsa.generate_lrays`.
 
 Next, :class:`~salsa.get_absorbers` is used to find the absorbers from each ion
 in ``ion_list`` and finally a catalog is returned as a ``pandas.DataFrame``. Note
-that the absorber index is unique only up to the ion/wavelength
+that the lighray index is unique only up to the ion/wavelength
 
 
 .. _visualizing-absorbers:

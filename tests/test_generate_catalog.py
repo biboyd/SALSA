@@ -59,15 +59,10 @@ def same_catalog(df, key_df):
 
     # test extraction values same as key
     for i in range(len(df)):
-        # extract correct row to compare to
-        ion=df.loc[i, 'name']
-        index = df.loc[i, 'absorber_index']
-        compare = key_df.query(f'(name == "{ion}") & (absorber_index == "{index}")').iloc[0]
-
         # compare column densities
-        cd_diff = abs(df.loc[i, 'col_dens'] - compare['col_dens'])/compare['col_dens']
+        cd_diff = abs(df.loc[i, 'col_dens'] - key_df.loc[i, 'col_dens'])/key_df.loc[i, 'col_dens']
         assert cd_diff < 1e-4
 
         #compare temperatures
-        temp_diff = abs(df.loc[i, 'temperature'] - compare['temperature'])/compare['temperature']
+        temp_diff = abs(df.loc[i, 'temperature'] - key_df.loc[i,'temperature'])/key_df.loc[i,'temperature']
         assert temp_diff < 1e-4

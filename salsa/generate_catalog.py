@@ -241,9 +241,8 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
             if df is not None:
                 # add ray index
                 ray_num = get_ray_num(ray)
-                start = 65 # Ascii number for 'A'
                 for i in range(abs_extractor.num_spice):
-                    df.loc[i,'absorber_index'] = f"{ray_num}{chr(start+i)}"
+                    df.loc[i,'lightray_index'] = ray_num
                 df_list.append(df)
 
     elif method == 'spectacle':
@@ -254,9 +253,8 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
             #add ray index
             if df is not None:
                 ray_num = get_ray_num(ray)
-                start = 65 # Ascii number for 'A'
                 for i in range(abs_extractor.num_spectacle):
-                    df.loc[i,'absorber_index'] = f"{ray_num}{chr(start+i)}"
+                    df.loc[i,'lightray_index'] = ray_num
                 df_list.append(df)
 
     else:
