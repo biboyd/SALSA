@@ -34,7 +34,7 @@ date: 9 July 2020
 bibliography: paper.bib
 ---
 
-# Summary
+# Introduction
 
 The hot, low density gas surrounding galaxies, called the circumgalactic medium
 (CGM), is vital to understanding the structure and evolution of galaxies
@@ -42,7 +42,7 @@ The hot, low density gas surrounding galaxies, called the circumgalactic medium
 to observe by direction detection in emission, so much of our understanding
 comes from studying absorption line features in the spectra of light from
 distant quasars that pass through intervening galaxies
-[@Howk:2017; @Lehner:2018]. A single quasar sightline only contains information 
+[@Howk:2017; @Lehner:2018]. A single quasar sightline only contains information
 about a relatively small portion of gas in the halo of an individual galaxy.
 Because of this,  observational astronomers conduct surveys to collect many
 sightlines and create large absorber catalogs that contain information about
@@ -62,6 +62,8 @@ observational studies. In this way, Trident provides a new avenue of study for
 simulators. However, a straightforward, streamlined process for replicating
 observational absorber catalogs is not yet readily available.
 
+# Statement of Need
+
 In order to fill this void, we introduce the Python package, SALSA (Synthetic
 Absorption Line Surveyor Application). SALSA is a package that generates
 synthetic absorber catalogs by studying the LightRays and/or spectra generated
@@ -74,15 +76,17 @@ method provides traditional absorption line information (e.g. Doppler broadening
 equivalent width, etc.) and thus creates synthetic absorber catalogs very similar
 to those made from observational studies.
 
+# Summary
+
 The “SPICE (Simple Procedure for Iterative Cloud Extraction) method” is a novel
 method that uses cell level data from the simulation to find the contiguous
 groups of cells which will meaningfully contribute absorption line features to
 the synthetic spectra. It does this through an iterative process that isolates
 the regions along the LightRay with the highest number density values and
 returns those regions with observationally detectable column densities as
-individual absorbers (see \autoref{fig:1} or for more details, the documentation[^3]). 
-This method provides direct access to the information contained in the simulation 
-(e.g. temperature, velocity, metallicity, etc.) and, in turn, more information 
+individual absorbers (see \autoref{fig:1} or for more details, the documentation[^3]).
+This method provides direct access to the information contained in the simulation
+(e.g. temperature, velocity, metallicity, etc.) and, in turn, more information
 than can be provided by spectral absorption line analysis alone.
 
 ![These plots were generated using FOGGIE simulation data [@Peeples:2019]. The
@@ -124,7 +128,7 @@ and observational astronomers studying the CGM.
 This work was supported by STScI grant HST-AR-14315.001-A and NSF grants
 AAG-1514700 and AAG-1908109. The authors would also like to thank the members of
 the FOGGIE Collaboration and the developers of the Trident software package, Cameron
-Hummels and Britton Smith, for their contributions in helping to make the SALSA 
+Hummels and Britton Smith, for their contributions in helping to make the SALSA
 package a reality.
 
 # References
