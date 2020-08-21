@@ -70,4 +70,4 @@ contributing code, testing and experimenting, or offering ideas for different
 features.
 
 If you are interested in contributing you can contact us directly at
-boydbre1@msu.edu or add an issue on this Github page.
+boyd.brendan@stonybrook.edu or add an issue on this Github page.
