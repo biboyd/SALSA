@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 import os
 
 #base dependencies
+#NOTE: gcc compiler is needed to install some packages
 dependecies=['numpy', 'yt', 'trident', 'spectacle', 'matplotlib', 'pandas',
              'scipy', 'mpi4py']
 

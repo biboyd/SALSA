@@ -3,6 +3,7 @@ name: salsa-env
 channels:
   - conda-forge
 
+#NOTE: gcc compiler is needed to install some packages
 dependencies:
     - python>=3.5
     - pip

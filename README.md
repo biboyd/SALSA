@@ -43,6 +43,7 @@ Then you should be able to create a conda environment via:
   $ conda env create --file environment.yml
   $ conda activate salsa-env
 ```
+Note that you need gcc compiler installed (which it often already is on most machines).
 For a more detailed description see the
 [installation guide](https://salsa.readthedocs.io/en/latest/installation.html)
 which also includes tips if you want to install dependencies on your own.

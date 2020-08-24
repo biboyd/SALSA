@@ -22,6 +22,10 @@ This will check that dependencies are installed and should install any that you
 might be missing. Again, since this is a somewhat complicated environment, it is
 best to install the dependencies beforehand.
 
+.. note::
+  To install some of the dependencies, the gcc compiler needs to be installed.
+  This is not a problem for most machines but can raise an error for some.
+
 Now you're all set to go! ::
 
   $ python
