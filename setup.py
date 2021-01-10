@@ -9,8 +9,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
 dependecies=['numpy', 'yt', 'trident', 'spectacle', 'matplotlib', 'pandas',
              'scipy', 'mpi4py']
 
-setup(name="salsa",
-      version="0.1.0",
+setup(name="astro-salsa",
+      version="1.0.0",
       description = ("Synthetic absorber catalog generator from astrophysical simulations"),
       long_description=long_description,
       author="Brendan Boyd",
