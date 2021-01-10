@@ -19,5 +19,5 @@ setup(name="salsa",
       keywords = ["simulation", "spectra", "astronomy", "astrophysics"],
       url="https://github.com/biboyd/SALSA",
       packages=find_packages(),
-      classifiers=[ "Programming Language :: Python :: 3"]
+      classifiers=[ "Programming Language :: Python :: 3"],
       install_requires=dependecies)
