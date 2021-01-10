@@ -29,8 +29,15 @@ For detailed information on how to install and run salsa, Read the Docs
 [here](https://salsa.readthedocs.io)
 
 ## Install
-If you have all the dependencies installed, you can clone the repository and
-run these commands:
+If you have all the dependencies installed, you can use pip and
+run these commands to install the most stable version:
+```
+  $ pip install astro-salsa
+  $ python
+  >>> import salsa
+```
+If you want to install the latest development version and have all the dependencies 
+installed, you can clone the repository and run these commands:
 ```
   $ git clone https://github.com/biboyd/SALSA.git
   $ cd SALSA

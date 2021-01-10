@@ -10,9 +10,21 @@ Salsa is built off of quite a few different packages so it is best to install
 these before installing salsa. Go to :ref:`dependencies-install` for more details
 on how best to do this.
 
-If you have the dependencies already installed, you need to `clone the
-repository <https://github.com/biboyd/SALSA>`_ if you haven't already then enter
-the main directory and use pip to install the package: ::
+Stable Version
+--------------
+
+If you have the dependencies already installed then you can use pip to install
+the package: ::
+
+  $ pip install astro-salsa
+
+Development Version
+-------------------
+
+For the latest development version follow these instructions if you have the
+dependencies already installed. Next you need to `clone the repository
+<https://github.com/biboyd/SALSA>`_ then enter the main directory and use pip to
+install the package: ::
 
   $ git clone https://github.com/biboyd/SALSA.git
   $ cd SALSA
