@@ -18,4 +18,4 @@ dependencies:
         - spectacle
         - specutils==0.5.2
         - gwcs==0.10.0
-        - astropy
+        - astropy==3.2.3
