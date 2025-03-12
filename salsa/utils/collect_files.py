@@ -144,6 +144,15 @@ def check_rays(ray_dir, n_rays, fields, parallel=True):
         else:
             raise RuntimeError(f"found {len(ray_files)} rays instead of {n_rays}. Either delete rays or change number of rays to match")
 
+def get_ray_num(file_path):
+    """
+    extract the ray's number from it's file name by removing 'ray' and '.h5' as
+    well as preceding path
+    """
+    filename = file_path.split('/')[-1]
+    num = filename[3:-3]
+    return num
+
 def combine_astropy_files(directory, kw='ice', outfile=None):
 
     #get files

@@ -4,7 +4,7 @@ import trident
 import pandas as pd
 
 from salsa.absorber_extractor import AbsorberExtractor
-from salsa.utils.collect_files import collect_files, check_rays
+from salsa.utils.collect_files import collect_files, check_rays, get_ray_num
 from salsa.utils.functions import ion_p_num
 from salsa.generate_light_rays import generate_lrays
 from mpi4py import MPI
@@ -261,11 +261,3 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
     return full_df
 
 
-def get_ray_num(file_path):
-    """
-    extract the ray's number from it's file name by removing 'ray' and '.h5' as
-    well as preceding path
-    """
-    filename = file_path.split('/')[-1]
-    num = filename[3:-3]
-    return num
