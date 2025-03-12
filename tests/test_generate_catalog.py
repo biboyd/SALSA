@@ -1,3 +1,5 @@
+import os
+
 import yt
 import salsa
 import numpy as np
@@ -9,6 +11,9 @@ def test_enzo_generate_catalog():
 
     ds = yt.load_sample("IsolatedGalaxy")
     raydir=f"tests/test_enzo_rays/"
+
+    clear_ray_dir(raydir)
+
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
                               center=[0.5, 0.5, 0.5], impact_param_lims=(0, 50),
                               ray_length=200,
@@ -33,6 +38,8 @@ def test_fire_generate_catalog():
     ds = yt.load_sample("FIRE_M12i_ref11")
     raydir=f"tests/test_fire_rays/"
 
+    clear_ray_dir(raydir)
+
     c=[29286.1032486 , 31049.29447174, 32589.58339691]
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
                               center=c, impact_param_lims=(0, 50),
@@ -52,6 +59,20 @@ def test_fire_generate_catalog():
     df.to_csv('tests/fire_df.csv')
     same_catalog(df, key_df)
 
+def clear_ray_dir(folder):
+    """
+    Explicitly remove files to make sure weird extra stuff isn't being added.
+    """
+    for i in range(2):
+        try:
+            os.remove(os.path.join(folder, f"ray{i}.h5"))
+        except FileNotFoundError:
+            continue
+    try:
+        os.remove("impact_parameters.npy")
+    except FileNotFoundError:
+        pass
+
 def same_catalog(df, key_df):
     # check number of columns/rows
     assert len(df) == len(key_df)
@@ -66,6 +87,3 @@ def same_catalog(df, key_df):
         #compare temperatures
         temp_diff = abs(df.loc[i, 'temperature'] - key_df.loc[i,'temperature'])/key_df.loc[i,'temperature']
         assert temp_diff < 1e-4
-
-if __name__ == "__main__":
-    test_fire_generate_catalog()
