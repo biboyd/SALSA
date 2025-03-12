@@ -69,7 +69,7 @@ def clear_ray_dir(folder):
         except FileNotFoundError:
             continue
     try:
-        os.remove(os.path.join(folder+"impact_parameters.npy"))
+        os.remove(os.path.join(folder+"impact_parameter.npy"))
     except FileNotFoundError:
         pass
 
