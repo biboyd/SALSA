@@ -17,6 +17,9 @@ opt_spectacle=['astropy<=4',
                'gwcs<=0.11.0', 
                'spectacle']
 
+opt_testing=["pooch",
+             "pytest"]
+
 setup(name="astro-salsa",
       version="1.0.0",
       description = ("Synthetic absorber catalog generator from astrophysical simulations"),
@@ -35,4 +38,5 @@ setup(name="astro-salsa",
                    "Programming Language :: Python :: 3.11"],
       python_requires=">=3.8, <3.12",
       install_requires=dependecies,
-      extras_require={'spectacle':opt_spectacle})
+      extras_require={'spectacle':opt_spectacle,
+                      'testing':opt_testing})

@@ -43,9 +43,6 @@ class AbsorberPlotter(AbsorberExtractor):
         Name of the ion to extract absorbers of and plot
         Default: "H I"
 
-    cut_region_filters : list of str, optional
-        a list of filters defined by the way you use Cut Regions in YT
-
     slice_field : string, optional
         Field to plot in slice plot. defaults to ion_name's number density
 
@@ -135,7 +132,6 @@ class AbsorberPlotter(AbsorberExtractor):
                 ray_filename,
                 ion_name='H I',
                 ftype='gas',
-                cut_region_filters=None,
                 slice_field=None,
                 absorber_fields=[],
                 north_vector=[0, 0, 1],
@@ -165,7 +161,6 @@ class AbsorberPlotter(AbsorberExtractor):
         self.ray_filename = ray_filename
         self.ion_name = ion_name
 
-        self.cut_region_filters = cut_region_filters
         self.frac = frac
 
         #add ion name to list of all ions to be plotted
@@ -334,17 +329,6 @@ class AbsorberPlotter(AbsorberExtractor):
         """
         #print("adding ion fields")
 
-        # runs way to slow, may add later
-        if False: #self.cut_region_filters is not None:
-            # parse for radial cuts
-            rad_in, rad_out, cut_str = self.cgm_details
-            cgm = self.ds.sphere(self.center_gal, (rad_out, 'kpc')) \
-                  - self.ds.sphere(self.center_gal, (rad_in, 'kpc'))
-            # cuts running too slow rn so just not including them
-            data_source = cgm.cut_region(cut_str)
-        else:
-            data_source=None
-
         ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
 
         #construct vec orthogonal to ray/plane
@@ -383,8 +367,7 @@ class AbsorberPlotter(AbsorberExtractor):
                           self.slice_field,
                           center=center,
                           north_vector = self.north_vector,
-                          width = wid_hght,
-                          data_source=data_source)
+                          width = wid_hght)
 
 
 
@@ -589,9 +572,8 @@ class AbsorberPlotter(AbsorberExtractor):
 
         #get length data and define x limits
         l_list = self.data['l'].in_units('kpc')
-        full_l = self.uncut_data['l'].in_units('kpc')
-        pad = 0.1*full_l[-1]
-        xlimits = [-pad, full_l[-1] + pad]
+        pad = 0.1*l_list[-1]
+        xlimits = [-pad, l_list[-1] + pad]
 
         # check if l_list is non-empty cuz something went wrong then.
         if l_list.size == 0:

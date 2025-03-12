@@ -39,10 +39,6 @@ class AbsorberExtractor():
         Name of the ion to extract absorbers of
         Default: "H I"
 
-    cut_region_filters: list of strings, optional
-        a list of filters defined by the way you use Cut Regions in YT
-        Default: None
-
     wavelegnth_center: float, optional
         The specific absorption line to look at (in unit Angstrom). None
         defaults to strongest absorption line for specified ion
@@ -78,7 +74,7 @@ class AbsorberExtractor():
     """
 
     def __init__(self, ds_filename, ray_filename,
-                ion_name='H I', cut_region_filters=None,
+                ion_name='H I', 
                 wavelength_center=None, velocity_res = 10,
                 spectacle_defaults=None, spectacle_res=None,
                 absorber_min=None, frac=0.8):
@@ -93,7 +89,6 @@ class AbsorberExtractor():
 
         self.ray_filename = ray_filename
         self.ion_name = ion_name
-        self.cut_region_filters = cut_region_filters
         self.frac = frac
 
         #add ion name to list of all ions to be plotted
@@ -179,19 +174,8 @@ class AbsorberExtractor():
             self.ray = new_ray
             self.ray_filename=new_ray.filename_template
 
-        #save uncut data. define center
-        self.uncut_data = self.ray.all_data()
-
-        #apply cut region if specified
-        if self.cut_region_filters is None:
-            self.data = self.uncut_data
-        else:
-            curr_data = self.uncut_data
-            #iteratively apply filters
-            for filter in self.cut_region_filters:
-                curr_data = curr_data.cut_region(filter)
-
-            self.data = curr_data
+        # store data
+        self.data = self.ray.all_data()
 
         # Check if ray is empty due to cuts
         if self.data['l'].size == 0:
@@ -310,6 +294,7 @@ class AbsorberExtractor():
             start, end = self.spice_intervals[i]
             stats_table.loc[i, 'interval_start'] = start
             stats_table.loc[i, 'interval_end'] = end
+
             dl = self.data['dl'][start:end].in_units('cm')
             density = self.data[('gas', 'density')][start:end].in_units('g/cm**3')
             tot_density = np.sum(dl*density)
@@ -322,8 +307,13 @@ class AbsorberExtractor():
             stats_table.loc[i, 'col_dens'] = np.log10(col_density)
 
             #calculate delta_v of absorber. ion col dense weighted
-            vel_los_dat = self.data['velocity_los'][start:end].in_units('km/s')
+            vel_los_dat = self.data['velocity_los'][start:end]
             central_vel = np.sum(dl*ion_density*vel_los_dat)/col_density
+            if "delta_v" in units_dict:
+                central_vel.convert_to_units(units_dict["delta_v"])
+            else:
+                central_vel.convert_to_units('km/s')
+
             stats_table.loc[i, 'delta_v'] = central_vel
 
             #calculate velocity dispersion
@@ -334,10 +324,17 @@ class AbsorberExtractor():
             else:
                 #weighted sample variance
                 vel_variance=col_density \
-                     *np.sum(dl*ion_density * ( vel_los_dat - self.ds.quan(central_vel, 'km/s') )**2) \
-                     /(col_density**2 - np.sum( (dl*ion_density)**2 ))
+                    * np.sum(dl*ion_density * \
+                        (vel_los_dat - central_vel)**2 ) \
+                    / (col_density**2 - np.sum( (dl*ion_density)**2 ))
+                vel_variance = np.sqrt(vel_variance)
 
-            stats_table.loc[i, 'vel_dispersion'] = np.sqrt(vel_variance)
+                if "vel_dispersion" in units_dict:
+                    vel_variance.convert_to_units(units_dict["vel_dispersion"])
+                else:
+                    vel_variance.convert_to_units("km/s")
+
+            stats_table.loc[i, 'vel_dispersion'] = vel_variance
 
             #calculate other field averages. gas col density weighted
             for fld in fields:
@@ -525,44 +522,8 @@ class AbsorberExtractor():
             a final list of intervals where prev and curr are properly combined.
         """
         dl_array = self.data['dl'].in_units('cm')
-        l_array = self.data['l'].in_units('cm')
         velocity_array = self.data['velocity_los'].in_units('km/s')
         density_array = self.data['density']
-
-        # first check no region jumping (from use of cut_regions)
-        if self.cut_region_filters is not None:
-            #make sure spatially connected
-            real_intervals = []
-            for curr_b, curr_e in curr_intervals:
-                #check if lengths match up
-                size_dl = np.sum(dl_array[curr_b:curr_e])
-                size_l = l_array[curr_e] - l_array[curr_b]
-                rel_diff = abs(size_dl - size_l)/size_dl
-                #print("rel diff: ", rel_diff)
-                if rel_diff > 1e-12:
-                    print(curr_b, curr_e)
-                    # make sure things are good
-                    divide_indx=None
-                    for i in range(curr_b, curr_e):
-                        # find where the jump is
-
-                        rel_diff = abs(l_array[i] +dl_array[i] - l_array[i+1])/l_array[i]
-                        #print(i, rel_diff.value)
-                        if rel_diff > 1e-12:
-                            divide_indx=i
-                            break
-                    #append intervals split up by the jump
-                    if divide_indx is not None:
-                        print(divide_indx)
-                        real_intervals.append((curr_b, divide_indx))
-                        real_intervals.append((divide_indx+1, curr_e))
-                    else:
-                        print("couldn't divide index for ",curr_b, " ", curr_e)
-
-                else:
-                    real_intervals.append((curr_b, curr_e))
-            curr_intervals = real_intervals.copy()
-
 
         #check if there are any previous intervals to combine with
         if prev_intervals == []:

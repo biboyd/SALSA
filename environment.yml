@@ -12,5 +12,7 @@ dependencies:
     - scipy
     - yt==4.2.0
     - pandas
+    - pooch
+    - pytest
     - pip:
         - trident==1.3.0

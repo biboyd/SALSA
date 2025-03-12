@@ -11,9 +11,8 @@ from yt.data_objects.static_output import \
     Dataset
 
 from salsa.absorber_plotter import AbsorberPlotter
-from salsa.utils.functions import parse_cut_filter
 
-def main(ds_filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=10):
+def main(ds_filename, ray_dir, i_name, out_dir, frac, velocity_res=10):
     #init mpi
     comm = MPI.COMM_WORLD
 
@@ -57,7 +56,6 @@ def main(ds_filename, ray_dir, i_name, out_dir, frac, cut_filters, velocity_res=
                      frac = frac,
                      bulk_velocity=bulk_vel,
                      plot_ice=True,
-                     cut_region_filters=cut_filters,
                      use_spectacle= True,
                      plot_spectacle=True,
                      velocity_res = velocity_res,
@@ -267,11 +265,6 @@ if __name__ == '__main__':
         ion_name = argv[3]
         out_dir= argv[4]
         frac = float(argv[5])
-        cuts = argv[6] # Ex. "hot inflow cgm"
-        cut_dir = "_".join(cuts.split(" "))
-        out_dir +=f"/{cut_dir}"
-        #retrieve properly formatted cut argument
-        cut_filters = parse_cut_filter(cuts)
 
     elif len(argv) == 6:
         filename = argv[1]
@@ -279,14 +272,11 @@ if __name__ == '__main__':
         ion_name = argv[3]
         out_dir= argv[4]
         frac = float(argv[5])
-        cut_filters=None
-        out_dir+="/no_cuts"
-        print("Not applying any sort of cuts")
     else:
-        raise RuntimeError("Takes 5 or 6 arguments: Dataset_fname Ray_directory Ion_name Output_directory frac (cuts)")
+        raise RuntimeError("Takes 5 arguments: Dataset_fname Ray_directory Ion_name Output_directory frac")
 
 
     #make sure out directory exists
     makedirs(out_dir, exist_ok=True)
     #check to see if should use bulk velocity
-    main(filename, ray_dir, ion_name, out_dir, frac, cut_filters=cut_filters)
+    main(filename, ray_dir, ion_name, out_dir, frac)

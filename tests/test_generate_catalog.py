@@ -7,13 +7,13 @@ def test_enzo_generate_catalog():
 
     np.random.seed(567)
 
-    ds = yt.load(f"tests/IsolatedGalaxy/galaxy0030/galaxy0030")
+    ds = yt.load_sample("IsolatedGalaxy")
     raydir=f"tests/test_enzo_rays/"
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
                               center=[0.5, 0.5, 0.5], impact_param_lims=(0, 50),
                               ray_length=200,
                               fields=['temperature'],
-                              cut_region_filters=["obj['temperature'] < 5e5"],
+                              ftype="gas",
                               extractor_kwargs={'velocity_res':25, 'absorber_min':12.8, 'frac':0.8},
                               units_dict={'temperature':'K'})
 
@@ -30,7 +30,7 @@ def test_fire_generate_catalog():
 
     np.random.seed(567)
 
-    ds = yt.load(f"tests/FIRE_M12i_ref11/snapshot_600.hdf5")
+    ds = yt.load_sample("FIRE_M12i_ref11")
     raydir=f"tests/test_fire_rays/"
 
     c=[29286.1032486 , 31049.29447174, 32589.58339691]
@@ -39,7 +39,6 @@ def test_fire_generate_catalog():
                               ray_length=200,
                               fields=['temperature'],
                               ftype='PartType0',
-                              cut_region_filters=["obj['temperature'] < 1e6"],
                               extractor_kwargs={'velocity_res':25, 'absorber_min':12.8, 'frac':0.8},
                               units_dict={'temperature':'K'})
 
@@ -50,6 +49,7 @@ def test_fire_generate_catalog():
     # load in dataframe to compare to
     key_df = pd.read_csv(f"tests/fire_key_df.csv", index_col=0)
 
+    df.to_csv('tests/fire_df.csv')
     same_catalog(df, key_df)
 
 def same_catalog(df, key_df):
@@ -66,3 +66,6 @@ def same_catalog(df, key_df):
         #compare temperatures
         temp_diff = abs(df.loc[i, 'temperature'] - key_df.loc[i,'temperature'])/key_df.loc[i,'temperature']
         assert temp_diff < 1e-4
+
+if __name__ == "__main__":
+    test_fire_generate_catalog()

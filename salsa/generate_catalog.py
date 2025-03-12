@@ -22,7 +22,6 @@ def generate_catalog(ds_file, n_rays,
                      field_parameters={},
                      fields=[],
                      ftype='gas',
-                     cut_region_filters=[],
                      extractor_kwargs={},
                      units_dict={}):
 
@@ -78,10 +77,6 @@ def generate_catalog(ds_file, n_rays,
         simulations. For particle-based simulations this will not work and needs
         to be changed. ``'PartType0'`` often works though it varies.
         See ``trident.add_ion_fields()`` for more information
-
-    cut_region_filters: list of strings, optional
-        a list of filters defined by the way you use Cut Regions in YT
-        Default: None
 
     extractor_kwargs: dict, optional
         Additional key word arguments to pass to the absorber_extractor to
@@ -173,7 +168,6 @@ def generate_catalog(ds_file, n_rays,
 
         # setup absorber extractor
         abs_ext = AbsorberExtractor(ds, my_ray_files[0], ion_name=ion,
-                                     cut_region_filters=cut_region_filters,
                                      **curr_kwargs)
 
         # get catalogs
