@@ -13,6 +13,7 @@ def test_enzo_generate_catalog():
     raydir=f"tests/test_enzo_rays/"
 
     clear_ray_dir(raydir)
+    os.mkdir(raydir)
 
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
                               center=[0.5, 0.5, 0.5], impact_param_lims=(0, 50),
@@ -39,6 +40,7 @@ def test_fire_generate_catalog():
     raydir=f"tests/test_fire_rays/"
 
     clear_ray_dir(raydir)
+    os.mkdir(raydir)
 
     c=[29286.1032486 , 31049.29447174, 32589.58339691]
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
@@ -56,12 +58,14 @@ def test_fire_generate_catalog():
     # load in dataframe to compare to
     key_df = pd.read_csv(f"tests/fire_key_df.csv", index_col=0)
 
-    df.to_csv('tests/fire_df.csv')
     same_catalog(df, key_df)
 
 def clear_ray_dir(folder):
     """
-    Explicitly remove files to make sure weird extra stuff isn't being added.
+    Clear out the ray directory so that rays will be re-generated even if
+    previous tests have been run. 
+    Explicitly remove each file to make sure weird extra stuff isn't being added,
+    and then delete the folder to make sure it is fully empty.
     """
     for i in range(2):
         try:
@@ -69,9 +73,14 @@ def clear_ray_dir(folder):
         except FileNotFoundError:
             continue
     try:
-        os.remove(os.path.join(folder+"impact_parameters.npy"))
+        os.remove(os.path.join(folder+"impact_parameter.npy"))
     except FileNotFoundError:
-        pass
+        pass # tests may not have been run before
+
+    try:
+        os.rmdir(folder)
+    except FileNotFoundError: # as opposed to OSError, where dir is not empty
+        pass # tests may not have been run before
 
 def same_catalog(df, key_df):
     # check number of columns/rows
