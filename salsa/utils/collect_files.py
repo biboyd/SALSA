@@ -33,7 +33,10 @@ def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
 
     """
 
-    all_files = listdir(directory)
+    try:
+        all_files = listdir(directory)
+    except FileNotFoundError: # directory doesn't exist
+        return []
 
     # get np files only
     files=[]
@@ -105,10 +108,15 @@ def check_rays(ray_dir, n_rays, fields, parallel=True):
 
     """
 
-    ray_files = np.array(collect_files(ray_dir, key_words=['ray']))
+    ray_files = collect_files(ray_dir, key_words=['ray'])
 
     #check if correct number
-    if len(ray_files) == n_rays:
+    if len(ray_files) == 0:
+        print(f"No rays found, Constructing new ones")
+        return False
+    elif len(ray_files) == n_rays:
+
+        ray_files = np.array(ray_files)
 
         if parallel:
             comm = MPI.COMM_WORLD
@@ -138,11 +146,7 @@ def check_rays(ray_dir, n_rays, fields, parallel=True):
         # all rays passed
         return True
     else:
-        if len(ray_files) == 0:
-            print(f"No rays found, Constructing new ones")
-            return False
-        else:
-            raise RuntimeError(f"found {len(ray_files)} rays instead of {n_rays}. Either delete rays or change number of rays to match")
+        raise RuntimeError(f"found {len(ray_files)} rays instead of {n_rays}. Either delete rays or change number of rays to match")
 
 def get_ray_num(file_path):
     """

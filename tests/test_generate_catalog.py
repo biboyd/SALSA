@@ -13,7 +13,6 @@ def test_enzo_generate_catalog():
     raydir=f"tests/test_enzo_rays/"
 
     clear_ray_dir(raydir)
-    os.mkdir(raydir)
 
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
                               center=[0.5, 0.5, 0.5], impact_param_lims=(0, 50),
@@ -40,7 +39,6 @@ def test_fire_generate_catalog():
     raydir=f"tests/test_fire_rays/"
 
     clear_ray_dir(raydir)
-    os.mkdir(raydir)
 
     c=[29286.1032486 , 31049.29447174, 32589.58339691]
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
@@ -71,9 +69,9 @@ def clear_ray_dir(folder):
         try:
             os.remove(os.path.join(folder, f"ray{i}.h5"))
         except FileNotFoundError:
-            continue
+            continue # tests may not have been run before
     try:
-        os.remove(os.path.join(folder+"impact_parameter.npy"))
+        os.remove(os.path.join(folder, "impact_parameter.npy"))
     except FileNotFoundError:
         pass # tests may not have been run before
 

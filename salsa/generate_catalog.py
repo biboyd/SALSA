@@ -120,9 +120,9 @@ def generate_catalog(ds_file, n_rays,
     for i in ion_list:
         check_fields.append(ion_p_num(i))
 
-    #check if rays already made
-    check =check_rays(ray_directory, n_rays, check_fields)
-    my_ray_bool= np.array([check], dtype=int)
+    # check if rays already made
+    check = check_rays(ray_directory, n_rays, check_fields)
+    my_ray_bool = np.array([check], dtype=int)
     ray_bool = np.array([0], dtype=int)
 
     # share if rays made already or not

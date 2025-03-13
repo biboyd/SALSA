@@ -1,3 +1,4 @@
+import os
 import yt
 import trident
 import numpy as np
@@ -10,7 +11,8 @@ from mpi4py import MPI
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 
-def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_impact_param=0, length=200):
+def random_sightlines(ds_file, center, num_sightlines, 
+                      max_impact_param, min_impact_param=0, length=200):
     """
     randomly sample impact parameter to get random sightlines from a given galaxy center
 
@@ -164,6 +166,10 @@ def construct_rays(ds_file,
     split_ray_nums = np.array_split(my_ray_nums, comm.size)
     my_ray_nums = split_ray_nums[ comm.rank]
 
+    if comm.rank == 0:
+        os.makedirs(out_dir, exist_ok=True)
+    comm.Barrier()
+    
     for i in my_ray_nums:
         #construct ray
         ray_filename = f"{out_dir}/ray{i:0{pad}d}.h5"
@@ -237,6 +243,8 @@ def generate_lrays(ds, center,
                                                  max_impact_param,
                                                  min_impact_param=min_impact_param,
                                                  length=length)
+        
+        os.makedirs(out_dir, exist_ok=True)
         imp_param = ds.arr(imp_param, 'code_length').in_units('kpc')
         np.save(f"{out_dir}/impact_parameter.npy", imp_param)
 
