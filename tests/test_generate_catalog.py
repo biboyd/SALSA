@@ -94,3 +94,8 @@ def same_catalog(df, key_df):
         #compare temperatures
         temp_diff = abs(df.loc[i, 'temperature'] - key_df.loc[i,'temperature'])/key_df.loc[i,'temperature']
         assert temp_diff < 1e-4
+
+if __name__ == "__main__":
+    test_enzo_generate_catalog()
+    test_fire_generate_catalog()
+    print("Tests successful.")
