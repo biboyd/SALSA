@@ -11,13 +11,78 @@ except ImportError:
 
 from numpy.linalg import norm
 import astropy.units  as u
-from astropy.table import QTable
 
 from yt.data_objects.static_output import \
     Dataset
 
 from salsa.utils.functions import ion_p_num, requires_spectacle
 from salsa.utils.defaults import default_cloud_dict
+from salsa.utils.collect_files import get_ray_num
+
+def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None):
+    """
+    Create catalog of the given rays using absorber extractor
+
+    Parameters
+    ----------
+    abs_extractor: SALS.AbsorberExtractor
+        Absorber Extractor object that will be used to extract absoprtion feat.
+        for the catalog
+
+    ray_list: list of str or trident.ray objects
+        List of ray objects or list of trident rays whose absorbers will be
+        extracted
+    method: str
+        Either 'spice' or 'spectacle'. specifies which method is used to extract
+        absorbers
+
+    fields: list str, optional
+        Fields to extract/add to catalog if using 'spice' method.
+        Defaults=None
+
+    units_dict: dict
+        dictionary containing what units to use for each field
+
+    Returns
+    -------
+    full_df: pandas.DataFrame
+        Catalog of absorber properties in a pandas dataframe.
+    """
+    df_list=[]
+
+    if method == 'spice':
+        for ray in ray_list:
+            #load new ray and extract absorbers
+            abs_extractor.load_ray(ray)
+            df = abs_extractor.get_spice_absorbers(fields=fields, units_dict=units_dict)
+
+            if df is not None:
+                # add ray index
+                ray_num = get_ray_num(ray)
+                for i in range(abs_extractor.num_spice):
+                    df.loc[i,'lightray_index'] = ray_num
+                df_list.append(df)
+
+    elif method == 'spectacle':
+        for ray in ray_list:
+            abs_extractor.load_ray(ray)
+            df = abs_extractor.get_spectacle_absorbers()
+
+            #add ray index
+            if df is not None:
+                ray_num = get_ray_num(ray)
+                for i in range(abs_extractor.num_spectacle):
+                    df.loc[i,'lightray_index'] = ray_num
+                df_list.append(df)
+
+    else:
+        raise RuntimeError(f"method={method} is not valid. method must be 'spice' or 'spectacle'.")
+
+    if len(df_list) > 0:
+        full_df = pd.concat(df_list, ignore_index=True)
+    else:
+        full_df = None
+    return full_df
 
 class AbsorberExtractor():
     """
