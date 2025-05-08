@@ -31,11 +31,10 @@ def ion_p_num(ion_name):
 
 def requires_spectacle(function):
     def wrapped(*args, **kwargs):
-
         try:
             import spectacle as _
         except ImportError:
-            raise ImportError("spectacle is required for this feature. Please install salsa[spectacle] for the necessary dependencies.")
+            raise ImportError("The spectacle package is required for this feature. Please install salsa[spectacle] for the necessary dependencies.")
         else:
             result = function(*args, **kwargs)
             

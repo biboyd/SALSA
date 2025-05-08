@@ -25,7 +25,7 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
 
     Parameters
     ----------
-    abs_extractor: SALS.AbsorberExtractor
+    abs_extractor: AbsorberExtractor
         Absorber Extractor object that will be used to extract absoprtion feat.
         for the catalog
 
@@ -54,24 +54,24 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
         for ray in ray_list:
             #load new ray and extract absorbers
             abs_extractor.load_ray(ray)
-            df = abs_extractor.get_spice_absorbers(fields=fields, units_dict=units_dict)
+            df = abs_extractor.get_absorbers(fields=fields, units_dict=units_dict)
 
             if df is not None:
                 # add ray index
                 ray_num = get_ray_num(ray)
-                for i in range(abs_extractor.num_spice):
+                for i in range(abs_extractor.num_feat):
                     df.loc[i,'lightray_index'] = ray_num
                 df_list.append(df)
 
     elif method == 'spectacle':
         for ray in ray_list:
             abs_extractor.load_ray(ray)
-            df = abs_extractor.get_spectacle_absorbers()
+            df = abs_extractor.get_absorbers()
 
             #add ray index
             if df is not None:
                 ray_num = get_ray_num(ray)
-                for i in range(abs_extractor.num_spectacle):
+                for i in range(abs_extractor.num_feat):
                     df.loc[i,'lightray_index'] = ray_num
                 df_list.append(df)
 
@@ -86,10 +86,9 @@ def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None)
 
 class AbsorberExtractor():
     """
-    Extracts absorbers from a trident lightray for a given ion species. Does This
-    through two methods, by using the SPICE (Simple Procedure for Iterative
-    Cloud Extraction) method and by fitting a synthetic spectra made by trident.
-    Fit is done using spectacle
+    Base class for extracting absorbers from a Trident lightray for a given ion species. 
+
+    Only setup is performed; actual extraction is not performed by this class.
 
     Parameters
     --------------
@@ -111,40 +110,21 @@ class AbsorberExtractor():
         Default: None
 
     velocity_res: float, optional
-        width of velocity bins for spectra. Minimum threshold for combining
-        absorbers in the SPICE method.
+        Set minimum resolution (in km/s)  that spectacle will 
+        attempt to fit lines to.
         Default: 10
-
-    spectacle_res: float, optional
-        Set minimum resolution that spectacle will attempt to fit lines to.
-        (in km/s) If None, default to value of velocity_res
-        Default: None
-
-    spectacle_defaults: dict, optional
-        Dictionary passed to spectacle defining default parameters/ranges
-        when fitting absorption lines
-        Deafult: None
 
     absorber_min: float, optional
         Minimum Log Column Density that will be used to define an absorber.
         If None, defaults to either default for specific ion or 13
         Default: None
-
-    frac: float, optional
-        Parameter defining what fraction of the number density is being
-        accounted for in each iteration of the SPICE method. Must be a number
-        between 0 and 1.
-        Default: 0.8
-
     """
 
     def __init__(self, ds_filename, ray_filename,
                 ion_name='H I', 
-                wavelength_center=None, velocity_res = 10,
-                spectacle_defaults=None, spectacle_res=None,
-                absorber_min=None, frac=0.8):
-
-
+                wavelength_center=None,
+                velocity_res=10,
+                absorber_min=None):
 
         #set file names and ion name
         if isinstance(ds_filename, str):
@@ -154,7 +134,6 @@ class AbsorberExtractor():
 
         self.ray_filename = ray_filename
         self.ion_name = ion_name
-        self.frac = frac
 
         #add ion name to list of all ions to be plotted
         self.ion_list = [ion_name]
@@ -180,17 +159,7 @@ class AbsorberExtractor():
             }
         }
 
-        #add user defined defaults
-        if spectacle_defaults is not None:
-            self.defaults_dict.update(spectacle_defaults)
-
         self.velocity_res = velocity_res
-
-        #default spectacle resolution to velocity_res
-        if spectacle_res is None:
-            self.spectacle_res = velocity_res
-        else:
-            self.spectacle_res = spectacle_res
 
         #default set the wavelength center to one of the known spectral lines
         #for ion name. Use tridents line database to search for correct wavelength
@@ -228,8 +197,7 @@ class AbsorberExtractor():
         self.spectacle_df=None
 
         #store number of features found
-        self.num_spice = None
-        self.num_spectacle = None
+        self.num_feat = None
 
         #check if str else assume is ray
         if isinstance(new_ray, str):
@@ -295,7 +263,221 @@ class AbsorberExtractor():
         self.ds.close()
         self.ray.close()
 
-    def get_spice_absorbers(self, fields=[], units_dict={}):
+    def get_absorbers(self, *args, **kwargs):
+        """
+        Stub to be implemented by child classes.
+        """
+        raise NotImplementedError(
+            "Method 'get_absorbers' is only defined in the child classes "
+            "SPICEAbsorberExtractor and SpectacleAbsorberExtractor.")
+
+
+@requires_spectacle
+class SpectacleAbsorberExtractor(AbsorberExtractor):
+    """
+    Uses Spectacle to extract absorbers from a Trident lightray for a given ion species.
+
+    Parameters
+    --------------
+
+    ds_filename: str or YT dataset
+        Either Path/name of the dataset to be loaded or the dataset itself
+
+    ray_filename: str or Trident ray
+        Path/name of the hdf5 ray file to be loaded or the ray already loaded
+
+    ion_name: string, optional
+        Name of the ion to extract absorbers of
+        Default: "H I"
+
+    wavelegnth_center: float, optional
+        The specific absorption line to look at (in unit Angstrom). None
+        defaults to strongest absorption line for specified ion
+        (using trident's ion table).
+        Default: None
+
+    velocity_res: float, optional
+        Set minimum resolution (in km/s)  that spectacle will 
+        attempt to fit lines to.
+        Default: 10
+
+    absorber_min: float, optional
+        Minimum Log Column Density that will be used to define an absorber.
+        If None, defaults to either default for specific ion or 13
+        Default: None
+
+    spectacle_defaults: dict, optional
+        Dictionary passed to spectacle defining default parameters/ranges
+        when fitting absorption lines
+        Deafult: None
+
+    """
+    def __init__(self, ds_filename, ray_filename,
+                ion_name='H I', wavelength_center=None,
+                velocity_res=10, absorber_min=None,
+                spectacle_defaults=None):
+        super().__init__(ds_filename, ray_filename,
+                         ion_name, wavelength_center,
+                         velocity_res, absorber_min)
+
+        #add user defined defaults
+        if spectacle_defaults is not None:
+            self.defaults_dict.update(spectacle_defaults)
+
+    def get_absorbers(self):
+        """
+        Uses spectacle to fit a Trident-made spectra of the specified ion.
+
+        Returns
+        ----------
+        line_stats : pandas.DataFrame
+            Table including all line statistics found from spectacle's fit of
+            the spectra.
+        """
+        #create spectra for a single line to fit
+        wav = int( np.round(self.wavelength_center) )
+        line = f"{self.ion_name} {wav}"
+        #format ion correctly to fit
+        ion_wav= "".join(line.split())
+
+        vel_array, flux_array=self._create_spectra()
+
+        #constrain possible column density values
+        #create line model
+        line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
+                                   defaults=self.defaults_dict,
+                                   fitter_args={'maxiter':2000},
+                                   threshold=0.01, output='flux',
+                                   min_distance=self.velocity_res, 
+                                   auto_fit=True)
+        #fit data
+        try:
+            spec_model = line_finder(vel_array*u.Unit('km/s'), flux_array)
+        except RuntimeError:
+            print('fit failed(prolly hit max iterations)', self.ray)
+            spec_model = None
+        except IndexError:
+            print('INDEX ERROR on', self.ray)
+            spec_model = None
+
+        #check if fit found any lines
+        if spec_model is None:
+            print('line could not be fit on ray ', self.ray)
+            self.spectacle_model = None
+            line_stats = None
+            self.num_feat = 0
+
+        else:
+            init_stats = spec_model.line_stats(vel_array*u.Unit('km/s'))
+
+            # include only lines greater than absorber_min
+            line_indxs, = np.where( init_stats['col_dens'] >= self.absorber_min)
+            if line_indxs.size == 0:
+                print('line could not be fit on ray ', self.ray)
+                self.spectacle_model = None
+                line_stats = None
+                self.num_feat = 0
+
+            else:
+                # retrieve lines that pass col dense threshold
+                good_lines=[]
+                for i in line_indxs:
+                    good_lines.append(spec_model.lines[i])
+
+                #create and save new model with lines desired
+                self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
+                self.num_feat = len(good_lines)
+                line_stats=self.spectacle_model.line_stats(vel_array*u.Unit('km/s'))
+
+                #add redshift
+                line_stats['redshift'] = self.ds.current_redshift
+                line_stats = line_stats.to_pandas()
+        self.spectacle_df=line_stats
+        return self.spectacle_df
+
+    def _create_spectra(self):
+        """
+        Use trident to create the absorption spectrum of the ray in velocity
+        space for use in fitting.
+
+        Returns
+        --------
+        velocity: YT array
+            Array of velocity values of the generated spectra (in km/s)
+
+        flux: YT array
+            Array of the normalized flux values of the generated spectra
+
+        """
+        #set which ions to add to spectra
+        wav = int( np.round(self.wavelength_center) )
+        line = f"{self.ion_name} {wav}"
+        ion_list = [line]
+
+        #use auto feature to capture full line
+        spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, bin_space="velocity")
+        spect_gen.make_spectrum(self.data, lines=ion_list)
+
+        #get fields from spectra and give correct units
+        flux = spect_gen.flux_field
+        velocity = spect_gen.lambda_field
+
+        return velocity, flux
+
+class SPICEAbsorberExtractor(AbsorberExtractor):
+    """
+    Uses SPICE to extract absorbers from a Trident lightray for a given ion species.
+
+    Parameters
+    --------------
+
+    ds_filename: str or YT dataset
+        Either Path/name of the dataset to be loaded or the dataset itself
+
+    ray_filename: str or Trident ray
+        Path/name of the hdf5 ray file to be loaded or the ray already loaded
+
+    ion_name: string, optional
+        Name of the ion to extract absorbers of
+        Default: "H I"
+
+    wavelegnth_center: float, optional
+        The specific absorption line to look at (in unit Angstrom). None
+        defaults to strongest absorption line for specified ion
+        (using trident's ion table).
+        Default: None
+
+    velocity_res: float, optional
+        Set minimum resolution (in km/s)  that spectacle will 
+        attempt to fit lines to.
+        Default: 10
+
+    absorber_min: float, optional
+        Minimum Log Column Density that will be used to define an absorber.
+        If None, defaults to either default for specific ion or 13
+        Default: None
+
+    frac: float, optional
+        Parameter defining what fraction of the number density is being
+        accounted for in each iteration of the SPICE method. Must be a number
+        between 0 and 1.
+        Default: 0.8
+
+    """
+    def __init__(self, ds_filename, 
+                 ray_filename,
+                 ion_name='H I', 
+                 wavelength_center=None,
+                 velocity_res=10,
+                 absorber_min=None,
+                 frac=0.8):
+        super().__init__(ds_filename, ray_filename,
+                         ion_name, wavelength_center,
+                         velocity_res, absorber_min)
+
+        self.frac = frac
+
+    def get_absorbers(self, fields=[], units_dict={}):
         """
         Use the SPICE method to extract absorbers and then find features of
         absorbers. Default outputs column density and central velocity of the
@@ -304,7 +486,6 @@ class AbsorberExtractor():
 
         Parameters
         -----------
-
         fields : list, optional
             list of yt fields to extract averages of for the absorbers.
             Defalut: []
@@ -315,14 +496,13 @@ class AbsorberExtractor():
 
         Returns
         ---------
-
         absorber_info : pandas.DataFrame
             Dataframe of all the absorbers and their corresponding features.
 
         """
         # get absorber locations
-        self.spice_intervals = self.run_spice()
-        self.num_spice = len(self.spice_intervals)
+        self.spice_intervals = self._run_spice()
+        self.num_feat = len(self.spice_intervals)
 
 
         # line information for absorbers
@@ -414,78 +594,7 @@ class AbsorberExtractor():
         self.spice_df = stats_table
         return self.spice_df
 
-    @requires_spectacle
-    def get_spectacle_absorbers(self):
-        """
-        Uses spectacle to fit a trident made spectra of the specified ion.
-
-        Returns
-        ----------
-        line_stats : pandas.DataFrame
-            Table including all line statistics found from spectacle's fit of
-            the spectra.
-        """
-        #create spectra for a single line to fit
-        wav = int( np.round(self.wavelength_center) )
-        line = f"{self.ion_name} {wav}"
-        #format ion correctly to fit
-        ion_wav= "".join(line.split())
-
-        vel_array, flux_array=self._create_spectra()
-
-        #constrain possible column density values
-        #create line model
-        line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
-                                   defaults=self.defaults_dict,
-                                   fitter_args={'maxiter':2000},
-                                   threshold=0.01, output='flux',
-                                   min_distance=self.spectacle_res, auto_fit=True)
-        #fit data
-        try:
-            spec_model = line_finder(vel_array*u.Unit('km/s'), flux_array)
-        except RuntimeError:
-            print('fit failed(prolly hit max iterations)', self.ray)
-            spec_model = None
-        except IndexError:
-            print('INDEX ERROR on', self.ray)
-            spec_model = None
-
-        #check if fit found any lines
-        if spec_model is None:
-            print('line could not be fit on ray ', self.ray)
-            self.spectacle_model = None
-            line_stats = None
-            self.num_spectacle = 0
-
-        else:
-            init_stats = spec_model.line_stats(vel_array*u.Unit('km/s'))
-
-            # include only lines greater than absorber_min
-            line_indxs, = np.where( init_stats['col_dens'] >= self.absorber_min)
-            if line_indxs.size == 0:
-                print('line could not be fit on ray ', self.ray)
-                self.spectacle_model = None
-                line_stats = None
-                self.num_spectacle = 0
-
-            else:
-                # retrieve lines that pass col dense threshold
-                good_lines=[]
-                for i in line_indxs:
-                    good_lines.append(spec_model.lines[i])
-
-                #create and save new model with lines desired
-                self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
-                self.num_spectacle = len(good_lines)
-                line_stats=self.spectacle_model.line_stats(vel_array*u.Unit('km/s'))
-
-                #add redshift
-                line_stats['redshift'] = self.ds.current_redshift
-                line_stats = line_stats.to_pandas()
-        self.spectacle_df=line_stats
-        return self.spectacle_df
-
-    def run_spice(self):
+    def _run_spice(self):
         """
         iteratively run the cloud method to extract all the absorbers in the
         lightray.
@@ -525,35 +634,6 @@ class AbsorberExtractor():
             if lcd > self.absorber_min:
                 final_intervals.append((b, e))
         return final_intervals
-
-    def _create_spectra(self):
-        """
-        Use trident to create the absorption spectrum of the ray in velocity
-        space for use in fitting.
-
-        Returns
-        --------
-        velocity: YT array
-            Array of velocity values of the generated spectra (in km/s)
-
-        flux: YT array
-            Array of the normalized flux values of the generated spectra
-
-        """
-        #set which ions to add to spectra
-        wav = int( np.round(self.wavelength_center) )
-        line = f"{self.ion_name} {wav}"
-        ion_list = [line]
-
-        #use auto feature to capture full line
-        spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, bin_space="velocity")
-        spect_gen.make_spectrum(self.data, lines=ion_list)
-
-        #get fields from spectra and give correct units
-        flux = spect_gen.flux_field
-        velocity = spect_gen.lambda_field
-
-        return velocity, flux
 
     def _cloud_method(self, num_density_arr, coldens_fraction):
         "run the cloud method"
