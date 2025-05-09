@@ -1,17 +1,18 @@
 import os
+import sys
 
 import yt
 import salsa
 import numpy as np
 import pandas as pd
 
-def test_enzo_generate_catalog():
+def test_enzo_generate_catalog(testdir):
 
     np.random.seed(567)
 
     ds = yt.load_sample("IsolatedGalaxy")
-    raydir=f"tests/test_enzo_rays/"
 
+    raydir=os.path.join(testdir, "test_enzo_rays")
     clear_ray_dir(raydir)
 
     df=salsa.generate_catalog(ds, 2, raydir, ['H I', 'C IV'], method='spice',
@@ -27,17 +28,17 @@ def test_enzo_generate_catalog():
     assert salsa.utils.check_rays(raydir, 2, fields)
 
     # load in dataframe to compare to
-    key_df = pd.read_csv(f"tests/enzo_key_df.csv", index_col=0)
+    key_df = pd.read_csv(os.path.join(testdir, "enzo_key_df.csv"), index_col=0)
 
     same_catalog(df, key_df)
 
-def test_fire_generate_catalog():
+def test_fire_generate_catalog(testdir):
 
     np.random.seed(567)
 
     ds = yt.load_sample("FIRE_M12i_ref11")
-    raydir=f"tests/test_fire_rays/"
 
+    raydir=os.path.join(testdir,"test_fire_rays")
     clear_ray_dir(raydir)
 
     c=[29286.1032486 , 31049.29447174, 32589.58339691]
@@ -54,7 +55,7 @@ def test_fire_generate_catalog():
     assert salsa.utils.check_rays(raydir, 2, fields)
 
     # load in dataframe to compare to
-    key_df = pd.read_csv(f"tests/fire_key_df.csv", index_col=0)
+    key_df = pd.read_csv(os.path.join(testdir, "fire_key_df.csv"), index_col=0)
 
     same_catalog(df, key_df)
 
@@ -96,6 +97,7 @@ def same_catalog(df, key_df):
         assert temp_diff < 1e-4
 
 if __name__ == "__main__":
-    test_enzo_generate_catalog()
-    test_fire_generate_catalog()
+    ray_basedir = os.path.dirname(sys.argv[0])  # path to this executable
+    test_enzo_generate_catalog(ray_basedir)
+    test_fire_generate_catalog(ray_basedir)
     print("Tests successful.")
