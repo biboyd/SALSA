@@ -174,15 +174,15 @@ def create_frames(ds_file, rays,
             outfile=f"{out_dir}/ray{ray_num}_ice_absorbers{mp.num_ice}.h5"
             mp.ice_df.to_hdf(outfile, mode='w')
 
-        if mp.spectacle_df is not None:
-            mp.spectacle_df['absorber_index']=np.empty(mp.num_spectacle, dtype=str)
+        if mp.df is not None:
+            mp.df['absorber_index']=np.empty(mp.num_spectacle, dtype=str)
             # add absorber index
             start = 65 # Ascii number for 'A'
             for i in range(mp.num_spectacle):
-                mp.spectacle_df[i, 'absorber_index'] = f"{ray_num}{chr(start+i)}"
+                mp.df[i, 'absorber_index'] = f"{ray_num}{chr(start+i)}"
 
             outfile=f"{out_dir}/ray{ray_num}_spectacle_absorbers{mp.num_spectacle}.h5"
-            mp.spectacle_df.to_hdf(outfile, mode='w')
+            mp.df.to_hdf(outfile, mode='w')
 
         # close files/figures
         mp.close()

@@ -19,70 +19,6 @@ from salsa.utils.functions import ion_p_num, requires_spectacle
 from salsa.utils.defaults import default_cloud_dict
 from salsa.utils.collect_files import get_ray_num
 
-def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None):
-    """
-    Create catalog of the given rays using absorber extractor
-
-    Parameters
-    ----------
-    abs_extractor: AbsorberExtractor
-        Absorber Extractor object that will be used to extract absoprtion feat.
-        for the catalog
-
-    ray_list: list of str or trident.ray objects
-        List of ray objects or list of trident rays whose absorbers will be
-        extracted
-    method: str
-        Either 'spice' or 'spectacle'. specifies which method is used to extract
-        absorbers
-
-    fields: list str, optional
-        Fields to extract/add to catalog if using 'spice' method.
-        Defaults=None
-
-    units_dict: dict
-        dictionary containing what units to use for each field
-
-    Returns
-    -------
-    full_df: pandas.DataFrame
-        Catalog of absorber properties in a pandas dataframe.
-    """
-    df_list=[]
-
-    if method == 'spice':
-        for ray in ray_list:
-            #load new ray and extract absorbers
-            abs_extractor.load_ray(ray)
-            df = abs_extractor.get_absorbers(fields=fields, units_dict=units_dict)
-
-            if df is not None:
-                # add ray index
-                ray_num = get_ray_num(ray)
-                for i in range(abs_extractor.num_feat):
-                    df.loc[i,'lightray_index'] = ray_num
-                df_list.append(df)
-
-    elif method == 'spectacle':
-        for ray in ray_list:
-            abs_extractor.load_ray(ray)
-            df = abs_extractor.get_absorbers()
-
-            #add ray index
-            if df is not None:
-                ray_num = get_ray_num(ray)
-                for i in range(abs_extractor.num_feat):
-                    df.loc[i,'lightray_index'] = ray_num
-                df_list.append(df)
-
-    else:
-        raise RuntimeError(f"method={method} is not valid. method must be 'spice' or 'spectacle'.")
-
-    if len(df_list) > 0:
-        full_df = pd.concat(df_list, ignore_index=True)
-    else:
-        full_df = None
-    return full_df
 
 class AbsorberExtractor():
     """
@@ -120,26 +56,26 @@ class AbsorberExtractor():
         Default: None
     """
 
-    def __init__(self, ds_filename, ray_filename,
-                ion_name='H I', 
+    def __init__(self, ds_filename,
+                ion_name='H I', # Not sure this need to be here?
                 wavelength_center=None,
                 velocity_res=10,
                 absorber_min=None):
 
-        #set file names and ion name
+        #set dataset filename
         if isinstance(ds_filename, str):
             self.ds = yt.load(ds_filename)
         elif isinstance(ds_filename, Dataset):
             self.ds = ds_filename
 
-        self.ray_filename = ray_filename
+        # set these to None so we can test if load_ray() was called
+        self.ray_filename = None
+        self.ray = None
+
         self.ion_name = ion_name
 
         #add ion name to list of all ions to be plotted
         self.ion_list = [ion_name]
-
-        #open up the dataset and ray files
-        self.load_ray(self.ray_filename)
 
         if absorber_min is None:
             if self.ion_name in default_cloud_dict.keys():
@@ -187,14 +123,11 @@ class AbsorberExtractor():
             either filename to rayfile or a trident ray that's already opened
 
         """
-        #reset absorber extraction variables
-        # variables to store raw info from the different methods
-        self.spectacle_model=None
-        self.spice_intervals=None
+        # reset absorber extraction variables
+        self.features=None
 
         # to store absorber feature table
-        self.spice_df=None
-        self.spectacle_df=None
+        self.df=None
 
         #store number of features found
         self.num_feat = None
@@ -263,13 +196,49 @@ class AbsorberExtractor():
         self.ds.close()
         self.ray.close()
 
-    def get_absorbers(self, *args, **kwargs):
+    def get_current_absorbers(self, *args, **kwargs):
         """
         Stub to be implemented by child classes.
         """
         raise NotImplementedError(
-            "Method 'get_absorbers' is only defined in the child classes "
+            "Method 'get_current_absorbers' is only defined in the child classes "
             "SPICEAbsorberExtractor and SpectacleAbsorberExtractor.")
+
+    def get_all_absorbers(self, ray_list, *args, **kwargs):
+        """
+        Create catalog of the given rays using absorber extractor
+
+        Parameters
+        ----------
+        ray_list: list of str or trident.ray objects
+            List of ray objects or list of trident rays whose absorbers will be
+            extracted
+
+        Returns
+        -------
+        full_df: pandas.DataFrame
+            Catalog of absorber properties in a pandas dataframe.
+        """
+        df_list=[]
+
+        for ray in ray_list:
+            #load new ray and extract absorbers
+            self.load_ray(ray)
+            df = self.get_current_absorbers(*args, **kwargs)
+
+            if df is not None:
+                # add ray index
+                ray_num = get_ray_num(ray)
+                for i in range(self.num_feat):
+                    df.loc[i,'lightray_index'] = ray_num
+                df_list.append(df)
+
+        if len(df_list) > 0:
+            full_df = pd.concat(df_list, ignore_index=True)
+        else:
+            full_df = None
+        return full_df
+
 
 
 @requires_spectacle
@@ -312,11 +281,14 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
         Deafult: None
 
     """
-    def __init__(self, ds_filename, ray_filename,
-                ion_name='H I', wavelength_center=None,
-                velocity_res=10, absorber_min=None,
-                spectacle_defaults=None):
-        super().__init__(ds_filename, ray_filename,
+    def __init__(self,
+                 ds_filename,
+                 ion_name='H I',
+                 wavelength_center=None,
+                 velocity_res=10,
+                 absorber_min=None,
+                 spectacle_defaults=None):
+        super().__init__(ds_filename,
                          ion_name, wavelength_center,
                          velocity_res, absorber_min)
 
@@ -324,9 +296,12 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
         if spectacle_defaults is not None:
             self.defaults_dict.update(spectacle_defaults)
 
-    def get_absorbers(self):
+    def get_current_absorbers(self):
         """
-        Uses spectacle to fit a Trident-made spectra of the specified ion.
+        Extract absorbers from the currently loaded ray using spectacle.
+
+        Spectacle will fit a Trident-made spectra of the specified ion.
+        Absorbers correspond to individual line fits.
 
         Returns
         ----------
@@ -334,6 +309,9 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
             Table including all line statistics found from spectacle's fit of
             the spectra.
         """
+        if self.ray is None:
+            raise RuntimeError("You must first load a ray with `load_ray`!")
+
         #create spectra for a single line to fit
         wav = int( np.round(self.wavelength_center) )
         line = f"{self.ion_name} {wav}"
@@ -363,7 +341,7 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
         #check if fit found any lines
         if spec_model is None:
             print('line could not be fit on ray ', self.ray)
-            self.spectacle_model = None
+            self.features = None
             line_stats = None
             self.num_feat = 0
 
@@ -374,7 +352,7 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
             line_indxs, = np.where( init_stats['col_dens'] >= self.absorber_min)
             if line_indxs.size == 0:
                 print('line could not be fit on ray ', self.ray)
-                self.spectacle_model = None
+                self.features = None
                 line_stats = None
                 self.num_feat = 0
 
@@ -385,15 +363,15 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
                     good_lines.append(spec_model.lines[i])
 
                 #create and save new model with lines desired
-                self.spectacle_model = spec_model.with_lines(good_lines, reset=True)
+                self.features = spec_model.with_lines(good_lines, reset=True)
                 self.num_feat = len(good_lines)
-                line_stats=self.spectacle_model.line_stats(vel_array*u.Unit('km/s'))
+                line_stats=self.features.line_stats(vel_array*u.Unit('km/s'))
 
                 #add redshift
                 line_stats['redshift'] = self.ds.current_redshift
                 line_stats = line_stats.to_pandas()
-        self.spectacle_df=line_stats
-        return self.spectacle_df
+        self.df=line_stats
+        return self.df
 
     def _create_spectra(self):
         """
@@ -464,25 +442,26 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         Default: 0.8
 
     """
-    def __init__(self, ds_filename, 
-                 ray_filename,
+    def __init__(self,
+                 ds_filename, 
                  ion_name='H I', 
                  wavelength_center=None,
                  velocity_res=10,
                  absorber_min=None,
                  frac=0.8):
-        super().__init__(ds_filename, ray_filename,
+        super().__init__(ds_filename,
                          ion_name, wavelength_center,
                          velocity_res, absorber_min)
 
         self.frac = frac
 
-    def get_absorbers(self, fields=[], units_dict={}):
+    def get_current_absorbers(self, fields=[], units_dict={}):
         """
-        Use the SPICE method to extract absorbers and then find features of
-        absorbers. Default outputs column density and central velocity of the
-        absorption line (delta_v) as well as requested fields All in
-        a pandas dataframe.
+        Extract absorbers from the currently loaded ray using SPICE.
+
+        Gas features of the absorbers are also extracted.
+        The features include the column density and central velocity of the
+        absorption line (delta_v) as well as requested `fields`.
 
         Parameters
         -----------
@@ -500,10 +479,12 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             Dataframe of all the absorbers and their corresponding features.
 
         """
-        # get absorber locations
-        self.spice_intervals = self._run_spice()
-        self.num_feat = len(self.spice_intervals)
+        if self.ray is None:
+            raise RuntimeError("You must first load a ray with `load_ray`!")
 
+        # get absorber locations
+        self.features = self._run_spice()
+        self.num_feat = len(self.features)
 
         # line information for absorbers
         name_type = [('name', str),
@@ -520,7 +501,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             name_type.append( (f, np.float64) )
 
         #check if any absorbrs were found
-        n_abs = len(self.spice_intervals)
+        n_abs = len(self.features)
         if n_abs == 0:
             print("No absorbers in ray: ", self.ray)
             return None
@@ -536,7 +517,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         # fill table with absorber features
         for i in range(n_abs):
             #load data for calculating properties
-            start, end = self.spice_intervals[i]
+            start, end = self.features[i]
             stats_table.loc[i, 'interval_start'] = start
             stats_table.loc[i, 'interval_end'] = end
 
@@ -591,8 +572,8 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
                 else:
                     stats_table.loc[i, fld] = avg_fld
 
-        self.spice_df = stats_table
-        return self.spice_df
+        self.df = stats_table
+        return self.df
 
     def _run_spice(self):
         """
@@ -782,3 +763,28 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         if in_absorber and start != i:
             intervals.append((start, i))
         return intervals
+
+    def get_all_absorbers(self, ray_list, fields=[], units_dict={}):
+        """
+        Create catalog of the given rays using absorber extractor
+
+        Parameters
+        ----------
+        ray_list: list of str or trident.ray objects
+            List of ray objects or list of trident rays whose absorbers will be
+            extracted
+
+        fields : list, optional
+            list of yt fields to extract averages of for the absorbers.
+            Defalut: []
+
+        units_dict : dict, optional
+            dictionary of fields and corresponding units to use for each field.
+            Default: {}
+
+        Returns
+        -------
+        full_df: pandas.DataFrame
+            Catalog of absorber properties in a pandas dataframe.
+        """
+        return super().get_all_absorbers(ray_list, fields, units_dict)

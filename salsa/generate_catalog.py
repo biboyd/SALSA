@@ -3,7 +3,7 @@ import yt
 import trident
 import pandas as pd
 
-from salsa.absorber_extractor import AbsorberExtractor, get_absorbers
+from salsa.absorber_extractor import SPICEAbsorberExtractor, SpectacleAbsorberExtractor
 from salsa.utils.collect_files import collect_files, check_rays
 from salsa.utils.functions import ion_p_num
 from salsa.generate_light_rays import generate_lrays
@@ -164,14 +164,24 @@ def generate_catalog(ds_file, n_rays,
         if ion in extractor_kwargs.keys():
             curr_kwargs = extractor_kwargs[ion]
         else:
-            curr_kwargs=extractor_kwargs.copy()
+            curr_kwargs = extractor_kwargs.copy()
 
         # setup absorber extractor
-        abs_ext = AbsorberExtractor(ds, my_ray_files[0], ion_name=ion,
-                                     **curr_kwargs)
+        if method == "spice":
+            abs_ext = SPICEAbsorberExtractor(ds, 
+                                            ion_name=ion,
+                                            **curr_kwargs)
+        elif method == "spectacle":
+            abs_ext = SpectacleAbsorberExtractor(ds, 
+                                                 ion_name=ion,
+                                                 **curr_kwargs)
+        else:
+            raise RuntimeError(f"Method {method} is not recognized.")
 
         # get catalogs
-        my_df = get_absorbers(abs_ext, my_ray_files, method, fields=fields, units_dict=units_dict)
+        my_df = abs_ext.get_all_absorbers(my_ray_files,
+                                          fields=fields,
+                                          units_dict=units_dict)
         if my_df is not None:
             df_list.append(my_df)
 
