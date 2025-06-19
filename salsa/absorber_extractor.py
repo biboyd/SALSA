@@ -68,14 +68,16 @@ class AbsorberExtractor():
         elif isinstance(ds_filename, Dataset):
             self.ds = ds_filename
 
-        # set these to None so we can test if load_ray() was called
+        self.ion_name = ion_name
+        self.ion_list = [ion_name]  # Add ion name to list of all ions to be plotted
+
+        # These will be set by later methods
         self.ray_filename = None
         self.ray = None
-
-        self.ion_name = ion_name
-
-        #add ion name to list of all ions to be plotted
-        self.ion_list = [ion_name]
+        self.features = None
+        self.num_feat = None
+        self.df = None
+        self.data = None
 
         if absorber_min is None:
             if self.ion_name in default_cloud_dict.keys():
@@ -126,11 +128,11 @@ class AbsorberExtractor():
         # reset absorber extraction variables
         self.features=None
 
-        # to store absorber feature table
-        self.df=None
-
         #store number of features found
         self.num_feat = None
+
+        # to store absorber feature table
+        self.df=None
 
         #check if str else assume is ray
         if isinstance(new_ray, str):

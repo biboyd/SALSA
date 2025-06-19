@@ -38,10 +38,26 @@ best to install the dependencies beforehand.
   To install some of the dependencies, the gcc compiler needs to be installed.
   This is not a problem for most machines but can raise an error for some.
 
-Now you're all set to go! ::
+Running the Test Suite
+**********************
 
-  $ python
-  >>> import salsa
+SALSA uses `pytest <https://docs.pytest.org/>`_ for its test suite infrastructure.
+To run the tests from either the top level ``SALSA`` directory or the ``tests`` subdirectory,
+simply execute: ::
+
+  $ pytest
+
+This test suite makes use of yt's `sample datasets <https://yt-project.org/doc/examining/loading_data.html#sample-data>`_.
+By default this sample data will be downloaded to the SALSA directory.
+To keep things clean, you may wish to use the provided ``tests/data/`` directory
+by setting yt's ``test_data_dir`` `configuration <https://yt-project.org/doc/reference/configuration.html>`_.
+For example, you can locally configure ``test_data_dir`` within the SALSA directory using: ::
+
+  $ yt config set --local yt test_data_dir  ./tests/data/
+
+Currently, the test suite is not written to utilize unit tests but rather
+regression tests SALSA's functionality wholistically.
+
 
 .. _dependencies-install:
 

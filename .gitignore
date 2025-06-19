@@ -2,8 +2,7 @@
 __pycache__/
 build/
 
-tests/test_*_rays/
-IsolatedGalaxy/
-FIRE_M12i_ref11/
+tests/data/*
+yt.toml
 
 .vscode
