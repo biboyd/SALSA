@@ -37,6 +37,6 @@ def requires_spectacle(function):
             raise ImportError("The spectacle package is required for this feature. Please install salsa[spectacle] for the necessary dependencies.")
         else:
             result = function(*args, **kwargs)
-            
+
         return result
     return wrapped

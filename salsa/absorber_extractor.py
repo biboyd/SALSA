@@ -10,7 +10,7 @@ except ImportError:
     warnings.warn("spectacle not installed.")
 
 from numpy.linalg import norm
-import astropy.units  as u
+from unyt import km, s
 
 from yt.data_objects.static_output import \
     Dataset
@@ -243,7 +243,6 @@ class AbsorberExtractor():
 
 
 
-@requires_spectacle
 class SpectacleAbsorberExtractor(AbsorberExtractor):
     """
     Uses Spectacle to extract absorbers from a Trident lightray for a given ion species.
@@ -283,6 +282,7 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
         Deafult: None
 
     """
+    @requires_spectacle
     def __init__(self,
                  ds_filename,
                  ion_name='H I',
@@ -332,7 +332,7 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
                                    auto_fit=True)
         #fit data
         try:
-            spec_model = line_finder(vel_array*u.Unit('km/s'), flux_array)
+            spec_model = line_finder(vel_array*km/s, flux_array)
         except RuntimeError:
             print('fit failed(prolly hit max iterations)', self.ray)
             spec_model = None
@@ -348,7 +348,7 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
             self.num_feat = 0
 
         else:
-            init_stats = spec_model.line_stats(vel_array*u.Unit('km/s'))
+            init_stats = spec_model.line_stats(vel_array*km/s)
 
             # include only lines greater than absorber_min
             line_indxs, = np.where( init_stats['col_dens'] >= self.absorber_min)
@@ -367,7 +367,7 @@ class SpectacleAbsorberExtractor(AbsorberExtractor):
                 #create and save new model with lines desired
                 self.features = spec_model.with_lines(good_lines, reset=True)
                 self.num_feat = len(good_lines)
-                line_stats=self.features.line_stats(vel_array*u.Unit('km/s'))
+                line_stats=self.features.line_stats(vel_array*km/s)
 
                 #add redshift
                 line_stats['redshift'] = self.ds.current_redshift

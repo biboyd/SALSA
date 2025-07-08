@@ -144,7 +144,7 @@ def generate_catalog(ds_file, n_rays,
                     ion_list=ion_list,
                     fields=fields,
                     ftype=ftype,
-                    out_dir=ray_directory)
+                    ray_directory=ray_directory)
 
     comm.Barrier()
     #Extract Absorbers

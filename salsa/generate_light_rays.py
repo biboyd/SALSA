@@ -108,7 +108,7 @@ def construct_rays(ds_file,
         line_list=None,
         other_fields=None,
         ftype='gas',
-        out_dir='./'):
+        ray_directory='./'):
     """
     Construct rays given a set of starting points and end points.
 
@@ -143,7 +143,7 @@ def construct_rays(ds_file,
         to be changed. 'PartType0' often works though it varies.
         See trident.make_simple_ray() for more information
 
-    out_dir : str/path
+    ray_directory : str/path
         where to save all of the lightrays
     """
     comm = MPI.COMM_WORLD
@@ -167,12 +167,12 @@ def construct_rays(ds_file,
     my_ray_nums = split_ray_nums[ comm.rank]
 
     if comm.rank == 0:
-        os.makedirs(out_dir, exist_ok=True)
+        os.makedirs(ray_directory, exist_ok=True)
     comm.Barrier()
     
     for i in my_ray_nums:
         #construct ray
-        ray_filename = f"{out_dir}/ray{i:0{pad}d}.h5"
+        ray_filename = f"{ray_directory}/ray{i:0{pad}d}.h5"
         trident.make_simple_ray(ds_file,
                                 start_points[i],
                                 end_points[i],
@@ -192,7 +192,7 @@ def generate_lrays(ds, center,
                 ion_list=['H I', 'C IV', 'O VI'],
                 fields=None,
                 ftype='gas',
-                out_dir='./'):
+                ray_directory='./'):
     """
     Generate a sample of trident lightrays that randomly, uniformly cover
     impact parameter.
@@ -230,7 +230,7 @@ def generate_lrays(ds, center,
         to be changed. 'PartType0' often works though it varies.
         See trident.add_ion_fields() for more information
 
-    out_dir : string
+    ray_directory : string
         path to where ray files will be written
 
     """
@@ -244,9 +244,9 @@ def generate_lrays(ds, center,
                                                  min_impact_param=min_impact_param,
                                                  length=length)
         
-        os.makedirs(out_dir, exist_ok=True)
+        os.makedirs(ray_directory, exist_ok=True)
         imp_param = ds.arr(imp_param, 'code_length').in_units('kpc')
-        np.save(f"{out_dir}/impact_parameter.npy", imp_param)
+        np.save(f"{ray_directory}/impact_parameter.npy", imp_param)
 
     else:
         start_pnts= np.empty((n_rays, 3), dtype=np.float64)
@@ -283,4 +283,4 @@ def generate_lrays(ds, center,
                    line_list=ion_list,
                    other_fields=construct_fields,
                    ftype=ftype,
-                   out_dir=out_dir)
+                   ray_directory=ray_directory)
