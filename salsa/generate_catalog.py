@@ -1,9 +1,8 @@
 import numpy as np
 import yt
-import trident
-import pandas as pd
+from astropy.table import vstack
 
-from salsa.absorber_extractor import SPICEAbsorberExtractor, SpectacleAbsorberExtractor
+from salsa.absorber_extractor import SPICEAbsorberExtractor
 from salsa.utils.collect_files import collect_files, check_rays
 from salsa.utils.functions import ion_p_num
 from salsa.generate_light_rays import generate_lrays
@@ -46,8 +45,9 @@ def generate_catalog(ds_file, n_rays,
     ion_list: list str
         list of ions to find absorbers from.
 
-    method: "spice" or "spectacle", optional
+    method: "spice", optional
         Choose which method to use to extract absorbers.
+        Currently only "spice" is supported.
 
     center: list or array, optional
         The center of the galaxy in units 'code_length'. If None, defaults to
@@ -171,10 +171,6 @@ def generate_catalog(ds_file, n_rays,
             abs_ext = SPICEAbsorberExtractor(ds, 
                                             ion_name=ion,
                                             **curr_kwargs)
-        elif method == "spectacle":
-            abs_ext = SpectacleAbsorberExtractor(ds, 
-                                                 ion_name=ion,
-                                                 **curr_kwargs)
         else:
             raise RuntimeError(f"Method {method} is not recognized.")
 
@@ -189,7 +185,7 @@ def generate_catalog(ds_file, n_rays,
     if df_list == []:
         my_catalog = None
     else:
-        my_catalog= pd.concat(df_list, ignore_index=True)
+        my_catalog= vstack(df_list)
     comm.Barrier()
 
     #gather all catalogs and creae one large
@@ -199,6 +195,6 @@ def generate_catalog(ds_file, n_rays,
     if all(v is None for v in all_dfs):
         full_catalog = None
     else:
-        full_catalog = pd.concat(all_dfs, ignore_index=True)
+        full_catalog = vstack(all_dfs)
 
     return full_catalog

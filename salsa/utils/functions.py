@@ -1,5 +1,5 @@
 from trident import from_roman
-
+from importlib.util import find_spec
 
 cgm_in_radius=10 #kpc
 cgm_out_radius=200 #kpc
@@ -28,15 +28,3 @@ def ion_p_num(ion_name):
     #combine all the names
     outname = f"{ip}_number_density"
     return outname
-
-def requires_spectacle(function):
-    def wrapped(*args, **kwargs):
-        try:
-            import spectacle as _
-        except ImportError:
-            raise ImportError("The spectacle package is required for this feature. Please install salsa[spectacle] for the necessary dependencies.")
-        else:
-            result = function(*args, **kwargs)
-
-        return result
-    return wrapped

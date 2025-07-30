@@ -5,13 +5,13 @@ channels:
 
 #NOTE: gcc compiler is needed to install some packages
 dependencies:
+    - astropy
     - python==3.11
     - pip
     - mpi4py
     - numpy
     - scipy
     - yt==4.2.0
-    - pandas
     - pooch
     - pytest
     - pip:

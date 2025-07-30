@@ -155,7 +155,7 @@ def get_ray_num(file_path):
     """
     filename = file_path.split('/')[-1]
     num = filename[3:-3]
-    return num
+    return int(num)
 
 def combine_astropy_files(directory, kw='ice', outfile=None):
 

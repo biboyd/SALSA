@@ -3,23 +3,16 @@ mpl.use('Agg')
 import yt
 import trident
 import numpy as np
-import warnings
-
-try:
-    from spectacle.fitting import LineFinder1D
-except ImportError:
-    warnings.warn("spectacle not installed.")
 
 from sys import argv, path
 import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 from mpl_toolkits.axes_grid1 import AxesGrid
-from numpy.linalg import norm
-from unyt import angstrom, km, s
+from astropy.units import angstrom
 
-from salsa.utils.functions import ion_p_num, requires_spectacle
+from salsa.utils.functions import ion_p_num
 from salsa.utils.defaults import default_units_dict, default_limits_dict
-from salsa.absorber_extractor import SPICEAbsorberExtractor, SpectacleAbsorberExtractor
+from salsa.absorber_extractor import SPICEAbsorberExtractor
 
 class AbsorberPlotter():
     """
@@ -269,11 +262,10 @@ class AbsorberPlotter():
     def plot_vel_space(self,
                        velocity_width = 3000,
                        ax=None,
-                       plot_spectacle_lines=False,
                        annotate_column_density=True):
         """
         Use trident to plot the absorption spectrum of the ray in velocity
-        space. Compute column densities with spectacle fits.
+        space.
         Uses the wavelength centers and velocity resolution of the AbsorberExtractor
         to generate the spectrum.
 
@@ -286,11 +278,6 @@ class AbsorberPlotter():
             an axis in which to draw the velocity plot. If None, no plot is
             not drawn.
             Default: None
-
-        plot_spectacle_lines : bool, optional
-            Plot individual absorption lines found by spectacle.
-            Only used if `ax` is not None.
-            Default: False
 
         annotate_column_density : bool, optional
             if True, add a textbox reporting the calculated col densities
@@ -336,31 +323,6 @@ class AbsorberPlotter():
             ax.set_ylabel("Flux")
             ax.grid(zorder=0, which='both')
 
-            if isinstance(self.abs_ext, SpectacleAbsorberExtractor):
-                line_txt, line_models = self._get_vel_plot_annotations()
-                box_props = dict(boxstyle='square', facecolor='white')
-
-                if annotate_column_density:
-                    #annotate plot with column densities
-                    ax.text(0.8, 0.05, line_txt, transform=ax.transAxes, bbox = box_props)
-
-                #annotate number of lines
-                ax.text(0.9, 0.85, f"{self.abs_ext.num_feat} lines", transform=ax.transAxes, bbox = box_props)
-
-                colors = ['tab:purple', 'tab:orange', 'tab:green']
-                vel = np.linspace(vel_min, vel_max, 1000) * km/s
-                #plot individual column lines
-                if line_models is not None:
-                    for mod, color in zip(line_models, colors):
-                        #plot centroids of largest lines
-                        dv = mod.lines[0].delta_v.value
-                        cd = mod.lines[0].column_density.value
-                        ax.scatter(dv, 1, c=color, marker='v',zorder=5, label="logN={:04.1f}".format(cd))
-                        #plott the largest lines
-                        if plot_spectacle_lines:
-                            ax.step(vel, mod(vel), linestyle='--', color=color, alpha=0.75)
-                    ax.legend(loc='lower left')
-
         return velocity, flux
 
     def plot_lambda_space(self, 
@@ -369,7 +331,7 @@ class AbsorberPlotter():
                           ax=None):
         """
         Use trident to plot the absorption spectrum of the ray. Plot in
-        wavelegnth (lambda) space. Not formatted to be used in spectacle fitting
+        wavelegnth (lambda) space.
 
         Parameters
         -----------    
@@ -673,60 +635,3 @@ class AbsorberPlotter():
         self.ds.close()
         self.abs_ext.ray.close()
         plt.close(self.fig)
-
-    def _get_vel_plot_annotations(self):
-        """
-        computes the column density along the given ray for a given ion species.
-        This is done by using spectacle if self.abs_ext is an instance of
-        SpectacleAbsorberExtractor
-
-        Returns:
-            line_models : list spectacle models : Individual line models for the
-                        3 largest absorbers found by spectacle
-            line_text : string : a string of properly formatted col dense to
-                        be added on to multi_plot
-        """
-
-        fit_label="Spect:"
-        #check if no absorbers found
-        if self.abs_ext.num_feat == 0:
-            line_models = None
-            fit_string = "{: <14s}{: >4s}\n".format(fit_label, '--')
-        else:
-            #get total column density and 3 largest lines
-            tot_spect_cd, line_models = self._get_large_spectacle()
-            fit_string = "{: <14s}{:04.1f}\n".format(fit_label, tot_spect_cd)
-
-        #get total column density along ray
-        ion_field = ion_p_num(self.ion_name)
-        tot_ray_cd= np.sum( self.abs_ext.data[ion_field].in_units('cm**-3')*self.abs_ext.data['dl'].in_units('cm') )
-        log_tot_ray = np.log10(tot_ray_cd)
-        total_string="{: <14s}{:04.1f}".format("full ray:", log_tot_ray)
-
-        #combine strings to create "legend"
-        line_text = "Tot Sums\n" + fit_string + total_string
-
-        return line_text, line_models
-
-    @requires_spectacle
-    def _get_large_spectacle(self):
-        """
-        Return the total column density found by spectacle and the 3 largest
-        absorbers found by spectacle.
-        """
-        #compute total column density
-        line_sum_cd = 0
-        for cd in self.df['col_dens']:
-            line_sum_cd+= 10**cd
-        log_tot_cd = np.log10(line_sum_cd)
-
-        line_models = []
-        indx_max = self.df['col_dens'].argsort()
-        for indx in indx_max[-3:]:
-            line = self.spectacle_model.lines[indx]
-            line_models.append( self.spectacle_model.with_line(line, reset=True))
-
-        #sort lines based on delta v
-        line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
-
-        return log_tot_cd, line_models

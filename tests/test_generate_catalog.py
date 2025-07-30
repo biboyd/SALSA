@@ -3,23 +3,21 @@ from os.path import join, dirname
 import yt
 import salsa
 import numpy as np
-import pandas as pd
-
+from astropy.io import ascii
 
 def same_catalog(df, key_df):
     # check number of columns/rows
     assert len(df) == len(key_df)
     assert len(df.columns) == len(key_df.columns)
 
-    # test extraction values same as key
-    for i in range(len(df)):
-        # compare column densities
-        cd_diff = abs(df.loc[i, 'col_dens'] - key_df.loc[i, 'col_dens'])/key_df.loc[i, 'col_dens']
-        assert cd_diff < 1e-4
+    # compare column densities
+    cd_diff = abs(df['col_dens'] - key_df['col_dens'])/key_df['col_dens']
+    assert (cd_diff.value < 1e-4).all()
 
         #compare temperatures
-        temp_diff = abs(df.loc[i, 'temperature'] - key_df.loc[i,'temperature'])/key_df.loc[i,'temperature']
-        assert temp_diff < 1e-4
+    temp_diff = abs(df['temperature'] - key_df['temperature']) \
+        / key_df['temperature']
+    assert (temp_diff.value < 1e-4).all()
 
 def test_enzo_generate_catalog(tmp_path, request):
 
@@ -42,8 +40,7 @@ def test_enzo_generate_catalog(tmp_path, request):
     assert salsa.utils.check_rays(raydir, 2, fields)
 
     # load in dataframe to compare to
-    key_df = pd.read_csv(join(dirname(request.path), "enzo_key_df.csv"),
-                         index_col=0)
+    key_df = ascii.read(join(dirname(request.path), "enzo_key.ecsv"))
 
     same_catalog(df, key_df)
 
@@ -69,7 +66,6 @@ def test_fire_generate_catalog(tmp_path, request):
     assert salsa.utils.check_rays(raydir, 2, fields)
 
     # load in dataframe to compare to
-    key_df = pd.read_csv(join(dirname(request.path), "fire_key_df.csv"),
-                         index_col=0)
+    key_df = ascii.read(join(dirname(request.path), "fire_key.ecsv"))
 
     same_catalog(df, key_df)

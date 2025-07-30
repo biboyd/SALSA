@@ -1,21 +1,15 @@
 import yt
 import trident
 import numpy as np
-import pandas as pd
-import warnings
-
-try:
-    from spectacle.fitting import LineFinder1D
-except ImportError:
-    warnings.warn("spectacle not installed.")
+from astropy.table import QTable, vstack
+from astropy.units import km, s
 
 from numpy.linalg import norm
-from unyt import km, s
 
 from yt.data_objects.static_output import \
     Dataset
 
-from salsa.utils.functions import ion_p_num, requires_spectacle
+from salsa.utils.functions import ion_p_num
 from salsa.utils.defaults import default_cloud_dict
 from salsa.utils.collect_files import get_ray_num
 
@@ -46,8 +40,7 @@ class AbsorberExtractor():
         Default: None
 
     velocity_res: float, optional
-        Set minimum resolution (in km/s)  that spectacle will 
-        attempt to fit lines to.
+        Set minimum resolution (in km/s) for lines.
         Default: 10
 
     absorber_min: float, optional
@@ -203,8 +196,8 @@ class AbsorberExtractor():
         Stub to be implemented by child classes.
         """
         raise NotImplementedError(
-            "Method 'get_current_absorbers' is only defined in the child classes "
-            "SPICEAbsorberExtractor and SpectacleAbsorberExtractor.")
+            "Method 'get_current_absorbers' is only defined in the child class "
+            "SPICEAbsorberExtractor.")
 
     def get_all_absorbers(self, ray_list, *args, **kwargs):
         """
@@ -231,178 +224,17 @@ class AbsorberExtractor():
             if df is not None:
                 # add ray index
                 ray_num = get_ray_num(ray)
-                for i in range(self.num_feat):
-                    df.loc[i,'lightray_index'] = ray_num
+                df.add_column(ray_num,
+                              name="lightray_index")
+
                 df_list.append(df)
 
         if len(df_list) > 0:
-            full_df = pd.concat(df_list, ignore_index=True)
+            full_df = vstack(df_list)
         else:
             full_df = None
         return full_df
 
-
-
-class SpectacleAbsorberExtractor(AbsorberExtractor):
-    """
-    Uses Spectacle to extract absorbers from a Trident lightray for a given ion species.
-
-    Parameters
-    --------------
-
-    ds_filename: str or YT dataset
-        Either Path/name of the dataset to be loaded or the dataset itself
-
-    ray_filename: str or Trident ray
-        Path/name of the hdf5 ray file to be loaded or the ray already loaded
-
-    ion_name: string, optional
-        Name of the ion to extract absorbers of
-        Default: "H I"
-
-    wavelegnth_center: float, optional
-        The specific absorption line to look at (in unit Angstrom). None
-        defaults to strongest absorption line for specified ion
-        (using trident's ion table).
-        Default: None
-
-    velocity_res: float, optional
-        Set minimum resolution (in km/s)  that spectacle will 
-        attempt to fit lines to.
-        Default: 10
-
-    absorber_min: float, optional
-        Minimum Log Column Density that will be used to define an absorber.
-        If None, defaults to either default for specific ion or 13
-        Default: None
-
-    spectacle_defaults: dict, optional
-        Dictionary passed to spectacle defining default parameters/ranges
-        when fitting absorption lines
-        Deafult: None
-
-    """
-    @requires_spectacle
-    def __init__(self,
-                 ds_filename,
-                 ion_name='H I',
-                 wavelength_center=None,
-                 velocity_res=10,
-                 absorber_min=None,
-                 spectacle_defaults=None):
-        super().__init__(ds_filename,
-                         ion_name, wavelength_center,
-                         velocity_res, absorber_min)
-
-        #add user defined defaults
-        if spectacle_defaults is not None:
-            self.defaults_dict.update(spectacle_defaults)
-
-    def get_current_absorbers(self):
-        """
-        Extract absorbers from the currently loaded ray using spectacle.
-
-        Spectacle will fit a Trident-made spectra of the specified ion.
-        Absorbers correspond to individual line fits.
-
-        Returns
-        ----------
-        line_stats : pandas.DataFrame
-            Table including all line statistics found from spectacle's fit of
-            the spectra.
-        """
-        if self.ray is None:
-            raise RuntimeError("You must first load a ray with `load_ray`!")
-
-        #create spectra for a single line to fit
-        wav = int( np.round(self.wavelength_center) )
-        line = f"{self.ion_name} {wav}"
-        #format ion correctly to fit
-        ion_wav= "".join(line.split())
-
-        vel_array, flux_array=self._create_spectra()
-
-        #constrain possible column density values
-        #create line model
-        line_finder = LineFinder1D(ions=[ion_wav], continuum=1, z=0,
-                                   defaults=self.defaults_dict,
-                                   fitter_args={'maxiter':2000},
-                                   threshold=0.01, output='flux',
-                                   min_distance=self.velocity_res, 
-                                   auto_fit=True)
-        #fit data
-        try:
-            spec_model = line_finder(vel_array*km/s, flux_array)
-        except RuntimeError:
-            print('fit failed(prolly hit max iterations)', self.ray)
-            spec_model = None
-        except IndexError:
-            print('INDEX ERROR on', self.ray)
-            spec_model = None
-
-        #check if fit found any lines
-        if spec_model is None:
-            print('line could not be fit on ray ', self.ray)
-            self.features = None
-            line_stats = None
-            self.num_feat = 0
-
-        else:
-            init_stats = spec_model.line_stats(vel_array*km/s)
-
-            # include only lines greater than absorber_min
-            line_indxs, = np.where( init_stats['col_dens'] >= self.absorber_min)
-            if line_indxs.size == 0:
-                print('line could not be fit on ray ', self.ray)
-                self.features = None
-                line_stats = None
-                self.num_feat = 0
-
-            else:
-                # retrieve lines that pass col dense threshold
-                good_lines=[]
-                for i in line_indxs:
-                    good_lines.append(spec_model.lines[i])
-
-                #create and save new model with lines desired
-                self.features = spec_model.with_lines(good_lines, reset=True)
-                self.num_feat = len(good_lines)
-                line_stats=self.features.line_stats(vel_array*km/s)
-
-                #add redshift
-                line_stats['redshift'] = self.ds.current_redshift
-                line_stats = line_stats.to_pandas()
-        self.df=line_stats
-        return self.df
-
-    def _create_spectra(self):
-        """
-        Use trident to create the absorption spectrum of the ray in velocity
-        space for use in fitting.
-
-        Returns
-        --------
-        velocity: YT array
-            Array of velocity values of the generated spectra (in km/s)
-
-        flux: YT array
-            Array of the normalized flux values of the generated spectra
-
-        """
-        #set which ions to add to spectra
-        wav = int( np.round(self.wavelength_center) )
-        line = f"{self.ion_name} {wav}"
-        ion_list = [line]
-
-        #use auto feature to capture full line
-        spect_gen = trident.SpectrumGenerator(lambda_min="auto", lambda_max="auto", dlambda = self.velocity_res, bin_space="velocity")
-        spect_gen.make_spectrum(self.data, lines=ion_list)
-
-        #get fields from spectra and give correct units
-        flux = spect_gen.flux_field
-        velocity = spect_gen.lambda_field
-
-        return velocity, flux
 
 class SPICEAbsorberExtractor(AbsorberExtractor):
     """
@@ -428,8 +260,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         Default: None
 
     velocity_res: float, optional
-        Set minimum resolution (in km/s)  that spectacle will 
-        attempt to fit lines to.
+        Set minimum resolution (in km/s) for SPICE to combine regions
         Default: 10
 
     absorber_min: float, optional
@@ -495,12 +326,32 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
                      ('col_dens', np.float64),
                      ('delta_v', np.float64),
                      ('vel_dispersion', np.float64),
-                     ('interval_start', np.int32),
-                     ('interval_end', np.int32)]
+                     ('interval_start', np.int64),
+                     ('interval_end', np.int64)]
+
+        # get some units info
+        if "delta_v" in units_dict:
+            delv_u = units_dict["delta_v"]
+        else:
+            delv_u = 'km/s'
+
+        if "vel_dispersion" in units_dict:
+            vdisp_u = units_dict["vel_dispersion"]
+        else:
+            vdisp_u = "km/s"
+
+        name_units = {'wave': 'angstrom',
+                      'delta_v': delv_u,
+                      'vel_dispersion': vdisp_u}
 
         # get name of columns and type of data for each
         for f in fields:
+            if f in units_dict.keys():
+                fld_u = units_dict[f]
+            else:
+                fld_u = self.data[f].units  # querying the dataset directly maybe isn't great
             name_type.append( (f, np.float64) )
+            name_units[f] = fld_u
 
         #check if any absorbrs were found
         n_abs = len(self.features)
@@ -508,20 +359,17 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             print("No absorbers in ray: ", self.ray)
             return None
 
-        #initialize empty table
-        stats_table = pd.DataFrame(np.empty(n_abs , dtype=name_type))
-
-        #add ion name and wavelength
-        stats_table['name']= self.ion_name
-        stats_table['wave'] = self.wavelength_center
-        stats_table['redshift'] = self.ds.current_redshift
-
+        row_list = []
         # fill table with absorber features
         for i in range(n_abs):
+            row = {'name':self.ion_name,
+                   'wave':self.wavelength_center,
+                   'redshift':self.ds.current_redshift}
+
             #load data for calculating properties
             start, end = self.features[i]
-            stats_table.loc[i, 'interval_start'] = start
-            stats_table.loc[i, 'interval_end'] = end
+            row['interval_start'] = start
+            row['interval_end'] = end
 
             dl = self.data['dl'][start:end].in_units('cm')
             density = self.data[('gas', 'density')][start:end].in_units('g/cm**3')
@@ -532,23 +380,21 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             ion_density=self.data[ion_field][start:end].in_units('cm**-3')
             col_density = np.sum(dl*ion_density)
 
-            stats_table.loc[i, 'col_dens'] = np.log10(col_density)
+            # yt uses unyt but we can convert that to astropy
+            row['col_dens'] = col_density.to_astropy()
 
             #calculate delta_v of absorber. ion col dense weighted
             vel_los_dat = self.data['velocity_los'][start:end]
             central_vel = np.sum(dl*ion_density*vel_los_dat)/col_density
-            if "delta_v" in units_dict:
-                central_vel.convert_to_units(units_dict["delta_v"])
-            else:
-                central_vel.convert_to_units('km/s')
-
-            stats_table.loc[i, 'delta_v'] = central_vel
+            central_vel.convert_to_units(delv_u)
+            row['delta_v'] = central_vel.to_astropy()
 
             #calculate velocity dispersion
 
             # set single cell absorber to zero velocity variance
             if end-start == 1:
-                vel_variance=np.nan
+                vel_variance=0
+                row['vel_dispersion'] = vel_variance * km/s  # units don't matter here
             else:
                 #weighted sample variance
                 vel_variance=col_density \
@@ -556,13 +402,8 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
                         (vel_los_dat - central_vel)**2 ) \
                     / (col_density**2 - np.sum( (dl*ion_density)**2 ))
                 vel_variance = np.sqrt(vel_variance)
-
-                if "vel_dispersion" in units_dict:
-                    vel_variance.convert_to_units(units_dict["vel_dispersion"])
-                else:
-                    vel_variance.convert_to_units("km/s")
-
-            stats_table.loc[i, 'vel_dispersion'] = vel_variance
+                vel_variance.convert_to_units(vdisp_u)
+                row['vel_dispersion'] = vel_variance.to_astropy()
 
             #calculate other field averages. gas col density weighted
             for fld in fields:
@@ -570,11 +411,18 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
 
                 if fld in units_dict.keys():
-                    stats_table.loc[i, fld] = avg_fld.in_units( units_dict[fld] )
+                    fld_u = units_dict[fld]
+                    row[fld] = avg_fld.in_units(fld_u).to_astropy()
                 else:
-                    stats_table.loc[i, fld] = avg_fld
+                    fld_u = avg_fld.units
+                    row[fld] = avg_fld.to_astropy()
 
-        self.df = stats_table
+            row_list.append(row)
+
+        self.df = QTable(data=row_list,
+                         names=[entry[0] for entry in name_type],
+                         dtype=[entry[1] for entry in name_type],
+                         units=name_units)
         return self.df
 
     def _run_spice(self):

@@ -6,8 +6,7 @@ Written by: Brendan Boyd boydbre1@msu.edu
 
 __version__ = "0.1.0"
 
-from salsa.absorber_extractor import AbsorberExtractor, SPICEAbsorberExtractor, SpectacleAbsorberExtractor
-
+from salsa.absorber_extractor import AbsorberExtractor, SPICEAbsorberExtractor
 from salsa.absorber_plotter import AbsorberPlotter
 
 from salsa.generate_light_rays import generate_lrays, construct_rays, random_sightlines
