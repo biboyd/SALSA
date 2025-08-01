@@ -55,11 +55,14 @@ def generate_catalog(ds_file, n_rays,
         Default: None
 
     impact_param_lims: tuple or list, optional
-        The range on which to sample impact parameter when constructing lightrays
+        The range on which to sample impact parameter when constructing lightrays.
+        If no units are associated with the numbers (either astropy or unyt),
+        the code will assume kpc.
         Default: (0, 200)
 
     ray_length: float, optional
-        The length of each light ray in units kpc.
+        The length of each light ray. If no units are associated (either astropy
+        or unyt) the code will assume kpc.
         Default: 200
 
     field_parameters: dict, optional
@@ -102,8 +105,8 @@ def generate_catalog(ds_file, n_rays,
 
     Returns
     -------
-    full_catalog: pandas.DataFrame
-        pandas dataframe containing all of the absorbers extracted from all
+    full_catalog: astropy QTable
+        Table containing all of the absorbers extracted from all
         the lightrays. If no absorbers are found, None is returned
     """
     comm = MPI.COMM_WORLD

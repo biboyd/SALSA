@@ -211,8 +211,8 @@ class AbsorberExtractor():
 
         Returns
         -------
-        full_df: pandas.DataFrame
-            Catalog of absorber properties in a pandas dataframe.
+        full_df: astropy QTable
+            Catalog of absorber properties.
         """
         df_list=[]
 
@@ -308,7 +308,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
 
         Returns
         ---------
-        absorber_info : pandas.DataFrame
+        absorber_info : astropy QTable
             Dataframe of all the absorbers and their corresponding features.
 
         """
@@ -634,7 +634,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
 
         Returns
         -------
-        full_df: pandas.DataFrame
-            Catalog of absorber properties in a pandas dataframe.
+        full_df: astropy QTable
+            Catalog of absorber properties.
         """
         return super().get_all_absorbers(ray_list, fields, units_dict)
