@@ -9,7 +9,9 @@ from yt.data_objects.static_output import \
 from mpi4py import MPI
 
 from scipy.spatial.transform import Rotation
-import matplotlib.pyplot as plt
+
+from unyt.array import unyt_quantity
+from astropy.units.quantity import Quantity
 
 def random_sightlines(ds_file, center, num_sightlines, 
                       max_impact_param, min_impact_param=0, length=200):
@@ -28,14 +30,17 @@ def random_sightlines(ds_file, center, num_sightlines,
         number of sightlines to return
 
     max_impact_param : float
-        maximum impact param to sample from in kpc
+        maximum impact param to sample from. If no units are attached
+        (either unyt or astropy) it is assumed to be in kpc
 
     min_impact_param : float, optional
-        minimum impact param to sample from in kpc
+        minimum impact param to sample from. If no units are attached
+        (either unyt or astropy) it is assumed to be in kpc
         Default: 0.
 
     length : float, optional
-         length of the sightline in kpc
+         length of the sightline. f no units are attached
+        (either unyt or astropy) it is assumed to be in kpc
          Default: 200
 
     Returns
@@ -47,7 +52,7 @@ def random_sightlines(ds_file, center, num_sightlines,
         2d array of the endpoints for each sightline in code_length
 
     impact_param : array
-        array of impact parameters for each ray created in kpc
+        array of impact parameters for each ray created in code_length
     """
 
     #set file names and ion name
@@ -56,14 +61,37 @@ def random_sightlines(ds_file, center, num_sightlines,
     elif isinstance(ds_file, Dataset):
         ds = ds_file
 
-    length = ds.quan(length, 'kpc').in_units('code_length')
+    # check for units (unyt or astropy) and convert to unyt/yt code_length
+    if isinstance(min_impact_param, unyt_quantity):
+        min_impact_param = ds.quan(min_impact_param).in_units('code_length')
+    elif isinstance(min_impact_param, Quantity):
+        min_impact_param = ds.quan(min_impact_param, 
+                                   str(min_impact_param.unit)).in_units('code_length')
+    else:
+        min_impact_param = ds.quan(min_impact_param, 'kpc').in_units('code_length')
+
+    if isinstance(max_impact_param, unyt_quantity):
+        max_impact_param = ds.quan(max_impact_param).in_units('code_length')
+    elif isinstance(max_impact_param, Quantity):
+        max_impact_param = ds.quan(max_impact_param, 
+                                   str(max_impact_param.unit)).in_units('code_length')
+    else:
+        max_impact_param = ds.quan(max_impact_param, 'kpc').in_units('code_length')
+
+    if isinstance(length, unyt_quantity):
+        length = ds.quan(length).in_units('code_length')
+    elif isinstance(length, Quantity):
+        length = ds.quan(length, 
+                         str(length.unit)).in_units('code_length')
+    else:
+        length = ds.quan(length, 'kpc').in_units('code_length')
     length = length.value
-    min_impact_param = ds.quan(min_impact_param, 'kpc').in_units('code_length')
-    max_impact_param = ds.quan(max_impact_param, 'kpc').in_units('code_length')
 
     #randomly select angle and distance from center of gal
     #take sqrt so that impact param is uniform in projected area space
-    impact_param = np.sqrt(np.random.uniform(min_impact_param.value**2, max_impact_param.value**2, num_sightlines))
+    impact_param = np.sqrt(np.random.uniform(min_impact_param**2,
+                                             max_impact_param**2,
+                                             num_sightlines))
 
     #theta represents polar angle. phi represents azimuthal
     theta = np.random.uniform(0, np.pi, num_sightlines)
