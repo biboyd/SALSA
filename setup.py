@@ -4,15 +4,18 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 #base dependencies
 #NOTE: gcc compiler is needed to install some packages
-dependecies=['trident~=1.3',
-             'yt~=4.2',
-             'matplotlib',
-             'numpy',
-             'scipy',
-             'mpi4py',
-             "pooch",
-             "pytest",
-             'astropy']
+dependecies=[
+    'astropy',
+    'h5py',
+    'matplotlib',
+    'mpi4py',
+    'numpy',
+    'pooch',
+    'pytest',
+    'scipy',
+    'trident~=1.3',
+    'yt~=4.2',
+    ]
 
 setup(name="astro-salsa",
       version="1.0.0",

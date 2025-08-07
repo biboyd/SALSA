@@ -2,6 +2,7 @@ import os
 import yt
 import trident
 import numpy as np
+import h5py
 
 from yt.data_objects.static_output import \
     Dataset
@@ -132,6 +133,7 @@ def random_sightlines(ds_file, center, num_sightlines,
 def construct_rays(ds_file,
         start_points,
         end_points,
+        impact_params,
         fld_params=None,
         line_list=None,
         other_fields=None,
@@ -150,6 +152,10 @@ def construct_rays(ds_file,
 
     end_points : numpy array
         1d array of end points for each ray (code_length)
+
+    impact_params : numpy array
+        1d array of impact parameters for each ray (code_length).
+        Used to save the impact parameter to the ray dataset.
 
     fld_params: dict, optional
         Dictionary of parameters that will be passed to the lightrays. (ie
@@ -201,14 +207,20 @@ def construct_rays(ds_file,
     for i in my_ray_nums:
         #construct ray
         ray_filename = f"{ray_directory}/ray{i:0{pad}d}.h5"
-        trident.make_simple_ray(ds_file,
-                                start_points[i],
-                                end_points[i],
-                                lines=line_list,
-                                fields=other_fields,
-                                ftype=ftype,
-                                field_parameters=fld_params,
-                                data_filename=ray_filename)
+        yt_ray = trident.make_simple_ray(ds_file,
+                                         start_points[i],
+                                         end_points[i],
+                                         lines=line_list,
+                                         fields=other_fields,
+                                         ftype=ftype,
+                                         field_parameters=fld_params,
+                                         data_filename=ray_filename)
+        yt_ray.close()  # we no longer need the yt object in memory
+                        # even though this function doesn't actually do anything...
+
+        with h5py.File(ray_filename, "a") as f:
+            f.attrs["light_ray_solution_impact_parameter"] = [impact_params[i]]
+            f.attrs["light_ray_solution_impact_parameter_units"] = "code_length"
 
     comm.Barrier()
 
@@ -272,20 +284,20 @@ def generate_lrays(ds, center,
                                                  min_impact_param=min_impact_param,
                                                  length=length)
         
-        os.makedirs(ray_directory, exist_ok=True)
-        imp_param = ds.arr(imp_param, 'code_length').in_units('kpc')
-        np.save(f"{ray_directory}/impact_parameter.npy", imp_param)
+        # os.makedirs(ray_directory, exist_ok=True)
+        # imp_param = ds.arr(imp_param, 'code_length').in_units('kpc')
+        # np.save(f"{ray_directory}/impact_parameter.npy", imp_param)
 
     else:
         start_pnts= np.empty((n_rays, 3), dtype=np.float64)
         end_pnts= np.empty((n_rays, 3), dtype=np.float64)
-        #imp_param= np.empty(n_rays, dtype=np.float64)
+        imp_param= np.empty(n_rays, dtype=np.float64)
 
     # share sightline points
     comm.Barrier()
     comm.Bcast([start_pnts, MPI.DOUBLE])
     comm.Bcast([end_pnts, MPI.DOUBLE])
-    #comm.Bcast([imp_param, MPI.DOUBLE])
+    comm.Bcast([imp_param, MPI.DOUBLE])
 
     #add center to field parameters
     fld_params['center']=center
@@ -306,7 +318,7 @@ def generate_lrays(ds, center,
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=ion_list, ftype=ftype)
 
-    construct_rays(ds, start_pnts, end_pnts,
+    construct_rays(ds, start_pnts, end_pnts, imp_param,
                    fld_params=fld_params,
                    line_list=ion_list,
                    other_fields=construct_fields,
