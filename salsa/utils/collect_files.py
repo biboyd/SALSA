@@ -2,7 +2,6 @@ from os import listdir
 import yt
 from astropy.table import QTable, vstack
 from mpi4py import MPI
-import pandas as pd
 import numpy as np
 
 def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
@@ -174,32 +173,6 @@ def combine_astropy_files(directory, kw='ice', outfile=None):
         #write table
         if outfile is not None:
             main_table.write(outfile, overwrite=True)
-    else:
-        out_err = outfile.split('.')[0] + ".out"
-        #write out dummy
-        f= open(out_err, 'w')
-        f.write(f"No files found in {directory} using key_words= ['ray', {kw}]")
-        f.close()
-        main_table = None
-    return main_table
-
-def combine_pandas_files(directory, kw='ice', outfile=None):
-
-    #get files
-    files = collect_files(directory, key_words=['ray', kw])
-
-    dfs = []
-    # open up tables
-    for f in files:
-        dfs.append(pd.read_hdf(f"{directory}/{f}"))
-
-    if len(tables) >0:
-        #combine tables
-        main_table = pd.concat(dfs, ignore_index=True)
-
-        #write table
-        if outfile is not None:
-            main_table.write_hdf(outfile, mode='w')
     else:
         out_err = outfile.split('.')[0] + ".out"
         #write out dummy
