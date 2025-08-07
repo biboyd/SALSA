@@ -10,11 +10,17 @@ dependecies=[
     'matplotlib',
     'mpi4py',
     'numpy',
-    'pooch',
-    'pytest',
     'scipy',
     'trident',
     'yt',
+    ]
+
+dev_deps=[
+    'pooch',
+    'pytest',
+    'sphinx',
+    'sphinx_automodapi',
+    'sphinx_rtd_theme',
     ]
 
 setup(name="astro-salsa",
@@ -32,4 +38,5 @@ setup(name="astro-salsa",
                    "Programming Language :: Python :: 3.12",
                    "Programming Language :: Python :: 3.13"],
       python_requires=">=3.11, <3.14",
-      install_requires=dependecies,)
+      install_requires=dependecies,
+      extras_require={'dev':dev_deps})

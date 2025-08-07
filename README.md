@@ -5,27 +5,27 @@
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.02581/status.svg)](https://doi.org/10.21105/joss.02581)
 [![DOI](https://zenodo.org/badge/271633933.svg)](https://zenodo.org/badge/latestdoi/271633933)
 
-SALSA: Synthetic Absorption Line Surveyor Application is a Python tool that
+SALSA (Synthetic Absorption Line Surveyor Application) is a Python tool that
 constructs synthetic absorber catalogs from hydrodynamic galaxy simulations.
-Salsa heavily utilizes [yt](https://yt-project.org/) to access simulation data
+SALSA heavily utilizes [yt](https://yt-project.org/) to access simulation data
 and [Trident](http://trident-project.org/) to create light rays/sight lines and
 generate synthetic spectra.
 
 Observational studies generate large absorber catalogs by studying the absorption
 line spectra of distant quasars, as their light passes through intervening galaxies.
-Salsa can generate similar catalogs from cosmological and galactic simulations,
+SALSA can generate similar catalogs from cosmological and galactic simulations,
 allowing research to study these simulations from an observers perspective. This
 can give new insights into the data as well as help facilitate comparisons and
 collaboration between simulations and observations.
 
-Salsa allows us to dip into galactic simulations and start to chip away at the
+SALSA allows us to dip into galactic simulations and start to chip away at the
 many unknowns of the universe
 
 A [JOSS paper](https://joss.theoj.org/papers/10.21105/joss.02581) was published for 
 SALSA and we recommend reading it for an overview of the package and its possible uses. 
 If you do use SALSA in a project we ask that you cite this paper.
 
-For detailed information on how to install and run salsa, Read the Docs
+For detailed information on how to install and run SALSA, Read the Docs
 [here](https://salsa.readthedocs.io)
 
 ## Install
@@ -36,12 +36,13 @@ run these commands to install the most stable version:
   $ python
   >>> import salsa
 ```
+
 If you want to install the latest development version and have all the dependencies 
 installed, you can clone the repository and run these commands:
 ```
   $ git clone https://github.com/biboyd/SALSA.git
   $ cd SALSA
-  $ pip install -e .
+  $ pip install -e .[dev]
   $ python
   >>> import salsa
 ```

@@ -13,6 +13,9 @@ dependencies:
     - pooch
     - pytest
     - scipy
+    - sphinx
+    - sphinx_automodapi
+    - sphinx_rtd_theme
     - yt
     - pip:
         - mpi4py

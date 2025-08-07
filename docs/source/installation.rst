@@ -3,11 +3,11 @@
 How To Install
 ==============
 
-Installing Salsa
+Installing SALSA
 ^^^^^^^^^^^^^^^^^
 
-Salsa is built off of quite a few different packages so it is best to install
-these before installing salsa. Go to :ref:`dependencies-install` for more details
+SALSA is built off of quite a few different packages so it is best to install
+these before installing SALSA. Go to :ref:`dependencies-install` for more details
 on how best to do this.
 
 Stable Version
@@ -28,14 +28,15 @@ install the package: ::
 
   $ git clone https://github.com/biboyd/SALSA.git
   $ cd SALSA
-  $ pip install -e .
+  $ pip install -e .[dev]
 
 This will check that dependencies are installed and should install any that you
 might be missing. Again, since this is a somewhat complicated environment, it is
-best to install the dependencies beforehand.
+best to install the dependencies beforehand. The ``dev`` tag will check for
+the additional packages needed to develop locally (e.g., pytest, sphinx).
 
 .. note::
-  To install some of the dependencies, the gcc compiler needs to be installed.
+  To install some of the dependencies, the GCC compiler needs to be installed.
   This is not a problem for most machines but can raise an error for some.
 
 Running the Test Suite
@@ -48,14 +49,14 @@ simply execute: ::
   $ pytest
 
 This test suite makes use of yt's `sample datasets <https://yt-project.org/doc/examining/loading_data.html#sample-data>`_.
-By default this sample data will be downloaded to the SALSA directory.
+By default this sample data will be downloaded to the directory from which the tests are run.
 To keep things clean, you may wish to use the provided ``tests/data/`` directory
 by setting yt's ``test_data_dir`` `configuration <https://yt-project.org/doc/reference/configuration.html>`_.
 For example, you can locally configure ``test_data_dir`` within the SALSA directory using: ::
 
-  $ yt config set --local yt test_data_dir  ./tests/data/
+  $ yt config set --local yt test_data_dir ./tests/data/
 
-Currently, the test suite is not written to utilize unit tests but rather
+Currently, the test suite is not written to utilize unit tests but rather it
 regression tests SALSA's functionality wholistically.
 
 
@@ -64,7 +65,7 @@ regression tests SALSA's functionality wholistically.
 Installing Dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^
 You may install the dependencies on your own, and you may have some of them installed
-already (ie numpy, matplotlib) depending on your environment. To make installation
+already (i.e., numpy, matplotlib) depending on your environment. To make installation
 easier, we advise using conda and a conda environment to install.
 
 .. _conda-install:
@@ -84,7 +85,7 @@ and then run the following: ::
   $ conda env create --file environment.yml
   $ conda activate salsa-env
 
-Now you should be able to painlessly install salsa as described above!
+Now you should be able to painlessly install SALSA as described above!
 
 .. note::
   This installs mpi4py using conda. This may cause problems if you already have
@@ -139,7 +140,7 @@ Install mpi4py
 **************
 
 `mpi4py <https://mpi4py.readthedocs.io/en/stable/index.html>`_ is a package that
-enables use of MPI parallelism with python. Salsa uses this to split up lightray
+enables use of MPI parallelism with Python. SALSA uses this to split up lightray
 creation and absorber extraction across multiple processors which becomes necessary
 for large numbers of lightrays.
 
