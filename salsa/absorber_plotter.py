@@ -154,7 +154,11 @@ class AbsorberPlotter():
 
         if plot_ray:
             #annotate ray
-            self.slice.annotate_ray(self.abs_ext.ray, arrow=True, plot_args={'alpha':0.5, 'color':'white', 'linewidth':2})
+            self.slice.annotate_ray(self.abs_ext.ray,
+                                    arrow=True,
+                                    alpha=0.5,
+                                    color='white',
+                                    linewidth=2)
 
         if self.markers:
             #get ray positional properties
@@ -178,7 +182,9 @@ class AbsorberPlotter():
                     mrk_kwargs = self.mark_kwargs.copy()
                     mrk_kwargs['color'] = mrk_cmap(self.colorscale[i])
 
-                    self.slice.annotate_marker(mrk_pos, marker=self.marker_shape, plot_args=mrk_kwargs)
+                    self.slice.annotate_marker(mrk_pos,
+                                               marker=self.marker_shape,
+                                               **mrk_kwargs)
 
     def create_slice(self, plot_ray = True, cmap="magma", height=None, width=None):
         """

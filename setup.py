@@ -13,8 +13,8 @@ dependecies=[
     'pooch',
     'pytest',
     'scipy',
-    'trident~=1.3',
-    'yt~=4.2',
+    'trident',
+    'yt',
     ]
 
 setup(name="astro-salsa",
@@ -28,6 +28,8 @@ setup(name="astro-salsa",
       keywords = ["simulation", "spectra", "astronomy", "astrophysics"],
       url="https://github.com/biboyd/SALSA",
       packages=find_packages(),
-      classifiers=["Programming Language :: Python :: 3.11"],
-      python_requires=">=3.11, <3.12",
+      classifiers=["Programming Language :: Python :: 3.11",
+                   "Programming Language :: Python :: 3.12",
+                   "Programming Language :: Python :: 3.13"],
+      python_requires=">=3.11, <3.14",
       install_requires=dependecies,)

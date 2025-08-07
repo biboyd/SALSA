@@ -5,7 +5,6 @@ channels:
 
 #NOTE: gcc compiler is needed to install some packages
 dependencies:
-    - python==3.11
     - astropy
     - h5py
     - matplotlib
@@ -14,7 +13,7 @@ dependencies:
     - pooch
     - pytest
     - scipy
-    - yt==4.2.0
+    - yt
     - pip:
         - mpi4py
-        - trident==1.3.0
+        - trident
