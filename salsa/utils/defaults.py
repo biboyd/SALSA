@@ -4,7 +4,7 @@ default_units_dict=dict(velocity_los='km/s',
                        z='kpc',
                        radius='kpc',
                        density='g/cm**3',
-                       metallicity='Zsun',
+                       metallicity='dimensionless',
                        temperature='K',
                        radial_velocity='km/s')
 

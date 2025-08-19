@@ -38,93 +38,84 @@ To use this function first create a directory to save rays:::
   $ mkdir my_rays
 
 Now we can load in a data set and define some of the parameters that we will
-look for.
-::
+look for:
+
+.. code-block:: python
 
   import yt
   import salsa
-  import numpy as np
-  import pandas as pd
 
   # load in the simulation dataset
   ds_file = "HiresIsolatedGalaxy/DD0044/DD0044"
   ds = yt.load(ds_file)
 
   # define the center of the galaxy
-  center= [0.53, 0.53, 0.53]
+  center = [0.53, 0.53, 0.53]
 
   # the directory where lightrays will be saved
   ray_dir = 'my_rays'
-  n_rays=4
+  n_rays = 4
 
   # Choose what absorption lines to add to the dataset as well as additional
   # field data to save
-  ion_list=['H I', 'C IV', 'O VI']
+  ion_list = ['H I', 'C IV']
   other_fields = ['density', 'temperature', 'metallicity']
 
   # the maximum distance a lightray will be created (minimum default to 0)
-  max_impact = 15 #kpc
+  max_impact = ds.quan(15, 'kpc')
 
-With the parameters set up we can now generate the lightrays. We will set the
-seed used to create the random light rays so we can reproduce these results.
-::
+With the parameters set up we can now generate the ``lightrays``. We will set the
+seed used to create the random light rays so we can reproduce these results:
+
+.. code-block:: python
 
   # set a seed so the function produces the same random rays
+  import numpy as np
   np.random.seed(18)
 
   # Run the function and rays will be saved to my_rays directory
   salsa.generate_lrays(ds, center, n_rays, max_impact,
-                       ion_list=ion_list, fields=other_fields, out_dir=ray_dir)
+                       ion_list=ion_list, fields=other_fields, 
+                       ray_directory=ray_dir)
 
 
 Step 2: Extract Absorbers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For more details on absorber extraction see :ref:`absorber-extraction`. But the
-quick synopsis is there is the SPICE method and the Spectacle method. SPICE looks at
-cell level data while Spectacle fits lines to a synthetic spectra that is generated
-by trident. The :class:`~salsa.AbsorberExtractor` class can use both methods.
+SALSA currently supports only one method for extracting absorbers;
+the SPICE method. To do this, we use the :class:`~salsa.SPICEAbsorberExtractor`
+class. For more details on absorber extraction see :ref:`absorber-extraction`.
 
-Now let's extract some absorbers from the Light rays we made
-::
+Now let's extract some absorbers from one of the light rays we made:
+
+.. code-block:: python
 
   ray_file = f"{ray_dir}/ray0.h5"
 
-  # construct absorber extractor
-  abs_ext = salsa.AbsorberExtractor(ds, ray_file, ion_name='H I')
+  # construct absorber extractor & load our ray
+  abs_ext = salsa.SPICEAbsorberExtractor(ds, ion_name='H I')
+  abs_ext.load_ray(ray_file)
 
   # use SPICE method to extract absorbers into a pandas DataFrame
-  units_dict=dict(density='g/cm**3', metallicity='Zsun')
-  df_spice = abs_ext.get_spice_absorbers(other_fields, units_dict=units_dict)
-  df_spice.head()
+  units_dict = dict(density='g/cm**3', temperature='K')
+  table = abs_ext.get_current_absorbers(other_fields, units_dict=units_dict)
+  print(table)
 
-.. csv-table::
-  :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity
-
-  H I,1215.670,0.000,12.787,14.187,0.384,201,204,0.000,96469.462,1.086
-  H I,1215.670,0.000,15.367,-0.264,4.846,204,216,0.000,48429.090,1.103
-
-Can also extract using Spectacle:
 ::
 
-  # use spectacle now
-  df_spect = abs_ext.get_spectacle_absorbers()
-  df_spect.head()
+  name   wave   redshift      col_dens      ...        density            temperature        metallicity     
+       Angstrom               1 / cm2       ...        g / cm3                 K                             
+  ---- -------- -------- ------------------ ... ---------------------- ----------------- --------------------
+   H I  1215.67      0.0  6116814645533.102 ... 1.6863708884078385e-28 96469.46167662967 0.014059433622242793
+   H I  1215.67      0.0 2505355090554556.5 ...   9.49051901355937e-28 50877.73530956685  0.01429726085432313
+   H I  1215.67      0.0  9408651484697.451 ... 1.6823168463953486e-28 94252.62895133752 0.014273053208746916
 
-.. csv-table::
-  :header: name,wave,col_dens,v_dop,delta_v,delta_lambda,ew,dv90,fwhm,redshift
+To extract absorbers from multiple ``lightrays`` you can use the
+:class:`~salsa.SPICEAbsorberExtractor.get_all_absorbers` function. 
+This will loop through a list of rays and
+extract absorbers from each one:
 
-  HI1216,1215.670,15.154,31.705,-5.915,0.000,7.759,40.000,0.217,0.000
-
-Notice that both of these methods contain different information. SPICE includes
-more details of the simulation data like the density and temperature of the
-absorber, something that is not easily detected from the spectra. Spectacle
-contains more information of the line like the equivalent width and the doppler
-b parameter.
-
-To extract absorbers from multiple ``LightRays`` you can use the
-:class:`~salsa.get_absorbers` function. This will loop through a list of rays and
-extract absorbers from each one. see:::
+.. code-block::python
 
   ray_list = [f"{ray_dir}/ray0.h5",
               f"{ray_dir}/ray1.h5",
@@ -132,27 +123,25 @@ extract absorbers from each one. see:::
               f"{ray_dir}/ray3.h5"]
 
   # initialize a new AbsorberExtractor for looking at C IV
-  abs_ext_civ = salsa.AbsorberExtractor(ds, ray_file, ion_name='C IV')
-  df_civ = salsa.get_absorbers(abs_ext_civ, ray_list, method='spice',
-                         fields=other_fields, units_dict=units_dict)
+  abs_ext_civ = salsa.SPICEAbsorberExtractor(ds, ion_name='C IV')
+  table = abs_ext_civ.get_all_absorbers(ray_list)
+  print(table)
 
-  df_civ.head()
+::
 
-.. csv-table::
-  :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity,lightray_index
+  name   wave   redshift      col_dens            delta_v         vel_dispersion   interval_start interval_end lightray_index
+      Angstrom               1 / cm2              km / s             km / s                                                 
+  ---- -------- -------- ------------------ ------------------- ------------------ -------------- ------------ --------------
+  C IV 1548.187      0.0 113534735506095.75 -2.2526205975043787 13.699041596403035            201          224              0
+  C IV 1548.187      0.0  39385046049917.84  116.44013343087262  6.581810678140516            110          125              2
+  C IV 1548.187      0.0  42223273159161.47  115.32578395061917  3.072995936488675            139          155              2
 
-  C IV,1548.187,0.000,14.057,-2.221,13.672,201,224,0.000,53985.906,1.103,0
-  C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2
-  C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2
-
-Notice that the Spectacle method could also be used. Also, although the
-AbsorberExtractor takes a ray file at construction, new rays can be loaded into
-it.
-
-To retain information on where each absorber came from, an ``lightray_index`` is
+To retain information on where each absorber came from, a ``lightray_index`` is
 given. The number represents the ray it was extracted from. So all absorbers
 extracted from ray2.h5 would have an index of ``2``. This can be useful for
-comparing/analyzing absorbers on the same sightline.
+comparing/analyzing absorbers on the same sightline. Note that in this example,
+we did not request any extra fields be extracted.
+
 
 .. _catalog-generation-example:
 

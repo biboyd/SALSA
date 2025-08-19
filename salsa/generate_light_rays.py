@@ -14,8 +14,12 @@ from scipy.spatial.transform import Rotation
 from unyt.array import unyt_quantity
 from astropy.units.quantity import Quantity
 
-def random_sightlines(ds_file, center, num_sightlines, 
-                      max_impact_param, min_impact_param=0, length=200):
+def random_sightlines(ds_file,
+                      center,
+                      num_sightlines, 
+                      max_impact_param,
+                      min_impact_param=0,
+                      length=200):
     """
     randomly sample impact parameter to get random sightlines from a given galaxy center
 

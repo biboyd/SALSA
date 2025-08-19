@@ -99,7 +99,7 @@ def generate_catalog(ds_file, n_rays,
         Default: {}
 
     units_dict: dict, optional
-        dictionary of units to use for the fields when extracting properties
+        dictionary of astropy units to use for the fields when extracting properties
         (only relevant for 'spice' method)
         Default: None
 

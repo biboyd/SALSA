@@ -1,7 +1,7 @@
 version: 2
 
 conda:
-  environment: docs/rtd_environment.yml
+  environment: environment.yml
 python:
    install:
       - method: setuptools

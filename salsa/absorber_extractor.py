@@ -303,7 +303,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             Defalut: []
 
         units_dict : dict, optional
-            dictionary of fields and corresponding units to use for each field.
+            dictionary of fields and corresponding astropy units to use for each field.
             Default: {}
 
         Returns
@@ -349,9 +349,10 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             if f in units_dict.keys():
                 fld_u = units_dict[f]
             else:
-                fld_u = self.data[f].units  # querying the dataset directly maybe isn't great
+                fld_u = str(self.data[f].units)  # querying the dataset directly maybe isn't great
             name_type.append( (f, np.float64) )
-            name_units[f] = fld_u
+            if fld_u != "dimensionless":
+                name_units[f] = fld_u
 
         #check if any absorbrs were found
         n_abs = len(self.features)
@@ -629,7 +630,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             Defalut: []
 
         units_dict : dict, optional
-            dictionary of fields and corresponding units to use for each field.
+            dictionary of fields and corresponding astropy units to use for each field.
             Default: {}
 
         Returns

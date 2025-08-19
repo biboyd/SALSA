@@ -6,3 +6,5 @@ tests/data/*
 yt.toml
 
 .vscode
+
+docs/source/api
