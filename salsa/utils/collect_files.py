@@ -41,12 +41,12 @@ def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
     files=[]
     for f in all_files:
         #check has file extension and not black listed
-        if file_ext in f and check_file(f, key_words, black_list):
+        if file_ext in f and _check_file(f, key_words, black_list):
             files.append(f)
 
     return files
 
-def check_file(file, key_words, black_list):
+def _check_file(file, key_words, black_list):
     """
     Check the file against a black list as well as check if it has keywords in
     it.
@@ -155,29 +155,3 @@ def get_ray_num(file_path):
     filename = file_path.split('/')[-1]
     num = filename[3:-3]
     return int(num)
-
-def combine_astropy_files(directory, kw='ice', outfile=None):
-
-    #get files
-    files = collect_files(directory, key_words=['ray', kw])
-
-    tables = []
-    # open up tables
-    for f in files:
-        tables.append(QTable.read(f"{directory}/{f}"))
-
-    if len(tables) >0:
-        #combine tables
-        main_table = vstack(tables)
-
-        #write table
-        if outfile is not None:
-            main_table.write(outfile, overwrite=True)
-    else:
-        out_err = outfile.split('.')[0] + ".out"
-        #write out dummy
-        f= open(out_err, 'w')
-        f.write(f"No files found in {directory} using key_words= ['ray', {kw}]")
-        f.close()
-        main_table = None
-    return main_table

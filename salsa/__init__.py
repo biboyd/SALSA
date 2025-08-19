@@ -1,10 +1,7 @@
 """
-salsa
-Written by: Brendan Boyd boydbre1@msu.edu
-
+Synthetic Absorption Line Surveyor Application (SALSA) for extracting absorbers from
+sightlines in astrophysical hydrodynamics simulations.
 """
-
-__version__ = "0.1.0"
 
 from salsa.absorber_extractor import AbsorberExtractor, SPICEAbsorberExtractor
 from salsa.absorber_plotter import AbsorberPlotter

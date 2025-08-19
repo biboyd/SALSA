@@ -1,12 +1,12 @@
-default_units_dict=dict(velocity_los='km/s',
-                       x='kpc',
-                       y='kpc',
-                       z='kpc',
-                       radius='kpc',
-                       density='g/cm**3',
-                       metallicity='dimensionless',
-                       temperature='K',
-                       radial_velocity='km/s')
+default_units_dict = dict(velocity_los='km/s',
+                          x='kpc',
+                          y='kpc',
+                          z='kpc',
+                          radius='kpc',
+                          density='g/cm**3',
+                          metallicity='dimensionless',
+                          temperature='K',
+                          radial_velocity='km/s')
 
 default_limits_dict = dict(velocity_los=[-600, 600],
                            metallicity=[0, 1],

@@ -91,7 +91,7 @@ def generate_catalog(ds_file, n_rays,
         ``extractor_kwargs={'absorber_min':13.5}``
 
         The first will set different absober mins for each ion, with O VI taking
-        default as specified by ``salsa.utils.defaults.default_cloud_dict``. The
+        default as specified by ``salsa.utils.default_cloud_dict``. The
         second example will set the minimum absorber as 13.5 for every ion.
         **NOTE** you cannot mix the two formats. If one ion is specified then
         all ions must be specified (see 'O VI' included even though it's dictionary is empty)
