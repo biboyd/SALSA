@@ -44,9 +44,9 @@ def random_sightlines(ds_file,
         Default: 0.
 
     length : float, optional
-         length of the sightline. f no units are attached
+        length of the sightline. f no units are attached
         (either unyt or astropy) it is assumed to be in kpc
-         Default: 200
+        Default: 200
 
     Returns
     --------
