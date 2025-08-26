@@ -6,13 +6,18 @@
 Welcome to SALSA's documentation!
 =================================
 
-SALSA is an open-source Python module that creates a streamlined process to
+The Synthetic Absorption Line Surveyor Application (SALSA)
+is an open-source Python module that creates a streamlined process to
 generate synthetic absorber catalogs from galactic simulations. Multiple open-source software
 projects utilized to achieve this: 
-accessing simulation data is done using `yt <https://yt-project.org/>`_,
-while `Trident <https://trident-project.org/>`_ is used to generate synthetic 
+accessing simulation data is done using `yt`_,
+while `Trident`_ is used to generate synthetic 
 sight lines/light rays and synthetic spectra. 
-Astropy <https://www.astropy.org/>`_ ``Tables`` are used to store data about identified absorbers.
+`Astropy`_ ``QTables`` are used to store data about identified absorbers.
+
+.. _yt: https://yt-project.org/
+.. _Trident: https://trident-project.org/
+.. _Astropy: https://www.astropy.org/
 
 Observational studies generate large absorber catalogs by studying the absorption
 line spectra of distant quasars.
@@ -24,17 +29,19 @@ can give new insights into the data as well as help facilitate comparisons and
 collaboration between simulations and observations
 
 SALSA includes a novel method for extracting absorbers, the SPICE method. This uses
-cell-level data to extract absorbers from a Trident ``lightray`` and returns a great
+cell-level data to extract absorbers from a Trident ``LightRay`` and returns a great
 deal of information that can be further analyzed.
 
 .. toctree::
    :maxdepth: 2
 
-   installation.rst
-   annotated_example.rst
-   absorber_extraction.rst
-   reference.rst
-   changelog.rst
+   installation
+   annotated_example
+   absorber_extraction
+   parallelism
+   lightray_solution
+   reference
+   changelog
 
 Index
 ==================

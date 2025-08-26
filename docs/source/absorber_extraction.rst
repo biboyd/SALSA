@@ -1,9 +1,9 @@
 .. _absorber-extraction:
 
-Absorber Extraction
-====================
+Absorber Extraction Methods
+===========================
 
-The main purpose of SALSA is to extract absorbers from Trident ``lightrays``. Doing this
+The main purpose of SALSA is to extract absorbers from Trident ``LightRays``. Doing this
 allows us to create synthetic absorption line catalogs/surveys in an analogous
 fashion as real observational surveys. As of version ???, the only supported
 extraction method is the SPICE method, which looks directly at cell level data
@@ -13,7 +13,7 @@ of the simulation. The SPICE algorithm is described in detail below.
 
 SPICE Method
 -------------
-The SPICE (Simple Procedure for Iterative Cloud Extraction) method looks at a Trident ``lightray`` and
+The SPICE (Simple Procedure for Iterative Cloud Extraction) method looks at a Trident ``LightRay`` and
 attempts to extract "absorbers" by identifying contiguous groups of cells along
 the ray that will contribute to observable features in the absorption spectra.
 
@@ -28,7 +28,7 @@ Quick rundown of SPICE method:
 
   2.) Define intervals that encompass the cells which meet this cutoff.
 
-  3.) Mask the intervals along the ``lightray`` that  were found in the previous step
+  3.) Mask the intervals along the ``LightRay`` that  were found in the previous step
 
   4.) Repeat same step as (1.). Find the 80% cutoff based on the column density
   *left over*.
@@ -41,7 +41,7 @@ Quick rundown of SPICE method:
   :class:`~salsa.AbsorberExtractor.velocity_res` parameter. Default is 10 km/s)
 
   7.) Now repeat process starting at step 3 until the total column density that
-  is *left over* in the ``lightray`` (ie not in an interval) is less than some
+  is *left over* in the ``LightRay`` (ie not in an interval) is less than some
   the lowest detectable column density (set by :class:`~salsa.AbsorberExtractor.min_absorber`
   parameter. Default is Log(N)=13, though it can vary based on ion)
 
@@ -49,31 +49,20 @@ Quick rundown of SPICE method:
   threshold. We return only the intervals that are above the threshold and define
   these to be our absorbers.
 
-.. _spectacle-method:
-
-Spectacle
-----------
-
-This method utilizes trident's feature of creating synthetic spectra from a
-light ray object as well as spectacle's ability to fit lines to these spectra.
-For more details about how Spectacle works and specifically how it runs fits see
-`Spectacle: Line Finding
-<https://spectacle-py.readthedocs.io/en/latest/line_finding.html>`_ and
-`Spectacle: Fitting <https://spectacle-py.readthedocs.io/en/latest/fitting.html>`_
 
 .. _detailed-spice-method:
 
-Detailed SPICE Example
------------------------------
+Detailed Example
+^^^^^^^^^^^^^^^^
 
 If you want a better understanding of how the SPICE method works, here is a real
 life example. We break down each step of the method so you can see the under
 workings and see how some of the parameters may impact the algorithm.
 
-Here is our ``lightray``, looking at the number density of O VI along its
-length. Our goal is to find regions/intervals of cells along the ``lightray``
+Here is our ``LightRay``, looking at the number density of O VI along its
+length. Our goal is to find regions/intervals of cells along the ``LightRay``
 with the highest column density and thus will meaningfully contribute to the
-absorption spectra of the ``lightray``.
+absorption spectra of the ``LightRay``.
 
 .. image:: /_static/annotated_schematic/01-ray.png
 
@@ -98,8 +87,8 @@ ones that we could spot pretty easily from just eye balling it.
 .. image:: _static/annotated_schematic/03-intervals.png
 
 Now we mask the intervals we found witht he first cutoff and check there is
-enough column density remaining in the ``lightray``. We find there is LogN=13.3
-remaining in the ``lightray``. We use a threshold for LogN=13 in this example so we
+enough column density remaining in the ``LightRay``. We find there is LogN=13.3
+remaining in the ``LightRay``. We use a threshold for LogN=13 in this example so we
 continue to iterating through.
 
 .. note::
@@ -109,7 +98,7 @@ continue to iterating through.
 
 .. image:: _static/annotated_schematic/04-mask.png
 
-Here we define a new cut based on what is "left over" of the ``lightray``. This
+Here we define a new cut based on what is "left over" of the ``LightRay``. This
 isolates some new regions that were at a lower column density but could still
 significantly contribute to the spectra, and so something we want to extract.
 

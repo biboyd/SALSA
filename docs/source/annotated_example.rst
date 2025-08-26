@@ -1,43 +1,56 @@
-lightray_index.. _annotated-example:
+.. _annotated-examples:
 
-Annotated Example
+Annotated Examples
 ==================
 
-To understand how salsa works and what it can do, here is an annotated example
-to walk through a use case of salsa.
+One of the main goals of SALSA is to make it easy to construct a catalog of
+absorbers that can then be further analyzed. This process is broken into two steps,
+as demonstrated in the :ref:`finding-absorbers-example` example. SALSA also provides tools
+for combining these steps into one as shown in the :ref:`catalog-generation-example` example.
 
-.. _extract-absorbers-example:
+.. contents:: Examples
+    :depth: 2
+    :local:
 
-Extracting Absorbers
+.. _finding-absorbers-example:
+
+Identifying Absorbers
 ---------------------
 
-One of the main goals of salsa is to make it easy to construct a catalog of
-absorbers that can then be further analyzed. The process of constructing absorbers
-takes two steps.
+Finding absorbers along lines of sight requires two steps: 
+:ref:`generating light rays<generating_light_rays>` and
+:ref:`extracting absorbers<extracting-absorbers>`. These two steps can be completed
+one after the other as shown in the following examples.
+
+.. _generating_light_rays:
 
 Step 1: Generate Light Rays
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-trident is used to generate light rays that pass through your simulation. These
+SALSA relies on the `Trident`_ package
+to generate light rays that pass through a given simulation domain. These ``LightRays``
 are 1-Dimensional objects that connect a series of cells and save field information
-contained in those cells, ie density, temperature, line of sight velocity.
-From these we can then extract absorbers along these light rays. (for further
-information see `trident's documentation <https://trident.readthedocs.io/>`_)
+contained in those cells such as density, temperature, and line of sight velocity.
+From these we can then extract absorbers along these ``LightRays``.
 
-To aid in generating these light rays, salsa contains the
-:class:`~salsa.generate_lrays` function which can generate any number of lightrays
-which uniformly, randomly sample impact parameters. This gives us a sample that
-is consistent with what the sample of observational studies. This prevents any
+.. _Trident:  https://trident-project.org/
+
+To aid in generating light rays, SALSA contains the
+:class:`~salsa.generate_lrays` function which can generate any number of ``LightRays``
+which uniformly sample a given range of impact parameters. This can give us a sample that
+is consistent with the samples of observational studies and prevents any
 sampling bias when doing comparisons.
 
 To get started we need to get a dataset. The one used in this example can be
-found `here <https://yt-project.org/data/>`_
+downloaded from `yt`_.
+
+.. _yt: https://yt-project.org/data/
 
 To use this function first create a directory to save rays:::
 
   $ mkdir my_rays
 
-Now we can load in a data set and define some of the parameters that we will
+Now we can load in a dataset and define some of the parameters that we will
 look for:
 
 .. code-block:: python
@@ -52,7 +65,7 @@ look for:
   # define the center of the galaxy
   center = [0.53, 0.53, 0.53]
 
-  # the directory where lightrays will be saved
+  # the directory where LightRays will be saved
   ray_dir = 'my_rays'
   n_rays = 4
 
@@ -60,16 +73,18 @@ look for:
   # field data to save
   ion_list = ['H I', 'C IV']
   other_fields = ['density', 'temperature', 'metallicity']
+  units_dict = dict(density='g/cm**3', temperature='K')
 
-  # the maximum distance a lightray will be created (minimum default to 0)
+  # the maximum distance a LightRay will be created (minimum default to 0)
   max_impact = ds.quan(15, 'kpc')
 
-With the parameters set up we can now generate the ``lightrays``. We will set the
-seed used to create the random light rays so we can reproduce these results:
+With the parameters set up we can now generate the ``LightRays``. We will set the
+NumPy seed used to create the random light rays so we can reproduce these results:
 
 .. code-block:: python
 
   # set a seed so the function produces the same random rays
+  # SALSA uses numpy.random internally
   import numpy as np
   np.random.seed(18)
 
@@ -78,6 +93,7 @@ seed used to create the random light rays so we can reproduce these results:
                        ion_list=ion_list, fields=other_fields, 
                        ray_directory=ray_dir)
 
+.. _extracting-absorbers:
 
 Step 2: Extract Absorbers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -96,8 +112,7 @@ Now let's extract some absorbers from one of the light rays we made:
   abs_ext = salsa.SPICEAbsorberExtractor(ds, ion_name='H I')
   abs_ext.load_ray(ray_file)
 
-  # use SPICE method to extract absorbers into a pandas DataFrame
-  units_dict = dict(density='g/cm**3', temperature='K')
+  # use SPICE method to extract absorbers into an Astropy QTable
   table = abs_ext.get_current_absorbers(other_fields, units_dict=units_dict)
   print(table)
 
@@ -110,12 +125,12 @@ Now let's extract some absorbers from one of the light rays we made:
    H I  1215.67      0.0 2505355090554556.5 ...   9.49051901355937e-28 50877.73530956685  0.01429726085432313
    H I  1215.67      0.0  9408651484697.451 ... 1.6823168463953486e-28 94252.62895133752 0.014273053208746916
 
-To extract absorbers from multiple ``lightrays`` you can use the
+To extract absorbers from multiple ``LightRays`` you can use the
 :class:`~salsa.SPICEAbsorberExtractor.get_all_absorbers` function. 
 This will loop through a list of rays and
 extract absorbers from each one:
 
-.. code-block::python
+.. code-block:: python
 
   ray_list = [f"{ray_dir}/ray0.h5",
               f"{ray_dir}/ray1.h5",
@@ -129,16 +144,16 @@ extract absorbers from each one:
 
 ::
 
-  name   wave   redshift      col_dens            delta_v         vel_dispersion   interval_start interval_end lightray_index
+  name   wave   redshift      col_dens            delta_v         vel_dispersion   interval_start interval_end LightRay_index
       Angstrom               1 / cm2              km / s             km / s                                                 
   ---- -------- -------- ------------------ ------------------- ------------------ -------------- ------------ --------------
   C IV 1548.187      0.0 113534735506095.75 -2.2526205975043787 13.699041596403035            201          224              0
   C IV 1548.187      0.0  39385046049917.84  116.44013343087262  6.581810678140516            110          125              2
   C IV 1548.187      0.0  42223273159161.47  115.32578395061917  3.072995936488675            139          155              2
 
-To retain information on where each absorber came from, a ``lightray_index`` is
+To retain information on where each absorber came from, a ``LightRay_index`` is
 given. The number represents the ray it was extracted from. So all absorbers
-extracted from ray2.h5 would have an index of ``2``. This can be useful for
+extracted from ``ray2.h5`` would have an index of ``2``. This can be useful for
 comparing/analyzing absorbers on the same sightline. Note that in this example,
 we did not request any extra fields be extracted.
 
@@ -147,34 +162,41 @@ we did not request any extra fields be extracted.
 
 Catalog Generation
 -------------------
+
 To generate a full catalog of absorbers we can use the
-:class:`~salsa.generate_catalog` function to both generate a sample of
-``trident.LightRay`` objects and then :class:`~salsa.AbsorberExtractor` to extract
-absorbers of a list of ions.
+:class:`~salsa.generate_catalog` function combine ``LightRay`` generation and
+absorber extraction into a single step:
 
-Here is what you need to setup and run:::
+.. code-block:: python
 
-  df_catalog = salsa.generate_catalog(ds, n_rays, ray_dir, ion_list,
-                                      fields=other_fields, center=center,
-                                      impact_param_lims=(0, max_impact),
-                                      method='spice', units_dict=units_dict)
+  # Setup a fresh run
+  np.random.seed(18)
+  new_ray_dir = 'my_rays/catalog_rays'
 
-  df_catalog.head()
+  catalog = salsa.generate_catalog(ds, n_rays, new_ray_dir, ion_list, method='spice',
+                                   center=center, impact_param_lims=(0, max_impact),
+                                   fields=other_fields, units_dict=units_dict)
 
-.. csv-table::
-  :header: name,wave,redshift,col_dens,delta_v,vel_dispersion,interval_start,interval_end,density,temperature,metallicity,absorber_index
+  print(catalog)
 
-  H I,1215.670,0.000,18.678,108.065,1.509,107,156,0.000,16302.538,1.096,2
-  H I,1215.670,0.000,12.787,14.187,0.384,201,204,0.000,96469.462,1.086,0
-  H I,1215.670,0.000,15.367,-0.264,4.846,204,216,0.000,48429.090,1.103,0
-  C IV,1548.187,0.000,13.596,116.462,6.576,110,125,0.000,29972.846,1.107,2
-  C IV,1548.187,0.000,13.625,115.329,3.075,139,155,0.000,34632.022,1.101,2
-  C IV,1548.187,0.000,14.057,-2.221,13.672,201,224,0.000,53985.906,1.103,0
+::
 
-This function looks first to see if rays have been created in the given directory.
+  name   wave   redshift        col_dens             delta_v          vel_dispersion   ... interval_end        density            temperature         metallicity      lightray_index
+       Angstrom                 1 / cm2               km / s              km / s       ...                     g / cm3                 K                                             
+  ---- -------- -------- --------------------- ------------------- ------------------- ... ------------ ---------------------- ------------------ -------------------- --------------
+   H I  1215.67      0.0     6116814645533.102  14.186900060851054 0.38448653831790686 ...          204 1.6863708884078385e-28  96469.46167662967 0.014059433622242793              0
+   H I  1215.67      0.0    2505355090554556.5  -1.030940550779623  5.6651802667616105 ...          222   9.49051901355937e-28  50877.73530956685  0.01429726085432313              0
+   H I  1215.67      0.0     9408651484697.451 -26.728157177393342    5.20649247388288 ...          226 1.6823168463953486e-28  94252.62895133752 0.014273053208746916              0
+   H I  1215.67      0.0 4.768813058817296e+18  108.06531773144404  1.5094660329566112 ...          156 1.4855073194776734e-26 16302.538383554222  0.01419281650535469              2
+  C IV 1548.187      0.0    113534735506095.75 -2.2526205975043787  13.699041596403035 ...          224  8.916084054641148e-28  53985.90647005775 0.014287622611506724              0
+  C IV 1548.187      0.0     39385046049917.84  116.44013343087262   6.581810678140516 ...          125 3.9893530708657154e-27  29972.84586437622 0.014338369933268647              2
+  C IV 1548.187      0.0     42223273159161.47  115.32578395061917   3.072995936488675 ...          155  3.326550307789238e-27  34632.02222613203 0.014263515932284202              2
+
+Note that we make a new directory for this example. That's because
+:class:`~salsa.generate_catalog` looks first to see if rays have been created in the given directory.
 If there are the right number of rays and they all contain the right ions and
-other fields that were specified (in this case that would be 'density',
-'temperature', 'radius'), then those rays will be used. Otherwise, new rays are
+other fields that were specified (in this case that would be ``'density'``,
+``'temperature'``, ``'metallicity'``), then those rays will be used. Otherwise, new rays are
 created using :class:`~salsa.generate_lrays`.
 
 Next, :class:`~salsa.get_absorbers` is used to find the absorbers from each ion
@@ -186,42 +208,43 @@ that the lighray index is unique only up to the ion/wavelength
 
 Visualizing Absorbers
 ---------------------
-To visualize what is actually be extracted from the ``LightRay`` objects and
-synthetic spectra, you can use the :class:`~salsa.AbsorberPlotter` class. This
-is built off of the :class:`~salsa.AbsorberExtractor` with added functionality
-to make plots.
+To visualize what is actually being extracted from the ``LightRay`` objects,
+you can use the :class:`~salsa.AbsorberPlotter` class. This class accepts an
+:class:`~salsa.AbsorberExtractor` object to have access to the extracted absorbers.
 
 To get a full picture of what is happening at each level we can create a
 multi panel plot containing:
 
-    1. a slice of the simulation with the ray annotated
+    1. A slice of the simulation with the ray annotated
     2. The number density profile along the ray's path
     3. The line of sight velocity profile along the ray's path
     4. The synthetic spectra created from the ray
 
 This figure gives you a good overview of what is happening and can give valuable
-context to the absorption extraction methods. Additionally, each plot can be made
-individually if you care less about the spectra, or don't want to plot a slice
-(which can be time consuming, depending on the detail in the simulation).
+context to the absorption extraction methods. Additionally, each panel can be made
+individually if you care less about the spectra or don't want to plot a slice;
+see the :class:`~salsa.AbsorberPlotter` API for options.
 
-To create the multi-panel plot:::
+To create the multi-panel plot:
+
+.. code-block:: python
 
   import salsa
   import yt
   import matplotlib.pyplot as plt
 
-  # set the dataset path and load the light ray
-  ds_file="HiresIsolatedGalaxy/DD0044/DD0044"
-  ray = yt.load("my_rays/ray0.h5")
+  # Assuming we've already generated some rays, extract absorbers
+  ds = yt.load("HiresIsolatedGalaxy/DD0044/DD0044")
+  abs_ext = salsa.SPICEAbsorberExtractor(ds, ion_name='H I')
+  abs_ext.load_ray("my_rays/ray0.h5")
+  abs_ext.get_current_absorbers()
 
   # set the y limits for one of the plots
-  num_dense_min=1e-11
-  num_dense_max=1e-5
-  plotter = salsa.AbsorberPlotter(ds_file, ray, "H I",
-                                  center_gal=[0.53, 0.53, 0.53],
-                                  use_spectacle=True,
-                                  plot_spectacle=True,
-                                  plot_spice=True,
+  num_dense_min = 1e-11
+  num_dense_max = 1e-5
+
+  # Plot!
+  plotter = salsa.AbsorberPlotter(abs_ext,
                                   num_dense_max=num_dense_max,
                                   num_dense_min=num_dense_min)
 
@@ -235,7 +258,7 @@ legend. In the last plot, the solid lines indicate the "raw" spectra while the
 dotted lines show the absorption lines that Spectacle fit (only the three largest
 lines are plotted with their column densities recorded in a legend).
 
-The total column density along the lightray, the total found via the SPICE method
+The total column density along the LightRay, the total found via the SPICE method
 and the total found by Spectacle is recorded in a legend in the spectra plot.
 
 You can see there is a discrepancy between the SPICE and Spectacle method. Due to the
