@@ -35,25 +35,8 @@ class AbsorberPlotter():
         if not already present.
         Default: "gas"
 
-    slice_field : string, optional
-        Field to plot in slice plot. defaults to ion_name's number density
-
     absorber_fields : list of strings, optional
         Additional ions to include in plots/Spectra, enter as list.
-
-    north_vector : array type, optional
-        vector used to fix the orientation of the slice plot defaults to z-axis
-
-    center_gal : array type, optional
-        center of galaxy in code_length. if None, then defaults to domain_center
-
-    num_dense_min: float, optional
-        Sets the lower limit for the number density plot. If None, defaults to
-        0.01 times the median number density
-
-    num_dense_max: float, optional
-        Sets the upper limit for the number density plot. If None, defaults to
-        100 times the median number density
 
     markers :bool, optional
         whether to include markers on light ray and number density plot
@@ -82,12 +65,7 @@ class AbsorberPlotter():
                  abs_ext,
                  ion_name='H I',
                  ftype='gas',
-                 slice_field=None,
                  absorber_fields=[],
-                 north_vector=[0, 0, 1],
-                 center_gal = None,
-                 num_dense_min=None,
-                 num_dense_max=None,
                  markers=True,
                  mark_plot_args=None,
                  figure=None):
@@ -104,14 +82,6 @@ class AbsorberPlotter():
 
         #set a value for slice
         self.slice = None
-        self.north_vector = north_vector
-        self.center_gal = center_gal
-
-        #set slice field to ion name if no field is specified
-        if (slice_field is None):
-            self.slice_field = ion_p_num(self.ion_name)
-        else:
-            self.slice_field = slice_field
 
         #open up a figure if none specified
         if figure is None:
@@ -136,10 +106,6 @@ class AbsorberPlotter():
             self.marker_cmap = self.mark_kwargs.pop('marker_cmap')
             self.marker_shape = self.mark_kwargs.pop('marker_shape')
         self.mark_dist_arr = None
-
-        #optionally set min/max value for number density plot
-        self.num_dense_min = num_dense_min
-        self.num_dense_max = num_dense_max
 
     def _add_annotations(self, plot_ray=True):
         """
@@ -186,13 +152,32 @@ class AbsorberPlotter():
                                                marker=self.marker_shape,
                                                **mrk_kwargs)
 
-    def create_slice(self, plot_ray = True, cmap="magma", height=None, width=None):
+    def create_slice(self,
+                     center = None,
+                     slice_field = None,
+                     north_vector = [0, 0, 1],
+                     plot_ray = True,
+                     cmap="magma",
+                     height=None,
+                     width=None):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
 
         Parameters
         ----------
+
+        center : array type, optional
+            Center of the slice in code_length.
+            If None, then defaults to domain_center
+
+        slice_field : string, optional
+            Field to plot. Defaults to the number density for the ion
+            associated with the abs_ext attribute.
+
+        north_vector : array type, optional
+            vector used to fix the orientation of the slice plot.
+            Defaults to z-axis
 
         plot_ray : bool
             Whether to annotate ray/markers to the slice plot or to just
@@ -209,27 +194,31 @@ class AbsorberPlotter():
         slice : yt SlicePlot
             Slice with ray annotated. This SlicePlot is also saved to the `.slice` attribute.
         """
-        #print("adding ion fields")
+        #set slice field to ion name if no field is specified
+        if (slice_field is None):
+            slice_field = ion_p_num(self.ion_name)
+        else:
+            slice_field = slice_field
 
         ray_begin, ray_end, ray_length, ray_unit = self.abs_ext.ray_position_prop(units='kpc')
 
         #construct vec orthogonal to ray/plane
-        self.north_vector = self.ds.arr(self.north_vector, 'dimensionless')
-        norm_vector = np.cross(ray_unit, self.north_vector)
+        north_vector = self.ds.arr(north_vector, 'dimensionless')
+        norm_vector = np.cross(ray_unit, north_vector)
         norm_vector = norm_vector/np.linalg.norm(norm_vector)
 
         #set center to domain_center unless specified
-        if self.center_gal is None:
-            self.center_gal = self.ds.domain_center
+        if center is None:
+            center = self.ds.domain_center
         else:
-            self.center_gal = self.ds.arr(self.center_gal, 'code_length')
+            center = self.ds.arr(center, 'code_length')
 
         #adjust center so that it is in the plane of ray and north_vector
         ray_center = (ray_begin + ray_end)/2
         ray_center = ray_center.in_units('code_length')
-        center_dif = ray_center - self.center_gal
+        center_dif = ray_center - center
         scale = self.ds.quan(np.dot(center_dif, norm_vector), 'code_length')
-        center = scale*norm_vector + self.center_gal
+        center = scale*norm_vector + center
 
         #set width/height
         if width ==None and height==None:
@@ -246,9 +235,9 @@ class AbsorberPlotter():
         #Create slice along ray. keep slice pointed in north_Vec direction
         self.slice = yt.OffAxisSlicePlot(self.ds,
                           norm_vector,
-                          self.slice_field,
-                          center=center,
-                          north_vector = self.north_vector,
+                          slice_field,
+                          center = center,
+                          north_vector = north_vector,
                           width = wid_hght)
 
         #set axes to kpc
@@ -258,17 +247,17 @@ class AbsorberPlotter():
         self._add_annotations(plot_ray=plot_ray)
 
         # set color map
-        self.slice.set_cmap(field=self.slice_field, cmap = cmap)
+        self.slice.set_cmap(field=slice_field, cmap = cmap)
 
         # set background to bottom of color map
-        self.slice.set_background_color(self.slice_field)
+        self.slice.set_background_color(slice_field)
 
         return self.slice
 
     def plot_vel_space(self,
                        velocity_width = 3000,
-                       ax=None,
-                       annotate_column_density=True):
+                       ax_vel=None,
+                       **kwargs):
         """
         Use trident to plot the absorption spectrum of the ray in velocity
         space.
@@ -280,15 +269,10 @@ class AbsorberPlotter():
         velocity_width : float, optional
             sets the velocity range of spectrum plot in units of km/s
 
-        ax : matplotlib axis object, optional
+        ax_vel : matplotlib axis object, optional
             an axis in which to draw the velocity plot. If None, no plot is
             not drawn.
             Default: None
-
-        annotate_column_density : bool, optional
-            if True, add a textbox reporting the calculated col densities
-            by each method to the plot. Only used if `ax` is not None.
-            Default: True
 
         Returns
         ----------
@@ -318,23 +302,24 @@ class AbsorberPlotter():
         flux = spect_gen.flux_field
         velocity = spect_gen.lambda_field.in_units('km/s')
 
-        if ax is not None:
+        if ax_vel is not None:
             #plot values for velocity plot
-            ax.plot(velocity[:-1], flux[:-1])
-            ax.set_ylim(0, 1.05)
-            ax.set_xlim(vel_min, vel_max)
-            ax.xaxis.set_minor_locator(AutoMinorLocator(2))
-            ax.set_title(f"Rel. to line {self.abs_ext.wavelength_center:.1f}"+r"$\AA$", loc='right')
-            ax.set_xlabel("Delta_v (km/s)")
-            ax.set_ylabel("Flux")
-            ax.grid(zorder=0, which='both')
+            ax_vel.plot(velocity[:-1], flux[:-1])
+            ax_vel.set_ylim(0, 1.05)
+            ax_vel.set_xlim(vel_min, vel_max)
+            ax_vel.xaxis.set_minor_locator(AutoMinorLocator(2))
+            ax_vel.set_title(f"Rel. to line {self.abs_ext.wavelength_center:.1f}"+r"$\AA$", loc='right')
+            ax_vel.set_xlabel("Delta_v (km/s)")
+            ax_vel.set_ylabel("Flux")
+            ax_vel.grid(zorder=0, which='both')
 
         return velocity, flux
 
     def plot_lambda_space(self, 
                           wavelength_width = 30,
                           wavelength_res = 0.1,
-                          ax=None):
+                          ax=None,
+                          **kwargs):
         """
         Use trident to plot the absorption spectrum of the ray. Plot in
         wavelegnth (lambda) space.
@@ -391,12 +376,15 @@ class AbsorberPlotter():
         return wavelength, flux
 
     def plot_num_density(self, 
-                         ax_num_dense, 
+                         ax_num_dense,
+                         num_dense_min=None,
+                         num_dense_max=None,
                          ax_prop2=None,
                          prop2_name='velocity_los', 
                          prop2_units=None,
                          plot_spice_intervals=False,
-                         plot_kwargs={}):
+                         plot_kwargs={},
+                         **kwargs):
         """
         Plots the number density at different lengths along the ray
 
@@ -404,6 +392,14 @@ class AbsorberPlotter():
         ----------
         ax_num_dense : matplotlib axis
             axis in which to draw the number density plot
+
+        num_dense_min: float, optional
+            Sets the lower limit for the number density plot. If None, defaults to
+            0.01 times the median number density
+
+        num_dense_max: float, optional
+            Sets the upper limit for the number density plot. If None, defaults to
+            100 times the median number density
 
         ax_prop2: matplotlib axis, optional
             axis in which to draw the second field. if None, no plot is made
@@ -473,13 +469,13 @@ class AbsorberPlotter():
             ax_num_dense.grid(zorder=0)
 
             #chech if min/max num dense was called
-            if (self.num_dense_min is None and self.num_dense_max is None):
+            if (num_dense_min is None and num_dense_max is None):
                 med = np.median(num_density)
-                self.num_dense_min = med*0.01
-                self.num_dense_max = med*1000
+                num_dense_min = med*0.01
+                num_dense_max = med*1000
 
             #set axes limits
-            ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
+            ax_num_dense.set_ylim(num_dense_min, num_dense_max)
             ax_num_dense.set_xlim(xlimits[0], xlimits[1])
             #add minor tick marks
             ax_num_dense.xaxis.set_minor_locator(AutoMinorLocator(2))
@@ -492,38 +488,38 @@ class AbsorberPlotter():
 
                 #plot spice intervals
                 if self.abs_ext.num_feat > 0:
+                    data = self.abs_ext.df['col_dens']
                     for i in range(self.abs_ext.num_feat):
                         b, e = self.abs_ext.features[i]
-                        curr_lcd = self.df.loc[i, 'col_dens']
 
                         #plot interval
-                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
+                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')
 
                         #plot on 2nd prop if axis exists
                         if ax_prop2 is not None:
-                            ax_prop2.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
+                            ax_prop2.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')
 
                     #plot number of intervals found
                     box_props = dict(boxstyle='square', facecolor='white')
                     ax_num_dense.text(0.9, 0.85, f"{self.abs_ext.num_feat} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
 
                     #take three largest absorbers and sort by position
-                    max_indices = self.df['col_dens'].argsort()
-                    max_indices = max_indices[-3:].to_numpy()
+                    max_indices = data.argsort()
+                    max_indices = max_indices[-3:]
                     max_indices.sort()
 
                     #plot markers from left to right
                     colors=['black', 'magenta', 'yellow']
                     for i,c in zip(max_indices, colors):
                         b, e = self.abs_ext.features[i]
-                        lcd = self.df.loc[i, 'col_dens']
+                        lcd = np.log10(data[i].value)
                         mid_point = (l_list[b]+l_list[e])/2
 
-                        ax_num_dense.scatter(mid_point, 0.75*self.num_dense_max,
+                        ax_num_dense.scatter(mid_point, 0.75*num_dense_max,
                                              marker='v',color=c, edgecolors='black',
                                              label=f"logN={lcd:.1f}", zorder=3)
 
-                    ax_num_dense.legend(loc='lower left', bbox_to_anchor=(-0.015, 0.95))
+                    ax_num_dense.legend()
 
         #make second plot
         if ax_prop2 is not None:
@@ -559,10 +555,23 @@ class AbsorberPlotter():
             plot_markers.update(self.mark_kwargs)
             ax_prop2.scatter(self.mark_dist_arr.value, Vys,zorder=3, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **plot_markers)
 
-    def plot_multiplot(self, outfname=None, markers=True, cmap="magma"):
+    def plot_multiplot(self,
+                       outfname=None,
+                       center = None,
+                       slice_field = None,
+                       north_vector = [0, 0, 1],
+                       cmap="magma",
+                       markers=True,
+                       plot_spice_intervals=True,
+                       annotate_column_density=True, 
+                       velocity_width = 3000,
+                       **kwargs):
         """
-        combines the slice plot, number density plot, and spectrum plot into
+        Combines the slice plot, number density plot, and spectrum plot into
         one image and saves it to disk.
+
+        Can supply any optional keyword arguments supported by plot_num_density
+        and plot_vel_space.
 
         Parameters
         -----------
@@ -570,13 +579,36 @@ class AbsorberPlotter():
             the file name/path in which to save the file defaults to being unsaved.
             Default: None
 
-        markers: bool, optional
-            adds markers to slice plot and number density to aid analysis between those plots.
-            Default: True
+        gal_center : array type, optional
+            Center of the slice in code_length.
+            If None, then defaults to domain_center
+
+        slice_field : string, optional
+            Field to plot. Defaults to the number density for the ion
+            associated with the abs_ext attribute.
+
+        north_vector : array type, optional
+            vector used to fix the orientation of the slice plot.
+            Defaults to z-axis
 
         cmap:  Colormap, optional
             the color map to use for the slice plot.
             Default: magma
+
+        markers: bool, optional
+            adds markers to slice plot and number density to aid analysis between those plots.
+            Default: True
+
+        plot_spice_intervals: bool, optional
+            whether or not to shade the absorber intervals found by SPICE in the
+            number density plot
+
+        annotate_column_density: bool, optional
+            whether or not to annotate the column densities of absorbers in the
+            spectrum plot
+
+        velocity_width: float, optional
+            velocity range of the spectrum plot in km/s
 
         Returns
         ---------
@@ -585,10 +617,17 @@ class AbsorberPlotter():
         axes : matplotlib axes
             axes the three lower plots are drawn on
         """
+        if (slice_field is None):
+            slice_field = ion_p_num(self.ion_name)
+        else:
+            slice_field = slice_field
 
         if (self.slice == None):
             #create the slicePlot using the field of the ion density
-            self.create_slice(cmap = cmap)
+            self.create_slice(center = center,
+                              slice_field = slice_field,
+                              north_vector = north_vector,
+                              cmap = cmap)
 
         grid = AxesGrid(self.fig, (0.,0.,0.5,0.5),
                         nrows_ncols = (1, 1),
@@ -601,7 +640,7 @@ class AbsorberPlotter():
                         cbar_pad="0%")
 
         #redraw slice plot onto figure
-        plot = self.slice.plots[self.slice_field]
+        plot = self.slice.plots[slice_field]
         plot.figure = self.fig
         plot.axes = grid[0].axes
         plot.cax = grid.cbar_axes[0]
@@ -613,8 +652,14 @@ class AbsorberPlotter():
         ax2 = self.fig.add_subplot(412)
         ax3 = self.fig.add_subplot(413)
 
-        self.plot_num_density(ax1, ax_prop2=ax2)
-        self.plot_vel_space(ax=ax3)
+        self.plot_num_density(ax1,
+                              ax_prop2=ax2,
+                              plot_spice_intervals=plot_spice_intervals,
+                              **kwargs)
+        self.plot_vel_space(ax_vel=ax3,
+                            velocity_width=velocity_width,
+                            annotate_column_density=annotate_column_density,
+                            **kwargs)
 
         axes= [ax1, ax2, ax3]
         #setup positioning for the plots underneath

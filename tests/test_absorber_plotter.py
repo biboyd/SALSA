@@ -88,19 +88,3 @@ def test_AbsorberPlotter_plot_multiplot(extractor, tempdir):
     img_path = tempdir/"test_multiplot.png"
     pltr.plot_multiplot(outfname = img_path)
     assert exists(img_path)
-
-if __name__ == "__main__":
-    np.random.seed(567)
-
-    ds = yt.load_sample("IsolatedGalaxy")
-    salsa.generate_lrays(ds,
-                         center=[0.5, 0.5, 0.5],
-                         ion_list=["H I"],
-                         n_rays=1,
-                         min_impact_param=0,
-                         max_impact_param=50)
-    
-    absext = salsa.SPICEAbsorberExtractor(ds)
-    absext.load_ray("ray0.h5")
-    absext.get_current_absorbers()
-    test_AbsorberPlotter_plot_multiplot(absext, "./")

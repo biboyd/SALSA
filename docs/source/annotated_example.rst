@@ -244,11 +244,12 @@ To create the multi-panel plot:
   num_dense_max = 1e-5
 
   # Plot!
-  plotter = salsa.AbsorberPlotter(abs_ext,
-                                  num_dense_max=num_dense_max,
-                                  num_dense_min=num_dense_min)
+  plotter = salsa.AbsorberPlotter(abs_ext)
 
-  fig, axes = plotter.create_multi_plot(outfname='example_multiplot.png')
+  fig, axes = plotter.plot_multiplot(outfname='example_multiplot.png',
+                                    center = [0.53, 0.53, 0.53],
+                                    num_dense_max=num_dense_max,
+                                    num_dense_min=num_dense_min)
 
 .. image:: /_static/example_multiplot.png
 
