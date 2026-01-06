@@ -14,7 +14,7 @@ dependencies:
     - pytest
     - scipy
     - sphinx
-    - sphinx_automodapi
+    - sphinx-automodapi
     - sphinx_rtd_theme
     - yt
     - pip:
