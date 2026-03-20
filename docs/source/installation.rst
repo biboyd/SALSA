@@ -100,9 +100,7 @@ and then run the following: ::
 Now you should be able to painlessly install SALSA as described above!
 
 .. note::
-  This installs mpi4py using conda. This may cause problems if you already have
-  an MPI Library already installed because conda will try to install one itself.
-  If you already have an MPI library it is best to use pip; see
+  This installs mpi4py using pip. This is useful if you already have an MPI library installed; see
   :ref:`install-mpi4py` for more details.
 
 .. _manual_install:
@@ -162,9 +160,8 @@ for large numbers of light rays.
 
 .. _mpi4py: https://mpi4py.readthedocs.io/en/stable/index.html
 
-mpi4py can be installed either using pip or conda. If you want to pip install
-mpi4py, you need to have an MPI library already installed, like
-`OpenMPI`_ . Otherwise just: ::
+mpi4py can be installed either using pip or conda. It's useful to install with pip
+if you already have an MPI library installed, such as `OpenMPI`_ : ::
 
   $ pip install mpi4py
 
