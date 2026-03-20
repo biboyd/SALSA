@@ -49,8 +49,11 @@ installed, you can clone the repository and run these commands:
 Now you should be all set to code!
 
 ### Installing dependencies
-To help with installing dependencies, `enivronment.yml` is included in the
-repository. First,
+To help with installing dependencies, both `environment-minimal.yml` and `environment.yml`
+files are included in the repository. The `environment.yml` contains additional packages necessary
+for developing SALSA and [building the documentation](#building-the-documentation) locally.
+
+First,
 [install conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 Then you should be able to create a conda environment via:
 ```
@@ -69,14 +72,24 @@ may take some time to load as it generally has to build the repository).
 
 If you want to explore on your own, the easiest way to get started is use
 `salsa.generate_catalog()`. This takes:
-  * The simulation dataset
+  * The simulation dataset (either as a path or an object loaded by yt)
   * Number of light rays/sightlines to make
   * Directory to save those light rays
   * A list of ions
   * Some other optional parameters.  
-This creates a number light rays and then extracts absorbers for each ion. A
-`pandas.DataFrame` is returned with information about all the absorbers which
+This creates a number light rays and then extracts absorbers for each ion. An
+Astropy [`QTable`](https://docs.astropy.org/en/stable/table/) is returned with information about all the absorbers which
 can then be further analyzed.
+
+### Building the Documentation
+If you created your environment from the supplied `environment.yml` file or installed SALSA with
+`pip install astro-salsa[dev]`, you'll be able to build the documentation locally:
+```
+  $ cd docs
+  $ make html  # or latexpdf if you prefer
+```
+
+This will create a `docs/build/` folder that contains the documentation.
 
 ## Contributing Guidelines
 All contributions are welcome! This is an open-source project, built on many
@@ -85,4 +98,4 @@ contributing code, testing and experimenting, or offering ideas for different
 features.
 
 If you are interested in contributing you can contact us directly at
-boyd.brendan@stonybrook.edu or add an issue on this Github page.
+kopenhaf@msu.edu or add an issue on this Github page.

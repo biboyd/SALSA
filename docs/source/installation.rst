@@ -6,23 +6,30 @@ Installation
 Installing SALSA
 ^^^^^^^^^^^^^^^^^
 
-SALSA is built off of quite a few different packages so it is best to install
-these before installing SALSA. Go to :ref:`dependencies-install` for more details
+SALSA is built off of quite a few different packages and some of these are
+best to install before installing SALSA. Go to :ref:`dependencies-install` for more details
 on how best to do this.
 
 Stable Version
 --------------
 
-If you have the dependencies already installed then you can use pip to install
-the package: ::
+If you have the (minimal) dependencies already installed then you can use pip to install
+SALSA: ::
 
   $ pip install astro-salsa
+
+.. note::
+  To install some of the dependencies, the GCC compiler needs to be installed.
+  This is not a problem for most machines but can raise an error for some.
 
 Development Version
 -------------------
 
-For the latest development version follow these instructions if you have the
-dependencies already installed. Next you need to clone the `SALSA repository`_ 
+For the latest development version, follow these instructions if you have the
+dependencies already installed. The easiest way to get all of the additional development
+dependencies is to use the ``environment.yml`` file as detailed in the :ref:`conda-install` section.
+
+With the dependencies installed, you next need to clone the `SALSA repository`_ 
 then enter the main directory and use pip to
 install the package: ::
 
@@ -33,13 +40,8 @@ install the package: ::
 .. _SALSA repository: https://github.com/biboyd/SALSA
 
 This will check that dependencies are installed and should install any that you
-might be missing. Again, since this is a somewhat complicated environment, it is
-best to install the dependencies beforehand. The ``dev`` tag will check for
+might be missing. The ``dev`` tag will check for
 the additional packages needed to develop locally (e.g., pytest, sphinx).
-
-.. note::
-  To install some of the dependencies, the GCC compiler needs to be installed.
-  This is not a problem for most machines but can raise an error for some.
 
 Running the Test Suite
 **********************
@@ -80,14 +82,17 @@ Conda Environment
 -----------------
 
 One of the easiest ways to make sure you have all the right dependencies is to
-use a conda environment. In the repository there is an ``enivronment.yml`` file
-that has all the packages necessary to run ``salsa``. To create the enivronment
+use a conda environment. In the repository there is an ``environment-minimal.yml`` file
+that has all the packages necessary to run ``salsa``. The ``environment.yml`` file
+additionally specifies the packages needed for development (e.g., pytest, sphinx). 
+
+To create the environment
 you first need to install `conda`_
 and then run the following: ::
 
   $ git clone https://github.com/biboyd/SALSA.git
   $ cd SALSA
-  $ conda env create --file environment.yml
+  $ conda env create --file environment-minimal.yml
   $ conda activate salsa-env
 
 .. _conda: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
@@ -106,7 +111,7 @@ Manually Installing Dependencies
 ---------------------------------
 
 If you have a different, preferred method for installing dependencies you are more
-than welcome to go with that route. See the ``environment.yml`` and/or ``setup.py``
+than welcome to go with that route. See the ``environment-minimal.yml`` and/or ``setup.py``
 in the `SALSA repository`_ for specifics about what
 packages you need. Below is some advice/guides to installing a couple of the
 trickier packages.
@@ -151,9 +156,9 @@ Install mpi4py
 **************
 
 `mpi4py`_ is a package that
-enables use of MPI parallelism with Python. SALSA uses this to split up LightRay
+enables use of MPI parallelism with Python. SALSA uses this to split up light ray
 creation and absorber extraction across multiple processors which becomes necessary
-for large numbers of LightRays.
+for large numbers of light rays.
 
 .. _mpi4py: https://mpi4py.readthedocs.io/en/stable/index.html
 
