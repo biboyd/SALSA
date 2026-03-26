@@ -298,7 +298,7 @@ class AbsorberPlotter():
                                               bin_space="velocity")
 
         #generate spectra and return fields
-        spect_gen.make_spectrum(self.abs_ext.data, lines=ion_list)
+        spect_gen.make_spectrum(self.abs_ext.ray_data, lines=ion_list)
         flux = spect_gen.flux_field
         velocity = spect_gen.lambda_field.in_units('km/s')
 
@@ -353,7 +353,7 @@ class AbsorberPlotter():
 
         #use wavelength_width to set the range
         spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = wavelength_res)
-        spect_gen.make_spectrum(self.abs_ext.data, lines=ion_list, observing_redshift=self.ds.current_redshift)
+        spect_gen.make_spectrum(self.abs_ext.ray_data, lines=ion_list, observing_redshift=self.ds.current_redshift)
 
 
         #get fields from spectra and give correct units
@@ -422,8 +422,8 @@ class AbsorberPlotter():
             Default: {}
         """
         #get list of num density  los velocity and corresponding lengths
-        num_density = self.abs_ext.data[ion_p_num(self.ion_name)]
-        prop2 = self.abs_ext.data[prop2_name]
+        num_density = self.abs_ext.ray_data[ion_p_num(self.ion_name)]
+        prop2 = self.abs_ext.ray_data[prop2_name]
 
         prop2_lb = None
         prop2_ub = None
@@ -448,7 +448,7 @@ class AbsorberPlotter():
             prop2 = prop2.in_units(prop2_units)
 
         #get length data and define x limits
-        l_list = self.abs_ext.data['l'].in_units('kpc')
+        l_list = self.abs_ext.ray_data['l'].in_units('kpc')
         pad = 0.1*l_list[-1]
         xlimits = [-pad, l_list[-1] + pad]
 

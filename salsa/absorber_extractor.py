@@ -70,7 +70,7 @@ class AbsorberExtractor():
         self.features = None
         self.num_feat = None
         self.df = None
-        self.data = None
+        self.ray_data = None
 
         if absorber_min is None:
             if self.ion_name in default_cloud_dict.keys():
@@ -136,10 +136,10 @@ class AbsorberExtractor():
             self.ray_filename=new_ray.filename_template
 
         # store data
-        self.data = self.ray.all_data()
+        self.ray_data = self.ray.all_data()
 
         # Check if ray is empty due to cuts
-        if self.data['l'].size == 0:
+        if self.ray_data['l'].size == 0:
             print(f'light ray {self.ray} is empty')
 
     def ray_position_prop(self, units='code_length'):
@@ -349,7 +349,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             if f in units_dict.keys():
                 fld_u = units_dict[f]
             else:
-                fld_u = str(self.data[f].units)  # querying the dataset directly maybe isn't great
+                fld_u = str(self.ray_data[f].units)  # querying the dataset directly maybe isn't great
             name_type.append( (f, np.float64) )
             if fld_u != "dimensionless":
                 name_units[f] = fld_u
@@ -372,20 +372,20 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
             row['interval_start'] = start
             row['interval_end'] = end
 
-            dl = self.data['dl'][start:end].in_units('cm')
-            density = self.data[('gas', 'density')][start:end].in_units('g/cm**3')
+            dl = self.ray_data['dl'][start:end].in_units('cm')
+            density = self.ray_data[('gas', 'density')][start:end].in_units('g/cm**3')
             tot_density = np.sum(dl*density)
 
             #calculate column density
             ion_field = ion_p_num(self.ion_name)
-            ion_density=self.data[ion_field][start:end].in_units('cm**-3')
+            ion_density=self.ray_data[ion_field][start:end].in_units('cm**-3')
             col_density = np.sum(dl*ion_density)
 
             # yt uses unyt but we can convert that to astropy
             row['col_dens'] = col_density.to_astropy()
 
             #calculate delta_v of absorber. ion col dense weighted
-            vel_los_dat = self.data['velocity_los'][start:end]
+            vel_los_dat = self.ray_data['velocity_los'][start:end]
             central_vel = np.sum(dl*ion_density*vel_los_dat)/col_density
             central_vel.convert_to_units(delv_u)
             row['delta_v'] = central_vel.to_astropy()
@@ -408,7 +408,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
 
             #calculate other field averages. gas col density weighted
             for fld in fields:
-                fld_data = self.data[fld][start:end]
+                fld_data = self.ray_data[fld][start:end]
                 avg_fld = np.sum(dl*density*fld_data)/tot_density
 
                 if fld in units_dict.keys():
@@ -420,10 +420,20 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
 
             row_list.append(row)
 
+        # Now that we've converted everything to units recognized by unyt,
+        # we have to remove any "dimensionless" unyt units because astropy
+        # won't know what to do with them. An example is Zsun for metallicity.
+        # We'll instead stash these in the QTable metadata.
+        metadata = {'dimensionless_field_units': {}}
+        for f in fields:
+            if self.ray_data[f].units.is_dimensionless:
+                metadata['dimensionless_field_units'][f] = name_units.pop(f)
+
         self.df = QTable(data=row_list,
                          names=[entry[0] for entry in name_type],
                          dtype=[entry[1] for entry in name_type],
-                         units=name_units)
+                         units=name_units,
+                         meta=metadata)
         return self.df
 
     def _run_spice(self):
@@ -436,8 +446,8 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         :final_intervals: list of tuples of int
             List of the indices that indicate the start and end of each absorber.
         """
-        num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
-        dl_list = self.data['dl'].in_units('cm')
+        num_density = self.ray_data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
+        dl_list = self.ray_data['dl'].in_units('cm')
 
         all_intervals=[]
         curr_num_density = num_density.copy()
@@ -498,9 +508,9 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         new_intervals : list
             a final list of intervals where prev and curr are properly combined.
         """
-        dl_array = self.data['dl'].in_units('cm')
-        velocity_array = self.data['velocity_los'].in_units('km/s')
-        density_array = self.data['density']
+        dl_array = self.ray_data['dl'].in_units('cm')
+        velocity_array = self.ray_data['velocity_los'].in_units('km/s')
+        density_array = self.ray_data['density']
 
         #check if there are any previous intervals to combine with
         if prev_intervals == []:
@@ -593,7 +603,7 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         intervals : list of tuples
             list of the intervals defining the absorbers in this ray.
         """
-        num_density = self.data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
+        num_density = self.ray_data[ion_p_num(self.ion_name)].in_units("cm**(-3)")
         in_absorber = False
         intervals = []
 

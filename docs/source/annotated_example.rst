@@ -73,7 +73,7 @@ look for:
   # field data to save
   ion_list = ['H I', 'C IV']
   other_fields = ['density', 'temperature', 'metallicity']
-  units_dict = dict(density='g/cm**3', temperature='K')
+  units_dict = {'density': 'g/cm**3', 'temperature': 'K', 'metallicity': 'Zsun'}
 
   # the maximum distance a LightRay will be created (minimum default to 0)
   max_impact = ds.quan(15, 'kpc')
@@ -113,7 +113,7 @@ Now let's extract some absorbers from one of the light rays we made:
   abs_ext.load_ray(ray_file)
 
   # use SPICE method to extract absorbers into an Astropy QTable
-  table = abs_ext.get_current_absorbers(other_fields, units_dict=units_dict)
+  table = abs_ext.get_current_absorbers(fields=other_fields, units_dict=units_dict)
   print(table)
 
 ::
@@ -124,6 +124,16 @@ Now let's extract some absorbers from one of the light rays we made:
    H I  1215.67      0.0  6116814645533.102 ... 1.6863708884078385e-28 96469.46167662967 0.014059433622242793
    H I  1215.67      0.0 2505355090554556.5 ...   9.49051901355937e-28 50877.73530956685  0.01429726085432313
    H I  1215.67      0.0  9408651484697.451 ... 1.6823168463953486e-28 94252.62895133752 0.014273053208746916
+
+.. note::
+
+  The ``metallicity`` column doesn't have a unit listed even though we specified
+  via the ``units_dict`` argument that metallicity should be presented in ``"Zsun"``.
+  This is because of differences between the ``unyt`` package, which ``yt`` uses to
+  handle its datasets and the ``astropy`` package, which is used to construct the table.
+  These two package have different ways of treating "dimensionless" values such as ``"Zsun"``.
+  Fear not; the specified units can still be found via the table's metadata:
+  ``table.meta["dimensionless_field_units"]["metallicity"]``
 
 To extract absorbers from multiple ``LightRays`` you can use the
 :class:`~salsa.SPICEAbsorberExtractor.get_all_absorbers` function. 
@@ -139,23 +149,22 @@ extract absorbers from each one:
 
   # initialize a new AbsorberExtractor for looking at C IV
   abs_ext_civ = salsa.SPICEAbsorberExtractor(ds, ion_name='C IV')
-  table = abs_ext_civ.get_all_absorbers(ray_list)
+  table = abs_ext_civ.get_all_absorbers(ray_list, fields=other_fields, units_dict=units_dict)
   print(table)
 
 ::
 
-  name   wave   redshift      col_dens            delta_v         vel_dispersion   interval_start interval_end LightRay_index
-      Angstrom               1 / cm2              km / s             km / s                                                 
-  ---- -------- -------- ------------------ ------------------- ------------------ -------------- ------------ --------------
-  C IV 1548.187      0.0 113534735506095.75 -2.2526205975043787 13.699041596403035            201          224              0
-  C IV 1548.187      0.0  39385046049917.84  116.44013343087262  6.581810678140516            110          125              2
-  C IV 1548.187      0.0  42223273159161.47  115.32578395061917  3.072995936488675            139          155              2
+  name   wave   redshift      col_dens      ... interval_start interval_end LightRay_index
+      Angstrom               1 / cm2        ...                                           
+  ---- -------- -------- ------------------ ... -------------- ------------ --------------
+  C IV 1548.187      0.0 113534735506095.75 ...            201          224              0
+  C IV 1548.187      0.0  39385046049917.84 ...            110          125              2
+  C IV 1548.187      0.0  42223273159161.47 ...            139          155              2
 
 To retain information on where each absorber came from, a ``LightRay_index`` is
 given. The number represents the ray it was extracted from. So all absorbers
 extracted from ``ray2.h5`` would have an index of ``2``. This can be useful for
-comparing/analyzing absorbers on the same sightline. Note that in this example,
-we did not request any extra fields be extracted.
+comparing/analyzing absorbers on the same sightline.
 
 
 .. _catalog-generation-example:
