@@ -1,9 +1,8 @@
 import numpy as np
 import yt
-import trident
-import pandas as pd
+from astropy.table import vstack
 
-from salsa.absorber_extractor import AbsorberExtractor
+from salsa.absorber_extractor import SPICEAbsorberExtractor
 from salsa.utils.collect_files import collect_files, check_rays
 from salsa.utils.functions import ion_p_num
 from salsa.generate_light_rays import generate_lrays
@@ -22,7 +21,6 @@ def generate_catalog(ds_file, n_rays,
                      field_parameters={},
                      fields=[],
                      ftype='gas',
-                     cut_region_filters=[],
                      extractor_kwargs={},
                      units_dict={}):
 
@@ -47,8 +45,9 @@ def generate_catalog(ds_file, n_rays,
     ion_list: list str
         list of ions to find absorbers from.
 
-    method: "spice" or "spectacle", optional
+    method: "spice", optional
         Choose which method to use to extract absorbers.
+        Currently only "spice" is supported.
 
     center: list or array, optional
         The center of the galaxy in units 'code_length'. If None, defaults to
@@ -56,11 +55,14 @@ def generate_catalog(ds_file, n_rays,
         Default: None
 
     impact_param_lims: tuple or list, optional
-        The range on which to sample impact parameter when constructing lightrays
+        The range on which to sample impact parameter when constructing lightrays.
+        If no units are associated with the numbers (either astropy or unyt),
+        the code will assume kpc.
         Default: (0, 200)
 
     ray_length: float, optional
-        The length of each light ray in units kpc.
+        The length of each light ray. If no units are associated (either astropy
+        or unyt) the code will assume kpc.
         Default: 200
 
     field_parameters: dict, optional
@@ -79,10 +81,6 @@ def generate_catalog(ds_file, n_rays,
         to be changed. ``'PartType0'`` often works though it varies.
         See ``trident.add_ion_fields()`` for more information
 
-    cut_region_filters: list of strings, optional
-        a list of filters defined by the way you use Cut Regions in YT
-        Default: None
-
     extractor_kwargs: dict, optional
         Additional key word arguments to pass to the absorber_extractor to
         modify default extraction parameters. Either a single dict that will be
@@ -93,7 +91,7 @@ def generate_catalog(ds_file, n_rays,
         ``extractor_kwargs={'absorber_min':13.5}``
 
         The first will set different absober mins for each ion, with O VI taking
-        default as specified by ``salsa.utils.defaults.default_cloud_dict``. The
+        default as specified by ``salsa.utils.default_cloud_dict``. The
         second example will set the minimum absorber as 13.5 for every ion.
         **NOTE** you cannot mix the two formats. If one ion is specified then
         all ions must be specified (see 'O VI' included even though it's dictionary is empty)
@@ -101,14 +99,14 @@ def generate_catalog(ds_file, n_rays,
         Default: {}
 
     units_dict: dict, optional
-        dictionary of units to use for the fields when extracting properties
+        dictionary of astropy units to use for the fields when extracting properties
         (only relevant for 'spice' method)
         Default: None
 
     Returns
     -------
-    full_catalog: pandas.DataFrame
-        pandas dataframe containing all of the absorbers extracted from all
+    full_catalog: astropy QTable
+        Table containing all of the absorbers extracted from all
         the lightrays. If no absorbers are found, None is returned
     """
     comm = MPI.COMM_WORLD
@@ -125,9 +123,9 @@ def generate_catalog(ds_file, n_rays,
     for i in ion_list:
         check_fields.append(ion_p_num(i))
 
-    #check if rays already made
-    check =check_rays(ray_directory, n_rays, check_fields)
-    my_ray_bool= np.array([check], dtype=int)
+    # check if rays already made
+    check = check_rays(ray_directory, n_rays, check_fields)
+    my_ray_bool = np.array([check], dtype=int)
     ray_bool = np.array([0], dtype=int)
 
     # share if rays made already or not
@@ -149,7 +147,7 @@ def generate_catalog(ds_file, n_rays,
                     ion_list=ion_list,
                     fields=fields,
                     ftype=ftype,
-                    out_dir=ray_directory)
+                    ray_directory=ray_directory)
 
     comm.Barrier()
     #Extract Absorbers
@@ -169,15 +167,20 @@ def generate_catalog(ds_file, n_rays,
         if ion in extractor_kwargs.keys():
             curr_kwargs = extractor_kwargs[ion]
         else:
-            curr_kwargs=extractor_kwargs.copy()
+            curr_kwargs = extractor_kwargs.copy()
 
         # setup absorber extractor
-        abs_ext = AbsorberExtractor(ds, my_ray_files[0], ion_name=ion,
-                                     cut_region_filters=cut_region_filters,
-                                     **curr_kwargs)
+        if method == "spice":
+            abs_ext = SPICEAbsorberExtractor(ds, 
+                                            ion_name=ion,
+                                            **curr_kwargs)
+        else:
+            raise RuntimeError(f"Method {method} is not recognized.")
 
         # get catalogs
-        my_df = get_absorbers(abs_ext, my_ray_files, method, fields=fields, units_dict=units_dict)
+        my_df = abs_ext.get_all_absorbers(my_ray_files,
+                                          fields=fields,
+                                          units_dict=units_dict)
         if my_df is not None:
             df_list.append(my_df)
 
@@ -185,7 +188,7 @@ def generate_catalog(ds_file, n_rays,
     if df_list == []:
         my_catalog = None
     else:
-        my_catalog= pd.concat(df_list, ignore_index=True)
+        my_catalog= vstack(df_list)
     comm.Barrier()
 
     #gather all catalogs and creae one large
@@ -195,83 +198,6 @@ def generate_catalog(ds_file, n_rays,
     if all(v is None for v in all_dfs):
         full_catalog = None
     else:
-        full_catalog = pd.concat(all_dfs, ignore_index=True)
+        full_catalog = vstack(all_dfs)
 
     return full_catalog
-
-
-
-def get_absorbers(abs_extractor, ray_list, method, fields=None, units_dict=None):
-    """
-    Create catalog of the given rays usin absorber extractor
-
-    Parameters
-    ----------
-    abs_extractor: SALS.AbsorberExtractor
-        Absorber Extractor object that will be used to extract absoprtion feat.
-        for the catalog
-
-    ray_list: list of str or trident.ray objects
-        List of ray objects or list of trident rays whose absorbers will be
-        extracted
-    method: str
-        Either 'spice' or 'spectacle'. specifies which method is used to extract
-        absorbers
-
-    fields: list str, optional
-        Fields to extract/add to catalog if using 'spice' method.
-        Defaults=None
-
-    units_dict: dict
-        dictionary containing what units to use for each field
-
-    Returns
-    -------
-    full_df: pandas.DataFrame
-        Catalog of absorber properties in a pandas dataframe.
-    """
-    df_list=[]
-
-    if method == 'spice':
-        for ray in ray_list:
-            #load new ray and extract absorbers
-            abs_extractor.load_ray(ray)
-            df = abs_extractor.get_spice_absorbers(fields=fields, units_dict=units_dict)
-
-            if df is not None:
-                # add ray index
-                ray_num = get_ray_num(ray)
-                for i in range(abs_extractor.num_spice):
-                    df.loc[i,'lightray_index'] = ray_num
-                df_list.append(df)
-
-    elif method == 'spectacle':
-        for ray in ray_list:
-            abs_extractor.load_ray(ray)
-            df = abs_extractor.get_spectacle_absorbers()
-
-            #add ray index
-            if df is not None:
-                ray_num = get_ray_num(ray)
-                for i in range(abs_extractor.num_spectacle):
-                    df.loc[i,'lightray_index'] = ray_num
-                df_list.append(df)
-
-    else:
-        raise RuntimeError(f"method={method} is not valid. method must be 'spice' or 'spectacle'.")
-
-    if len(df_list) > 0:
-        full_df = pd.concat(df_list, ignore_index=True)
-    else:
-        full_df = None
-    return full_df
-
-
-def get_ray_num(file_path):
-    """
-    extract the ray's number from it's file name by removing 'ray' and '.h5' as
-    well as preceding path
-    """
-    filename = file_path.split('/')[-1]
-    num = filename[3:-3]
-    return num

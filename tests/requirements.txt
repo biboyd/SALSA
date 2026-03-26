@@ -1,6 +1,6 @@
 mpi4py
-matplotlib<=3.2.1
-numpy==1.16.6
+matplotlib<=3.3.4
+numpy
 scipy
 yt
 pandas

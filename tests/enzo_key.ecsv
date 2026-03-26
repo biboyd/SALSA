@@ -1,0 +1,40 @@
+# %ECSV 1.0
+# ---
+# datatype:
+# - {name: name, datatype: string}
+# - {name: wave, unit: Angstrom, datatype: float64}
+# - {name: redshift, datatype: float64}
+# - {name: col_dens, unit: 1 / cm2, datatype: float64}
+# - {name: delta_v, unit: km / s, datatype: float64}
+# - {name: vel_dispersion, unit: km / s, datatype: float64}
+# - {name: interval_start, datatype: int64}
+# - {name: interval_end, datatype: int64}
+# - {name: temperature, unit: K, datatype: float64}
+# - {name: lightray_index, datatype: int64}
+# meta: !!omap
+# - __serialized_columns__:
+#     col_dens:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: 1 / cm2}
+#       value: !astropy.table.SerializedColumn {name: col_dens}
+#     delta_v:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: km / s}
+#       value: !astropy.table.SerializedColumn {name: delta_v}
+#     temperature:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: K}
+#       value: !astropy.table.SerializedColumn {name: temperature}
+#     vel_dispersion:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: km / s}
+#       value: !astropy.table.SerializedColumn {name: vel_dispersion}
+#     wave:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: Angstrom}
+#       value: !astropy.table.SerializedColumn {name: wave}
+# schema: astropy-2.0
+name wave redshift col_dens delta_v vel_dispersion interval_start interval_end temperature lightray_index
+"H I" 1215.67 0.0 4.618442431167126e+16 2.0222164857443303 47.30891229213332 0 248 11607.624910504768 0
+"H I" 1215.67 0.0 8275293766575024.0 -2.581379763682519 26.725029754528183 6 179 11106.018633151036 1
+"C IV" 1548.187 0.0 7900365831538.294 13.454571979706794 55.49111876468044 70 211 11780.005031457587 0

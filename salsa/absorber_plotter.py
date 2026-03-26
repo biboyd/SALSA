@@ -3,22 +3,18 @@ mpl.use('Agg')
 import yt
 import trident
 import numpy as np
-from spectacle.fitting import LineFinder1D
+
 from sys import argv, path
 import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 from mpl_toolkits.axes_grid1 import AxesGrid
-from numpy.linalg import norm
-import astropy.units  as u
-
-from yt.data_objects.static_output import \
-    Dataset
+from astropy.units import angstrom
 
 from salsa.utils.functions import ion_p_num
-from salsa.utils.defaults import default_units_dict, default_limits_dict, default_cloud_dict
-from salsa.absorber_extractor import AbsorberExtractor
+from salsa.utils.defaults import default_units_dict, default_limits_dict
+from salsa.absorber_extractor import SPICEAbsorberExtractor
 
-class AbsorberPlotter(AbsorberExtractor):
+class AbsorberPlotter():
     """
     Create's plot to easily see where absorbers are found along the light ray
     both directly and through resulting spectra. Uses absorber extractor as base
@@ -26,80 +22,21 @@ class AbsorberPlotter(AbsorberExtractor):
 
     Parameters
     ----------
-
-    ds_filename: str or YT dataset
-        Either Path/name of the dataset to be loaded or the dataset itself
-
-    ray_filename: str or Trident ray
-        Path/name of the hdf5 ray file to be loaded or the ray already loaded
+    abs_ext : AbsorberExtractor object
+        Absorber extractor used to extract the data we want to plot.
+        Can be any of the child classes; e.g. SPICEAbsorberExtractor
 
     ion_name: string, optional
         Name of the ion to extract absorbers of and plot
         Default: "H I"
 
-    cut_region_filters : list of str, optional
-        a list of filters defined by the way you use Cut Regions in YT
-
-    slice_field : string, optional
-        Field to plot in slice plot. defaults to ion_name's number density
+    ftype : string, optional
+        Field type for ion fields. Allows ion fields to be added
+        if not already present.
+        Default: "gas"
 
     absorber_fields : list of strings, optional
         Additional ions to include in plots/Spectra, enter as list.
-
-    north_vector : array type, optional
-        vector used to fix the orientation of the slice plot defaults to z-axis
-
-    center_gal : array type, optional
-        center of galaxy in code_length. if None, then defaults to domain_center
-
-    wavelength_center : float, optional
-        Wavelength to center spectrum plot on. defaults to the stringest known
-        spectral line of ion_name. in units of Angstrom
-
-    wavelength_width :float, optional
-        sets the wavelength range of the spectrum plot. defaults to 300 Angstroms
-
-    velocity_width :float, optional
-        sets the velocity range in spectrum plot in units of km/s
-
-    wavelegnth_res :float, optional
-        width of wavelength bins in spectrum plot. default 0.1 Angstrom
-
-    velocity_res :float, optional
-        width of velocity bins in spectrum plot. default 10 km/s
-
-    use_spectacle : bool, optional
-        Choose whether to use spectacle fit to compute col dense
-
-    plot_spectacle: bool, optional
-        chooses whether individual absorption lines found by spectacle are plotted
-
-    spectacle_res : double, optional
-        Set minimum resolution that spectacle will attempt to fit lines to. If
-        None, default to velocity_res
-
-    plot_spice : bool, optional
-        Sets whether the intervals found by the SPICE method are plotted on the
-        number density plot
-
-    absorber_min: float, optional
-        Minimum Log Column Density that will be used to define an absorber.
-        If None, defaults to either default for specific ion or 13
-        Default: None
-
-    frac: float, optional
-        Parameter defining what fraction of the number density is being
-        accounted for in each iteration of the SPICE method. Must be a number
-        between 0 and 1.
-        Default: 0.8
-
-    num_dense_min: float, optional
-        Sets the lower limit for the number density plot. If None, defaults to
-        0.01 times the median number density
-
-    num_dense_max: float, optional
-        Sets the upper limit for the number density plot. If None, defaults to
-        100 times the median number density
 
     markers :bool, optional
         whether to include markers on light ray and number density plot
@@ -125,43 +62,18 @@ class AbsorberPlotter(AbsorberExtractor):
     """
 
     def __init__(self,
-                ds_filename,
-                ray_filename,
-                ion_name='H I',
-                ftype='gas',
-                cut_region_filters=None,
-                slice_field=None,
-                absorber_fields=[],
-                north_vector=[0, 0, 1],
-                center_gal = None,
-                wavelength_center=None,
-                wavelength_width = 30,
-                velocity_width = 3000,
-                wavelength_res = 0.1,
-                velocity_res = 10,
-                use_spectacle=False,
-                plot_spectacle=False,
-                spectacle_defaults=None,
-                spectacle_res=None,
-                plot_spice=False,
-                absorber_min=None,
-                frac=0.8,
-                num_dense_min=None,
-                num_dense_max=None,
-                markers=True,
-                mark_plot_args=None,
-                figure=None):
-        #set file names and ion name
-        if isinstance(ds_filename, str):
-            self.ds = yt.load(ds_filename)
-        elif isinstance(ds_filename, Dataset):
-            self.ds = ds_filename
-        self.ray_filename = ray_filename
+                 abs_ext,
+                 ion_name='H I',
+                 ftype='gas',
+                 absorber_fields=[],
+                 markers=True,
+                 mark_plot_args=None,
+                 figure=None):
+
+        self.abs_ext = abs_ext
+        self.ds = abs_ext.ds
+
         self.ion_name = ion_name
-
-        self.cut_region_filters = cut_region_filters
-        self.frac = frac
-
         #add ion name to list of all ions to be plotted
         self.ion_list = [ion_name] + absorber_fields
 
@@ -170,82 +82,12 @@ class AbsorberPlotter(AbsorberExtractor):
 
         #set a value for slice
         self.slice = None
-        self.north_vector = north_vector
-        self.center_gal= center_gal
-
-        #open up the ray files
-        self.load_ray(self.ray_filename)
-
-
-        #set slice field to ion name if no field is specified
-        if (slice_field is None):
-            self.slice_field = ion_p_num(self.ion_name)
-        else:
-            self.slice_field = slice_field
-
-        # whether to use/plot these methods
-        self.plot_spice = plot_spice
-        self.use_spectacle = use_spectacle
-        self.plot_spectacle = plot_spectacle
-
-        if absorber_min is None:
-
-            if self.ion_name in default_cloud_dict.keys():
-                self.absorber_min = default_cloud_dict[self.ion_name]
-            else:
-                self.absorber_min=13
-        else:
-            self.absorber_min = absorber_min
-
-        # define defaults for spectacle fit
-        self.defaults_dict = {
-            'bounds' :{
-                'column_density' : (self.absorber_min-0.5, 23)
-            },
-            'fixed' : {
-                'delta_lambda' : True,
-                'column_density' : False
-            }
-        }
-
-        #add user defined defaults
-        if spectacle_defaults is not None:
-            self.defaults_dict.update(spectacle_defaults)
-
-        #parameters for trident
-        self.wavelength_width = wavelength_width
-        self.wavelegnth_res = wavelength_res
-        self.velocity_width = velocity_width
-        self.velocity_res = velocity_res
-
-        #default spectacle resolution to velocity_res
-        if spectacle_res is None:
-            self.spectacle_res = velocity_res
-        else:
-            self.spectacle_res = spectacle_res
-
-        #default set the wavelength center to one of the known spectral lines
-        #for ion name. Use tridents line database to search for correct wavelength
-        if wavelength_center is None:
-            #open up tridents default line database
-            lbd = trident.LineDatabase('lines.txt')
-            #find all lines that match ion
-            lines = lbd.parse_subset(subsets= [self.ion_name])
-            #take one with largest f_value
-            f_val = 0
-            for line in lines:
-                if line.f_value >= f_val:
-                    f_val = line.f_value
-                    self.wavelength_center = line.wavelength
-        else:
-            self.wavelength_center = wavelength_center
 
         #open up a figure if none specified
         if figure is None:
             self.fig = plt.figure(figsize=(10, 10))
         else:
             self.fig = figure
-
 
         #set marker plot properties
         self.markers = markers
@@ -265,40 +107,38 @@ class AbsorberPlotter(AbsorberExtractor):
             self.marker_shape = self.mark_kwargs.pop('marker_shape')
         self.mark_dist_arr = None
 
-        #optionally set min/max value for number density plot
-        self.num_dense_min = num_dense_min
-        self.num_dense_max = num_dense_max
-
-
-
-    def add_annotations(self, plot=True):
+    def _add_annotations(self, plot_ray=True):
         """
         Adds ray and marker annotations to slice plot
 
         Parameters
         -----------
-        plot : bool
-            Whether to annotate ray/markers to the slice plot or to just
+        plot_ray : bool
+            Whether to annotate ray & markers to the slice plot or to just
             calculate the marker positions for placing on los_velocity plot
         """
 
-        if plot:
+        if plot_ray:
             #annotate ray
-            self.slice.annotate_ray(self.ray, arrow=True, plot_args={'alpha':0.5, 'color':'white', 'linewidth':2})
+            self.slice.annotate_ray(self.abs_ext.ray,
+                                    arrow=True,
+                                    alpha=0.5,
+                                    color='white',
+                                    linewidth=2)
 
         if self.markers:
             #get ray positional properties
-            ray_begin, ray_end, ray_length, ray_direction = self.ray_position_prop(units='kpc')
+            ray_begin, ray_end, ray_length, ray_direction = self.abs_ext.ray_position_prop(units='kpc')
             #make marker every x kpc. skip start
             mark_dist = self.marker_spacing #kpc
             mark_dist_arr = np.arange(mark_dist, ray_length.value, mark_dist)
             self.mark_dist_arr = self.ds.arr(mark_dist_arr, 'kpc')
 
             #define colormap and scale
-            mrk_cmap = plt.cm.get_cmap(self.marker_cmap)
+            mrk_cmap = plt.get_cmap(self.marker_cmap)
             self.colorscale = np.linspace(0, 1, mark_dist_arr.size)
 
-            if plot:
+            if plot_ray:
                 #construct unit vec from ray
                 for i in range(mark_dist_arr.size):
                     #calculate the position
@@ -308,9 +148,18 @@ class AbsorberPlotter(AbsorberExtractor):
                     mrk_kwargs = self.mark_kwargs.copy()
                     mrk_kwargs['color'] = mrk_cmap(self.colorscale[i])
 
-                    self.slice.annotate_marker(mrk_pos, marker=self.marker_shape, plot_args=mrk_kwargs)
+                    self.slice.annotate_marker(mrk_pos,
+                                               marker=self.marker_shape,
+                                               **mrk_kwargs)
 
-    def create_slice(self, cmap="magma", height=None, width=None):
+    def create_slice(self,
+                     center = None,
+                     slice_field = None,
+                     north_vector = [0, 0, 1],
+                     plot_ray = True,
+                     cmap="magma",
+                     height=None,
+                     width=None):
         """
         Create a slice in the Dataset along the path of the ray.
         Choose to keep the Z direction maintained.
@@ -318,46 +167,58 @@ class AbsorberPlotter(AbsorberExtractor):
         Parameters
         ----------
 
+        center : array type, optional
+            Center of the slice in code_length.
+            If None, then defaults to domain_center
+
+        slice_field : string, optional
+            Field to plot. Defaults to the number density for the ion
+            associated with the abs_ext attribute.
+
+        north_vector : array type, optional
+            vector used to fix the orientation of the slice plot.
+            Defaults to z-axis
+
+        plot_ray : bool
+            Whether to annotate ray/markers to the slice plot or to just
+            calculate the marker positions for placing on los_velocity plot
+
         cmap: str
             the colormap to use for the slice. Default: 'magma'
+
+        height, width: float, optional
+            dimension for the figure
 
         Returns
         -------
         slice : yt SlicePlot
-            Slice with ray annotated
+            Slice with ray annotated. This SlicePlot is also saved to the `.slice` attribute.
         """
-        #print("adding ion fields")
-
-        # runs way to slow, may add later
-        if False: #self.cut_region_filters is not None:
-            # parse for radial cuts
-            rad_in, rad_out, cut_str = self.cgm_details
-            cgm = self.ds.sphere(self.center_gal, (rad_out, 'kpc')) \
-                  - self.ds.sphere(self.center_gal, (rad_in, 'kpc'))
-            # cuts running too slow rn so just not including them
-            data_source = cgm.cut_region(cut_str)
+        #set slice field to ion name if no field is specified
+        if (slice_field is None):
+            slice_field = ion_p_num(self.ion_name)
         else:
-            data_source=None
+            slice_field = slice_field
 
-        ray_begin, ray_end, ray_length, ray_unit = self.ray_position_prop(units='kpc')
+        ray_begin, ray_end, ray_length, ray_unit = self.abs_ext.ray_position_prop(units='kpc')
 
         #construct vec orthogonal to ray/plane
-        self.north_vector = self.ds.arr(self.north_vector, 'dimensionless')
-        norm_vector = np.cross(ray_unit, self.north_vector)
+        north_vector = self.ds.arr(north_vector, 'dimensionless')
+        norm_vector = np.cross(ray_unit, north_vector)
         norm_vector = norm_vector/np.linalg.norm(norm_vector)
 
         #set center to domain_center unless specified
-        if self.center_gal is None:
-            self.center_gal = self.ds.domain_center
+        if center is None:
+            center = self.ds.domain_center
         else:
-            self.center_gal = self.ds.arr(self.center_gal, 'code_length')
+            center = self.ds.arr(center, 'code_length')
 
         #adjust center so that it is in the plane of ray and north_vector
         ray_center = (ray_begin + ray_end)/2
         ray_center = ray_center.in_units('code_length')
-        center_dif = ray_center - self.center_gal
+        center_dif = ray_center - center
         scale = self.ds.quan(np.dot(center_dif, norm_vector), 'code_length')
-        center = scale*norm_vector + self.center_gal
+        center = scale*norm_vector + center
 
         #set width/height
         if width ==None and height==None:
@@ -374,44 +235,44 @@ class AbsorberPlotter(AbsorberExtractor):
         #Create slice along ray. keep slice pointed in north_Vec direction
         self.slice = yt.OffAxisSlicePlot(self.ds,
                           norm_vector,
-                          self.slice_field,
-                          center=center,
-                          north_vector = self.north_vector,
-                          width = wid_hght,
-                          data_source=data_source)
-
-
+                          slice_field,
+                          center = center,
+                          north_vector = north_vector,
+                          width = wid_hght)
 
         #set axes to kpc
         self.slice.set_axes_unit('kpc')
 
         #annotate plot
-        self.add_annotations()
+        self._add_annotations(plot_ray=plot_ray)
 
         # set color map
-        self.slice.set_cmap(field=self.slice_field, cmap = cmap)
+        self.slice.set_cmap(field=slice_field, cmap = cmap)
 
         # set background to bottom of color map
-        self.slice.set_background_color(self.slice_field)
+        self.slice.set_background_color(slice_field)
 
         return self.slice
 
-    def plot_vel_space(self, ax=None, annotate_column_density=True):
+    def plot_vel_space(self,
+                       velocity_width = 3000,
+                       ax_vel=None,
+                       **kwargs):
         """
         Use trident to plot the absorption spectrum of the ray in velocity
-        space. Compute column densities with spectacle fits.
+        space.
+        Uses the wavelength centers and velocity resolution of the AbsorberExtractor
+        to generate the spectrum.
 
         Parameters
         -----------
-        ax: matplotlib axis object, optional
+        velocity_width : float, optional
+            sets the velocity range of spectrum plot in units of km/s
+
+        ax_vel : matplotlib axis object, optional
             an axis in which to draw the velocity plot. If None, no plot is
             not drawn.
             Default: None
-
-        annotate_column_density: bool, optional
-            if True, add a textbox reporting the calculated col densities
-            by each method to the plot.
-            Default: True
 
         Returns
         ----------
@@ -424,69 +285,53 @@ class AbsorberPlotter(AbsorberExtractor):
         """
 
         # add wav center first so it is set as zero point velocity by trident
-        wav = int( np.round(self.wavelength_center) )
+        wav = int( np.round(self.abs_ext.wavelength_center) )
         line = f"{self.ion_name} {wav}"
         ion_list = [line] + self.ion_list
 
         #set up spectra
-        vel_min = -self.velocity_width/2
-        vel_max = self.velocity_width/2
+        vel_min = -velocity_width/2
+        vel_max = velocity_width/2
         spect_gen = trident.SpectrumGenerator(lambda_min=vel_min,
                                               lambda_max=vel_max,
-                                              dlambda = self.velocity_res,
+                                              dlambda = self.abs_ext.velocity_res,
                                               bin_space="velocity")
 
         #generate spectra and return fields
-        spect_gen.make_spectrum(self.data, lines=ion_list)
+        spect_gen.make_spectrum(self.abs_ext.ray_data, lines=ion_list)
         flux = spect_gen.flux_field
         velocity = spect_gen.lambda_field.in_units('km/s')
 
-        if ax is not None:
+        if ax_vel is not None:
             #plot values for velocity plot
-            ax.plot(velocity[:-1], flux[:-1])
-            ax.set_ylim(0, 1.05)
-            ax.set_xlim(vel_min, vel_max)
-            ax.xaxis.set_minor_locator(AutoMinorLocator(2))
-            ax.set_title(f"Rel. to line {self.wavelength_center:.1f} $\AA$", loc='right')
-            ax.set_xlabel("Delta_v (km/s)")
-            ax.set_ylabel("Flux")
-            ax.grid(zorder=0, which='both')
-
-            if self.use_spectacle:
-                line_txt, line_models = self._get_vel_plot_annotations()
-                box_props = dict(boxstyle='square', facecolor='white')
-
-                if annotate_column_density:
-                    #annotate plot with column densities
-                    ax.text(0.8, 0.05, line_txt, transform=ax.transAxes, bbox = box_props)
-
-                #annotate number of lines
-                ax.text(0.9, 0.85, f"{self.num_spectacle} lines", transform=ax.transAxes, bbox = box_props)
-
-                colors = ['tab:purple', 'tab:orange', 'tab:green']
-                vel= np.linspace(vel_min, vel_max, 1000) *u.Unit('km/s')
-                #plot individual column lines
-                if line_models is not None:
-                    for mod, color in zip(line_models, colors):
-                        #plot centroids of largest lines
-                        dv = mod.lines[0].delta_v.value
-                        cd = mod.lines[0].column_density.value
-                        ax.scatter(dv, 1, c=color, marker='v',zorder=5, label="logN={:04.1f}".format(cd))
-                        #plott the largest lines
-                        if self.plot_spectacle:
-                            ax.step(vel, mod(vel), linestyle='--', color=color, alpha=0.75)
-                    ax.legend(loc='lower left')
-
+            ax_vel.plot(velocity[:-1], flux[:-1])
+            ax_vel.set_ylim(0, 1.05)
+            ax_vel.set_xlim(vel_min, vel_max)
+            ax_vel.xaxis.set_minor_locator(AutoMinorLocator(2))
+            ax_vel.set_title(f"Rel. to line {self.abs_ext.wavelength_center:.1f}"+r"$\AA$", loc='right')
+            ax_vel.set_xlabel("Delta_v (km/s)")
+            ax_vel.set_ylabel("Flux")
+            ax_vel.grid(zorder=0, which='both')
 
         return velocity, flux
 
-    def plot_lambda_space(self, ax=None):
+    def plot_lambda_space(self, 
+                          wavelength_width = 30,
+                          wavelength_res = 0.1,
+                          ax=None,
+                          **kwargs):
         """
         Use trident to plot the absorption spectrum of the ray. Plot in
-        wavelegnth (lambda) space. Not formatted to be used in spectacle fitting
+        wavelegnth (lambda) space.
 
         Parameters
-        -----------
+        -----------    
+        wavelength_width :float, optional
+            sets the wavelength range of the spectrum plot. defaults to 300 Angstroms
+
+        wavelength_res :float, optional
+            width of wavelength bins in spectrum plot. default 0.1 Angstrom
+
         ax : matplotlib axis
             axis in which to draw the spectra plot
 
@@ -502,18 +347,19 @@ class AbsorberPlotter(AbsorberExtractor):
         ion_list = self.ion_list
 
         #adjust wavelegnth_center for redshift
-        rest_wavelength = self.wavelength_center
-        wave_min = rest_wavelength - self.wavelength_width/2
-        wave_max = rest_wavelength + self.wavelength_width/2
+        rest_wavelength = self.abs_ext.wavelength_center
+        wave_min = rest_wavelength - wavelength_width/2
+        wave_max = rest_wavelength + wavelength_width/2
 
         #use wavelength_width to set the range
-        spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = self.wavelegnth_res)
-        spect_gen.make_spectrum(self.data, lines=ion_list, observing_redshift=self.ds.current_redshift)
+        spect_gen = trident.SpectrumGenerator(lambda_min=wave_min, lambda_max=wave_max, dlambda = wavelength_res)
+        spect_gen.make_spectrum(self.abs_ext.ray_data, lines=ion_list, observing_redshift=self.ds.current_redshift)
 
 
         #get fields from spectra and give correct units
-        rest_wavelength = rest_wavelength*u.Unit('angstrom')
-        wavelength = spect_gen.lambda_field * u.Unit('angstrom')
+        #also convert from astropy to unyt for consistency
+        rest_wavelength = rest_wavelength * angstrom
+        wavelength = spect_gen.lambda_field * angstrom
         flux = spect_gen.flux_field
 
         if ax is not None:
@@ -523,15 +369,22 @@ class AbsorberPlotter(AbsorberExtractor):
             ax.set_xlim(wave_min, wave_max)
             ax.xaxis.set_minor_locator(AutoMinorLocator(2))
             ax.set_title(f"Spectrum {self.ion_name}", loc='right')
-            ax.set_xlabel("Wavelength $\AA$")
+            ax.set_xlabel(r"Wavelength $\AA$")
             ax.set_ylabel("Flux")
             ax.grid(zorder=0, which='both')
 
         return wavelength, flux
 
-    def plot_num_density(self, ax_num_dense, ax_prop2=None,
-                         prop2_name='velocity_los', prop2_units=None,
-                         plot_kwargs={}):
+    def plot_num_density(self, 
+                         ax_num_dense,
+                         num_dense_min=None,
+                         num_dense_max=None,
+                         ax_prop2=None,
+                         prop2_name='velocity_los', 
+                         prop2_units=None,
+                         plot_spice_intervals=False,
+                         plot_kwargs={},
+                         **kwargs):
         """
         Plots the number density at different lengths along the ray
 
@@ -540,24 +393,37 @@ class AbsorberPlotter(AbsorberExtractor):
         ax_num_dense : matplotlib axis
             axis in which to draw the number density plot
 
+        num_dense_min: float, optional
+            Sets the lower limit for the number density plot. If None, defaults to
+            0.01 times the median number density
+
+        num_dense_max: float, optional
+            Sets the upper limit for the number density plot. If None, defaults to
+            100 times the median number density
+
         ax_prop2: matplotlib axis, optional
             axis in which to draw the second field. if None, no plot is made
             Default: None
 
-        prop2_name: str,optional
+        prop2_name: str, optional
             Field to plot in second plot.
             Default:'velocity_los'
 
         prop2_units: str, optional
             The units to use in the second field.
             Defaults: None
+
+        plot_spice_intervals: bool, optional
+            If using a SPICEAbsorberExtractor, plot the SPICE intervals.
+            Has no effect for any other AbsorberExtractor class.
+
         plot_kwargs: dict, optional
             A Dictionary of plot kwargs to be passed to the pyplot.plot function.
             Default: {}
         """
         #get list of num density  los velocity and corresponding lengths
-        num_density = self.data[ion_p_num(self.ion_name)]
-        prop2 = self.data[prop2_name]
+        num_density = self.abs_ext.ray_data[ion_p_num(self.ion_name)]
+        prop2 = self.abs_ext.ray_data[prop2_name]
 
         prop2_lb = None
         prop2_ub = None
@@ -582,15 +448,14 @@ class AbsorberPlotter(AbsorberExtractor):
             prop2 = prop2.in_units(prop2_units)
 
         #get length data and define x limits
-        l_list = self.data['l'].in_units('kpc')
-        full_l = self.uncut_data['l'].in_units('kpc')
-        pad = 0.1*full_l[-1]
-        xlimits = [-pad, full_l[-1] + pad]
+        l_list = self.abs_ext.ray_data['l'].in_units('kpc')
+        pad = 0.1*l_list[-1]
+        xlimits = [-pad, l_list[-1] + pad]
 
         # check if l_list is non-empty cuz something went wrong then.
         if l_list.size == 0:
             err_file = open("error_file.txt", 'a')
-            err_file.write(f"{self.ray_filename} had an l_list that was of size zero")
+            err_file.write(f"{self.abs_ext.ray_filename} had an l_list that was of size zero")
             err_file.close()
             return 1
 
@@ -604,57 +469,57 @@ class AbsorberPlotter(AbsorberExtractor):
             ax_num_dense.grid(zorder=0)
 
             #chech if min/max num dense was called
-            if (self.num_dense_min is None and self.num_dense_max is None):
+            if (num_dense_min is None and num_dense_max is None):
                 med = np.median(num_density)
-                self.num_dense_min = med*0.01
-                self.num_dense_max = med*1000
+                num_dense_min = med*0.01
+                num_dense_max = med*1000
 
             #set axes limits
-            ax_num_dense.set_ylim(self.num_dense_min, self.num_dense_max)
+            ax_num_dense.set_ylim(num_dense_min, num_dense_max)
             ax_num_dense.set_xlim(xlimits[0], xlimits[1])
             #add minor tick marks
             ax_num_dense.xaxis.set_minor_locator(AutoMinorLocator(2))
 
             #check if should plot spice intervals
-            if self.plot_spice:
-                # run spice method if not already run
-                if self.num_spice is None:
-                    self.get_spice_absorbers()
+            if plot_spice_intervals and isinstance(self.abs_ext, SPICEAbsorberExtractor):
+                
+                if self.abs_ext.num_feat is None:
+                    raise RuntimeError("Please run the AbsorberExtractor's get_current_absorbers() method before plotting.")
 
                 #plot spice intervals
-                if self.num_spice > 0:
-                    for i in range(self.num_spice):
-                        b, e = self.spice_intervals[i]
-                        curr_lcd = self.spice_df.loc[i, 'col_dens']
+                if self.abs_ext.num_feat > 0:
+                    data = self.abs_ext.df['col_dens']
+                    for i in range(self.abs_ext.num_feat):
+                        b, e = self.abs_ext.features[i]
 
                         #plot interval
-                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
+                        ax_num_dense.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')
 
                         #plot on 2nd prop if axis exists
                         if ax_prop2 is not None:
-                            ax_prop2.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')#vspan_cmap((curr_lcd-12)/11))
+                            ax_prop2.axvspan(l_list[b], l_list[e], alpha=0.5, edgecolor='black',facecolor='tab:grey')
 
                     #plot number of intervals found
                     box_props = dict(boxstyle='square', facecolor='white')
-                    ax_num_dense.text(0.9, 0.85, f"{self.num_spice} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
+                    ax_num_dense.text(0.9, 0.85, f"{self.abs_ext.num_feat} feat.", transform=ax_num_dense.transAxes, bbox = box_props)
 
                     #take three largest absorbers and sort by position
-                    max_indices = self.spice_df['col_dens'].argsort()
-                    max_indices = max_indices[-3:].to_numpy()
+                    max_indices = data.argsort()
+                    max_indices = max_indices[-3:]
                     max_indices.sort()
 
                     #plot markers from left to right
                     colors=['black', 'magenta', 'yellow']
                     for i,c in zip(max_indices, colors):
-                        b, e = self.spice_intervals[i]
-                        lcd = self.spice_df.loc[i, 'col_dens']
+                        b, e = self.abs_ext.features[i]
+                        lcd = np.log10(data[i].value)
                         mid_point = (l_list[b]+l_list[e])/2
 
-                        ax_num_dense.scatter(mid_point, 0.75*self.num_dense_max,
+                        ax_num_dense.scatter(mid_point, 0.75*num_dense_max,
                                              marker='v',color=c, edgecolors='black',
                                              label=f"logN={lcd:.1f}", zorder=3)
 
-                    ax_num_dense.legend(loc='lower left', bbox_to_anchor=(-0.015, 0.95))
+                    ax_num_dense.legend()
 
         #make second plot
         if ax_prop2 is not None:
@@ -683,17 +548,30 @@ class AbsorberPlotter(AbsorberExtractor):
         if self.markers and ax_prop2 is not None:
             #check if marker distances have been defined
             if self.mark_dist_arr is None:
-                self.add_annotations(plot=False)
+                self._add_annotations(plot=False)
 
             Vys = np.zeros_like(self.mark_dist_arr) - 500
             plot_markers = {}
             plot_markers.update(self.mark_kwargs)
             ax_prop2.scatter(self.mark_dist_arr.value, Vys,zorder=3, c=self.colorscale, marker=self.marker_shape, cmap=self.marker_cmap, **plot_markers)
 
-    def create_multi_plot(self, outfname=None, markers=True, cmap="magma"):
+    def plot_multiplot(self,
+                       outfname=None,
+                       center = None,
+                       slice_field = None,
+                       north_vector = [0, 0, 1],
+                       cmap="magma",
+                       make_spectra = True,
+                       plot_spice_intervals=True,
+                       annotate_column_density=True, 
+                       velocity_width = 3000,
+                       **kwargs):
         """
-        combines the slice plot, number density plot, and spectrum plot into
-        one image.
+        Combines the slice plot, number density plot, and (optionally) spectrum plot into
+        one image and saves it to disk.
+
+        Can supply any optional keyword arguments supported by plot_num_density
+        and plot_vel_space.
 
         Parameters
         -----------
@@ -701,13 +579,39 @@ class AbsorberPlotter(AbsorberExtractor):
             the file name/path in which to save the file defaults to being unsaved.
             Default: None
 
-        markers: bool, optional
-            adds markers to slice plot and number density to aid analysis between those plots.
-            Default: True
+        gal_center : array type, optional
+            Center of the slice in code_length.
+            If None, then defaults to domain_center
+
+        slice_field : string, optional
+            Field to plot. Defaults to the number density for the ion
+            associated with the abs_ext attribute.
+
+        north_vector : array type, optional
+            vector used to fix the orientation of the slice plot.
+            Defaults to z-axis
 
         cmap:  Colormap, optional
             the color map to use for the slice plot.
             Default: magma
+
+        plot_spice_intervals: bool, optional
+            whether or not to shade the absorber intervals found by SPICE in the
+            number density plot
+
+        make_spectrum: bool, optional
+            whether to include the spectrum plot or not. Given that the transition
+            from yt 3 to yt 4 has affected Trident's spectra generation
+            (https://github.com/trident-project/trident/issues/217), you may
+            wish to not include this plot.
+            Default: True
+
+        annotate_column_density: bool, optional
+            whether or not to annotate the column densities of absorbers in the
+            spectrum plot
+
+        velocity_width: float, optional
+            velocity range of the spectrum plot in km/s
 
         Returns
         ---------
@@ -716,10 +620,17 @@ class AbsorberPlotter(AbsorberExtractor):
         axes : matplotlib axes
             axes the three lower plots are drawn on
         """
+        if (slice_field is None):
+            slice_field = ion_p_num(self.ion_name)
+        else:
+            slice_field = slice_field
 
         if (self.slice == None):
             #create the slicePlot using the field of the ion density
-            self.create_slice(cmap = cmap)
+            self.create_slice(center = center,
+                              slice_field = slice_field,
+                              north_vector = north_vector,
+                              cmap = cmap)
 
         grid = AxesGrid(self.fig, (0.,0.,0.5,0.5),
                         nrows_ncols = (1, 1),
@@ -732,7 +643,7 @@ class AbsorberPlotter(AbsorberExtractor):
                         cbar_pad="0%")
 
         #redraw slice plot onto figure
-        plot = self.slice.plots[self.slice_field]
+        plot = self.slice.plots[slice_field]
         plot.figure = self.fig
         plot.axes = grid[0].axes
         plot.cax = grid.cbar_axes[0]
@@ -742,40 +653,39 @@ class AbsorberPlotter(AbsorberExtractor):
         #set up axes and draw other plots to them
         ax1 = self.fig.add_subplot(411)
         ax2 = self.fig.add_subplot(412)
-        ax3 = self.fig.add_subplot(413)
+        if make_spectra:
+            ax3 = self.fig.add_subplot(413)
 
-        self.plot_num_density(ax1, ax_prop2=ax2)
-        self.plot_vel_space(ax=ax3)
+        self.plot_num_density(ax1,
+                              ax_prop2=ax2,
+                              plot_spice_intervals=plot_spice_intervals,
+                              **kwargs)
+        if make_spectra:
+            self.plot_vel_space(ax_vel=ax3,
+                                velocity_width=velocity_width,
+                                annotate_column_density=annotate_column_density,
+                                **kwargs)
 
-        axes= [ax1, ax2, ax3]
+        axes= [ax1, ax2]
+        if make_spectra:
+            axes.append(ax3)
+
         #setup positioning for the plots underneath
         strt_pos = -0.255
         ax1.set_position( [0.0, strt_pos, 0.5, 0.15] )
         ax2.set_position( [0.0, strt_pos-0.16, 0.5, 0.15] )
-        ax3.set_position( [0.0, strt_pos-0.4, 0.5, 0.15] )
+        if make_spectra:
+            ax3.set_position( [0.0, strt_pos-0.4, 0.5, 0.15] )
 
         #set num dense and los vel to share axis
         ax1.set_xlabel("")
         ax2.set_title("", loc='right')
-        ax1.get_shared_x_axes().join(ax1, ax2)
+        ax1.sharex(ax2)
         ax1.set_xticklabels([])
         if (outfname != None):
             self.fig.savefig(outfname, bbox_inches='tight')
 
         return self.fig, axes
-
-    def zoom(self, factor):
-        """
-        Zoom into the slice by specified factor
-
-        Parameters
-        ----------
-        factor : float
-            factor by which to zoom in using yt's zoom mehtod
-
-        """
-
-        self.slice.zoom(factor)
 
     def close(self):
         """
@@ -783,84 +693,5 @@ class AbsorberPlotter(AbsorberExtractor):
         """
 
         self.ds.close()
-        self.ray.close()
+        self.abs_ext.ray.close()
         plt.close(self.fig)
-
-    def _get_vel_plot_annotations(self):
-        """
-        computes the column density along the given ray for a given ion species.
-        This is done by using spectacle if use_spectacle is True. as well as
-        by summing the product of the number density for a given length by that length.
-        and the SPICE method
-
-        Returns:
-            line_models : list spectacle models : Individual line models for the
-                        3 largest absorbers found by spectacle
-            line_text : string : a string of properly formatted col dense to
-                        be added on to multi_plot
-        """
-
-        # run thw two methods if not already done
-        if self.num_spectacle is None:
-            # run spectacle method
-            self.get_spectacle_absorbers()
-        if self.num_spice is None:
-            self.get_spice_absorbers()
-
-
-        fit_label="Spect:"
-        #check if no absorbers found
-        if self.num_spectacle == 0:
-            line_models = None
-            fit_string = "{: <14s}{: >4s}\n".format(fit_label, '--')
-        else:
-            #get total column density and 3 largest lines
-            tot_spect_cd, line_models = self._get_large_spectacle()
-            fit_string = "{: <14s}{:04.1f}\n".format(fit_label, tot_spect_cd)
-
-        #get sum from SPICE method
-        spice_label="SPICE:"
-        #check if no absorbers
-        if self.num_spice == 0:
-            spice_string = "{: <11s}{: >4s}\n".format(spice_label,'--')
-        else:
-            #find total column density for SPICE method
-            cd_sum=0
-            for lcd in self.spice_df['col_dens']:
-                cd_sum += 10**lcd
-
-            log_cd_sum = np.log10(cd_sum)
-            spice_string = "{: <11s}{:04.1f}\n".format(spice_label,log_cd_sum)
-
-        #get total column density along ray
-        ion_field = ion_p_num(self.ion_name)
-        tot_ray_cd= np.sum( self.data[ion_field].in_units('cm**-3')*self.data['dl'].in_units('cm') )
-        log_tot_ray = np.log10(tot_ray_cd)
-        total_string="{: <14s}{:04.1f}".format("full ray:", log_tot_ray)
-
-        #combine strings to create "legend"
-        line_text = "Tot Sums\n"+spice_string + fit_string + total_string
-
-        return line_text, line_models
-
-    def _get_large_spectacle(self):
-        """
-        Return the total column density found by spectacle and the 3 largest
-        absorbers found by spectacle.
-        """
-        #compute total column density
-        line_sum_cd = 0
-        for cd in self.spectacle_df['col_dens']:
-            line_sum_cd+= 10**cd
-        log_tot_cd = np.log10(line_sum_cd)
-
-        line_models = []
-        indx_max = self.spectacle_df['col_dens'].argsort()
-        for indx in indx_max[-3:]:
-            line = self.spectacle_model.lines[indx]
-            line_models.append( self.spectacle_model.with_line(line, reset=True))
-
-        #sort lines based on delta v
-        line_models.sort(key=lambda mod: mod.lines[0].delta_v.value)
-
-        return log_tot_cd, line_models
