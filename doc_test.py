@@ -57,4 +57,5 @@ plotter = salsa.AbsorberPlotter(abs_ext)
 fig, axes = plotter.plot_multiplot(outfname='example_multiplot.png',
                                    center = [0.53, 0.53, 0.53],
                                    num_dense_max=num_dense_max,
-                                   num_dense_min=num_dense_min)
+                                   num_dense_min=num_dense_min,
+                                   make_spectra=False)

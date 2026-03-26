@@ -561,13 +561,13 @@ class AbsorberPlotter():
                        slice_field = None,
                        north_vector = [0, 0, 1],
                        cmap="magma",
-                       markers=True,
+                       make_spectra = True,
                        plot_spice_intervals=True,
                        annotate_column_density=True, 
                        velocity_width = 3000,
                        **kwargs):
         """
-        Combines the slice plot, number density plot, and spectrum plot into
+        Combines the slice plot, number density plot, and (optionally) spectrum plot into
         one image and saves it to disk.
 
         Can supply any optional keyword arguments supported by plot_num_density
@@ -595,13 +595,16 @@ class AbsorberPlotter():
             the color map to use for the slice plot.
             Default: magma
 
-        markers: bool, optional
-            adds markers to slice plot and number density to aid analysis between those plots.
-            Default: True
-
         plot_spice_intervals: bool, optional
             whether or not to shade the absorber intervals found by SPICE in the
             number density plot
+
+        make_spectrum: bool, optional
+            whether to include the spectrum plot or not. Given that the transition
+            from yt 3 to yt 4 has affected Trident's spectra generation
+            (https://github.com/trident-project/trident/issues/217), you may
+            wish to not include this plot.
+            Default: True
 
         annotate_column_density: bool, optional
             whether or not to annotate the column densities of absorbers in the
@@ -650,23 +653,29 @@ class AbsorberPlotter():
         #set up axes and draw other plots to them
         ax1 = self.fig.add_subplot(411)
         ax2 = self.fig.add_subplot(412)
-        ax3 = self.fig.add_subplot(413)
+        if make_spectra:
+            ax3 = self.fig.add_subplot(413)
 
         self.plot_num_density(ax1,
                               ax_prop2=ax2,
                               plot_spice_intervals=plot_spice_intervals,
                               **kwargs)
-        self.plot_vel_space(ax_vel=ax3,
-                            velocity_width=velocity_width,
-                            annotate_column_density=annotate_column_density,
-                            **kwargs)
+        if make_spectra:
+            self.plot_vel_space(ax_vel=ax3,
+                                velocity_width=velocity_width,
+                                annotate_column_density=annotate_column_density,
+                                **kwargs)
 
-        axes= [ax1, ax2, ax3]
+        axes= [ax1, ax2]
+        if make_spectra:
+            axes.append(ax3)
+
         #setup positioning for the plots underneath
         strt_pos = -0.255
         ax1.set_position( [0.0, strt_pos, 0.5, 0.15] )
         ax2.set_position( [0.0, strt_pos-0.16, 0.5, 0.15] )
-        ax3.set_position( [0.0, strt_pos-0.4, 0.5, 0.15] )
+        if make_spectra:
+            ax3.set_position( [0.0, strt_pos-0.4, 0.5, 0.15] )
 
         #set num dense and los vel to share axis
         ax1.set_xlabel("")

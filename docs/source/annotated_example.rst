@@ -129,8 +129,8 @@ Now let's extract some absorbers from one of the light rays we made:
 
   The ``metallicity`` column doesn't have a unit listed even though we specified
   via the ``units_dict`` argument that metallicity should be presented in ``"Zsun"``.
-  This is because of differences between the ``unyt`` package, which ``yt`` uses to
-  handle its datasets and the ``astropy`` package, which is used to construct the table.
+  This is because of differences between the unyt package, which yt uses to
+  handle its datasets and the astropy package, which is used to construct the table.
   These two package have different ways of treating "dimensionless" values such as ``"Zsun"``.
   Fear not; the specified units can still be found via the table's metadata:
   ``table.meta["dimensionless_field_units"]["metallicity"]``
@@ -258,19 +258,17 @@ To create the multi-panel plot:
   fig, axes = plotter.plot_multiplot(outfname='example_multiplot.png',
                                     center = [0.53, 0.53, 0.53],
                                     num_dense_max=num_dense_max,
-                                    num_dense_min=num_dense_min)
+                                    num_dense_min=num_dense_min,
+                                    make_spectra=False)
 
 .. image:: /_static/example_multiplot.png
 
 The grey regions on the middle two plots indicate the absorbers that the SPICE
 method finds. The three highest column densities are marked and displayed in a
-legend. In the last plot, the solid lines indicate the "raw" spectra while the
-dotted lines show the absorption lines that Spectacle fit (only the three largest
-lines are plotted with their column densities recorded in a legend).
+legend.
 
-The total column density along the LightRay, the total found via the SPICE method
-and the total found by Spectacle is recorded in a legend in the spectra plot.
+.. warning::
 
-You can see there is a discrepancy between the SPICE and Spectacle method. Due to the
-changing velocity profile, the SPICE method extracts two absorbers. Spectacle
-only fits one absorber because the larger absorber drowns out the smaller one.
+  While SALSA can include the Trident spectrum in these multiplots, there is
+  currently an issue with Trident's spectrum generation due to changes in the
+  underlying yt module. See the associated (GitHub issue)[https://github.com/trident-project/trident/issues/217].
