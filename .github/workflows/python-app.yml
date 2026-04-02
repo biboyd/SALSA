@@ -52,11 +52,9 @@ jobs:
         mv hm2012_ss_hr.h5 $HOME/.trident
 
     - name: Copy Trident config
-      # uses: canastro/copy-file-action@master
-      # with:
-      #   source: ${{ github.workspace }}/.github/scripts/config.tri
-      #   target: $HOME/.trident/config.tri
-      run: ls -a .github/scripts/config.tri
+      run: |
+        cp .github/scripts/config.tri $HOME/.trident/
+        ls $HOME/.trident
 
     - name: Install salsa
       run: |
