@@ -51,7 +51,7 @@ jobs:
     - name: Copy Trident config
       uses: canastro/copy-file-action@master
       with:
-        source: .github/scripts/config.tri
+        source: ${GITHUB_WORKSPACE}/.github/scripts/config.tri
         target: $HOME/.trident/config.tri
 
     - name: Install salsa
