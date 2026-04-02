@@ -53,7 +53,7 @@ jobs:
       # with:
       #   source: ${{ github.workspace }}/.github/scripts/config.tri
       #   target: $HOME/.trident/config.tri
-      run: ls
+      run: ls -a
 
     - name: Install salsa
       run: |

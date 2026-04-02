@@ -39,7 +39,7 @@ setup(name="astro-salsa",
       classifiers=["Programming Language :: Python :: 3.11",
                    "Programming Language :: Python :: 3.12",
                    "Programming Language :: Python :: 3.13",
-                   "Programming Language :: Python :: 3.14"]
+                   "Programming Language :: Python :: 3.14"],
       python_requires=">=3.11, <3.15",
       install_requires=dependecies,
       extras_require={'dev':dev_deps})
