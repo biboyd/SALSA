@@ -1,0 +1,8 @@
+astropy
+h5py
+matplotlib
+numpy
+scipy
+yt
+mpi4py
+trident

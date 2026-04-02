@@ -13,8 +13,9 @@ on how best to do this.
 Stable Version
 --------------
 
-If you have the (minimal) dependencies already installed then you can use pip to install
-SALSA: ::
+SALSA has a few dependencies that are best installed 
+
+The easiest way to install SALSA is with pip ::
 
   $ pip install astro-salsa
 
@@ -25,16 +26,16 @@ SALSA: ::
 Development Version
 -------------------
 
-For the latest development version, follow these instructions if you have the
-dependencies already installed. The easiest way to get all of the additional development
-dependencies is to use the ``environment.yml`` file as detailed in the :ref:`conda-install` section.
-
-With the dependencies installed, you next need to clone the `SALSA repository`_ 
-then enter the main directory and use pip to
-install the package: ::
+For the latest development version, you will first need to clone the `SALSA repository`_,
+then enter the main directory. You can then install SALSA with pip: ::
 
   $ git clone https://github.com/biboyd/SALSA.git
   $ cd SALSA
+  $ pip install -e .
+
+If you want to install the additional dependencies needed for locally testing SALSA
+and building the documentation, instead run: ::
+
   $ pip install -e .[dev]
 
 .. _SALSA repository: https://github.com/biboyd/SALSA
@@ -72,71 +73,55 @@ regression tests SALSA's functionality wholistically.
 
 Installing Dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^
-You may install the dependencies on your own, and you may have some of them installed
-already (i.e., numpy, matplotlib) depending on your environment. To make installation
-easier, we advise using conda and a conda environment to install.
-
-.. _conda-install:
-
-Conda Environment
------------------
-
-One of the easiest ways to make sure you have all the right dependencies is to
-use a conda environment. In the repository there is an ``environment-minimal.yml`` file
-that has all the packages necessary to run ``salsa``. The ``environment.yml`` file
-additionally specifies the packages needed for development (e.g., pytest, sphinx). 
-
-To create the environment
-you first need to install `conda`_
-and then run the following: ::
-
-  $ git clone https://github.com/biboyd/SALSA.git
-  $ cd SALSA
-  $ conda env create --file environment-minimal.yml
-  $ conda activate salsa-env
-
-.. _conda: https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
-
-Now you should be able to painlessly install SALSA as described above!
-
-.. note::
-  This installs mpi4py using pip. This is useful if you already have an MPI library installed; see
-  :ref:`install-mpi4py` for more details.
-
-.. _manual_install:
-
-Manually Installing Dependencies
----------------------------------
-
-If you have a different, preferred method for installing dependencies you are more
-than welcome to go with that route. See the ``environment-minimal.yml`` and/or ``setup.py``
-in the `SALSA repository`_ for specifics about what
-packages you need. Below is some advice/guides to installing a couple of the
+For the full list of dependencies, see the ``requirements.txt`` and/or ``setup.py`` files
+in the `SALSA repository`_. Below is some advice/guides to installing a couple of the
 trickier packages.
+
+A Note on Conda
+***************
+
+`Conda <https://docs.conda.io/en/latest/>`_ is a popular package manager that
+prefers to install wholly contained environments. This can cause issues with packages
+like :ref:`mpi4py <install-mpi4py>` or h5py (often needed by :ref:`yt <install-yt>`)
+that depend on non-Python libraries, as Conda
+will install its own copy of these libraries. On most HPC systems, these libraries
+are already provided and are usually optimized to the system itself.
+
+It's generally discouraged to mix Conda and pip because it can cause issues with
+dependency resolution, but it is required to install both SALSA and its dependency 
+:ref:`Trident <install-trident>`. Additionally, 
+of you wish to use a Conda environment but want to avoid duplicating non-Python libraries,
+can often pip install such Python libraries using the existing external dependencies
+in your system path.
+
+Always make sure you are using the copy of pip associated with your Conda environment:
+
+  $ conda activate my-env
+  $ conda install pip
+  $ which pip
 
 .. _install-yt:
 
 Install yt
-*************
+**********
 
-yt can be installed in a few different ways but one of the easier ways is by
-using conda. First
-install `conda`_
-then run: ::
+The yt package offers instructions on how to install it on 
+`their website <https://yt-project.org/doc/installing.html#install-stable>`_. 
 
-  $ conda install -c http://use.yt/with_conda/ -c conda-forge yt
-
-For full details about the different ways you can install yt, see
-`yt's documentation`_.
-
-.. _yt's documentation: https://yt-project.org/doc/
-
+Note that if you want to work with a dataset from a particular simulation code,
+there may be additional dependencies that need to be installed. For example, Enzo
+datasets require you to install `h5py <https://docs.h5py.org/en/latest/build.html>`_.
+This in turn depends on having `HDF5 <https://www.hdfgroup.org/solutions/hdf5/>`.
 .. _install-trident:
 
 Install Trident
 ****************
 
-Trident can be installed via ``pip install trident``. The first time trident runs
+Trident can be installed via pip: ::
+
+  $ pip install trident
+  
+The first time trident runs
 though, it downloads an ionization table. It is recommended that you run trident
 right after you pip install. This will also do some tests to make sure trident
 is running properly. ::
@@ -153,21 +138,17 @@ For more details see `Trident's documentation`_
 Install mpi4py
 **************
 
-`mpi4py`_ is a package that
-enables use of MPI parallelism with Python. SALSA uses this to split up light ray
+The `mpi4py`_ package enables use of MPI parallelism with Python. SALSA uses this to split up light ray
 creation and absorber extraction across multiple processors which becomes necessary
 for large numbers of light rays.
 
 .. _mpi4py: https://mpi4py.readthedocs.io/en/stable/index.html
 
-mpi4py can be installed either using pip or conda. It's useful to install with pip
-if you already have an MPI library installed, such as `OpenMPI`_ : ::
+You can install mpi4py can be installed either using pip or Conda. It's useful to install with pip
+if you already have an MPI library installed (such as `OpenMPI`_) as it will be 
+built against your existing installation as long as the MPI compiler is in your system path: ::
 
   $ pip install mpi4py
 
 .. _OpenMPI: https://www.open-mpi.org/
 
-If you want to use conda to install mpi4py, you need to be careful because there
-may be problems if you have an MPI library already installed. Otherwise just: ::
-
-  $ conda install mpi4py

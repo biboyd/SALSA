@@ -29,7 +29,11 @@ For detailed information on how to install and run SALSA, Read the Docs
 [here](https://salsa.readthedocs.io)
 
 ## Install
-If you have all the dependencies installed, you can use pip and
+
+We recommending checking the [documentation](https://salsa.readthedocs.io/en/latest/installation.html#installing-dependencies>) for advice on installing the
+core dependencies.
+
+Once you have the trickier dependencies installed, you can use pip and
 run these commands to install the most stable version:
 ```
   $ pip install astro-salsa
@@ -37,8 +41,9 @@ run these commands to install the most stable version:
   >>> import salsa
 ```
 
-If you want to install the latest development version and have all the dependencies 
-installed, you can clone the repository and run these commands:
+If you want to install the latest development version, you can clone the repository and run these commands to install
+the additional dependencies necessary for testing and building
+the documentation:
 ```
   $ git clone https://github.com/biboyd/SALSA.git
   $ cd SALSA
@@ -49,21 +54,23 @@ installed, you can clone the repository and run these commands:
 Now you should be all set to code!
 
 ### Installing dependencies
-To help with installing dependencies, both `environment-minimal.yml` and `environment.yml`
-files are included in the repository. The `environment.yml` contains additional packages necessary
-for developing SALSA and [building the documentation](#building-the-documentation) locally.
+The `requirements.txt` file contains the minimum dependencies needed to run SALSA.
 
-First,
-[install conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
-Then you should be able to create a conda environment via:
-```
-  $ conda env create --file environment.yml
-  $ conda activate salsa-env
-```
 Note that you need gcc compiler installed (which it often already is on most machines).
 For a more detailed description see the
 [installation guide](https://salsa.readthedocs.io/en/latest/installation.html)
 which also includes tips if you want to install dependencies on your own.
+
+To install the basic dependencies with pip, run
+
+```
+pip install -r requirements.txt
+```
+
+If you prefer to use conda, you cannot use the `requirements.txt` file
+directly as [Trident](http://trident-project.org/) is not available via conda.
+You'll also still need to install SALSA with pip as above. **Make sure `pip` is
+installed in your conda environment!**
 
 ## Getting Started
 For an annotated example [go here](https://salsa.readthedocs.io/en/latest/annotated_example.html). Or launch an interactive jupyter hosted on Binder
@@ -82,8 +89,8 @@ Astropy [`QTable`](https://docs.astropy.org/en/stable/table/) is returned with i
 can then be further analyzed.
 
 ### Building the Documentation
-If you created your environment from the supplied `environment.yml` file or installed SALSA with
-`pip install astro-salsa[dev]`, you'll be able to build the documentation locally:
+If you installed SALSA with
+`pip install astro-salsa[dev]` or `pip install -e .[dev]`, you'll be able to build the documentation locally:
 ```
   $ cd docs
   $ make html  # or latexpdf if you prefer
