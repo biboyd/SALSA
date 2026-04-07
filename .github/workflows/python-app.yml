@@ -76,7 +76,7 @@ jobs:
       run: pytest
 
     - name: Show data
-      run: ls -l /tests/data/
+      run: ls -l ./tests/data/
 
   build-docs:
 
