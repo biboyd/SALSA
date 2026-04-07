@@ -34,8 +34,7 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
     - name: Make Trident folder
-      run: |
-        mkdir -p ~/.trident/
+      run: mkdir -p ~/.trident/
 
     - name: Cache Trident data
       id: cache-table
@@ -53,21 +52,32 @@ jobs:
         cp .github/scripts/config.tri ~/.trident/
         ls ~/.trident
 
-    - name: Install SALSA`
-      run: |
-        pip install .
+    - name: Install SALSA
+      run: pip install .
 
-  # test:
+  test:
 
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   strategy:
-  #     matrix:
-  #       python-version: ["3.11", "3.12", "3.13", "3.14"]
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
-  #   steps:
-  #   - name: 
-  #   - name: Test with pytest
-  #     run: |
-  #       pip install pytest
-  #       pytest
+    steps:
+    - name: Install pytest
+      run: pip install pytest
+
+    - name: Cache yt data
+      id: cache-datasets
+      uses: actions/cache@v5
+      with:
+        path: ./tests/data/
+        key: ${{ runner.os }}-datasets
+
+    # if cache misses, data will be downloaded during the pytest step
+
+    - name: Configure yt data dir
+      run: yt config set --local yt test_data_dir ./tests/data/
+
+    - name: Run pytest
+      run: pytest
