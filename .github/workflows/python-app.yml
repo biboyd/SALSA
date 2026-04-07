@@ -80,6 +80,11 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: Install OpenMPI
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: openmpi-bin openmpi-common libopenmpi-dev
+
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
