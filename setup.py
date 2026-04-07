@@ -16,6 +16,7 @@ dependecies=[
     ]
 
 dev_deps=[
+    'pandas', # needed for getting the sample data
     'pooch',
     'pytest',
     'sphinx',
