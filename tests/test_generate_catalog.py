@@ -11,13 +11,10 @@ def same_catalog(df, key_df):
     assert len(df.columns) == len(key_df.columns)
 
     # compare column densities
-    cd_diff = abs(df['col_dens'] - key_df['col_dens'])/key_df['col_dens']
-    assert (cd_diff.value < 1e-4).all()
+    assert np.allclose(df['col_dens'], key_df['col_dens'])
 
-        #compare temperatures
-    temp_diff = abs(df['temperature'] - key_df['temperature']) \
-        / key_df['temperature']
-    assert (temp_diff.value < 1e-4).all()
+    # compare temperatures
+    assert np.allclose(df['temperature'], key_df['temperature'])
 
 def test_enzo_generate_catalog(tmp_path, request):
 

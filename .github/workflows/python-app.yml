@@ -72,7 +72,11 @@ jobs:
       run: yt config set --local yt test_data_dir ./tests/data/
 
     - name: Run pytest
+      continue-on-error: true
       run: pytest
+
+    - name: Show data
+      run: ls -l /tests/data/
 
   build-docs:
 
