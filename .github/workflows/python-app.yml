@@ -72,11 +72,7 @@ jobs:
       run: yt config set --local yt test_data_dir ./tests/data/
 
     - name: Run pytest
-      continue-on-error: true
       run: pytest
-
-    - name: Show data
-      run: ls -l ./tests/data/
 
   build-docs:
 
@@ -88,6 +84,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+
+    - name: Install OpenMPI
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: openmpi-bin openmpi-common libopenmpi-dev
 
     - name: Set up Python
       uses: actions/setup-python@v6

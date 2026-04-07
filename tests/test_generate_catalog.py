@@ -6,15 +6,21 @@ import numpy as np
 from astropy.io import ascii
 
 def same_catalog(df, key_df):
+
+    # ensure table order is the same for comparison.
+    # changes in row order do not affect correctness.
+    key_grpd = key_df.group_by(["name","lightray_index"])
+    df_grpd = df.group_by(["name","lightray_index"])
+
     # check number of columns/rows
-    assert len(df) == len(key_df)
-    assert len(df.columns) == len(key_df.columns)
+    assert len(df_grpd) == len(key_grpd)
+    assert len(df_grpd.columns) == len(key_grpd.columns)
 
     # compare column densities
-    assert np.allclose(df['col_dens'], key_df['col_dens'])
+    assert np.allclose(df_grpd['col_dens'], key_grpd['col_dens'])
 
     # compare temperatures
-    assert np.allclose(df['temperature'], key_df['temperature'])
+    assert np.allclose(df_grpd['temperature'], key_grpd['temperature'])
 
 def test_enzo_generate_catalog(tmp_path, request):
 
