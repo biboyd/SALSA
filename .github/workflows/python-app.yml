@@ -35,28 +35,25 @@ jobs:
 
     - name: Make Trident folder
       run: |
-        mkdir -p $HOME/.trident/
+        mkdir -p ~/.trident/
 
-    - name: Cache ion table
+    - name: Cache Trident data
       id: cache-table
       uses: actions/cache@v5
       with:
-        path: $HOME/.trident/hm2012_ss_hr.h5
+        path: ~/.trident/
         key: ${{ runner.os }}-ion-table
 
-    - name: Download ion table
+    - name: Configure Trident
       if: steps.cache-table.outputs.cache-hit != 'true'
       run: |
         wget http://trident-project.org/data/ion_table/hm2012_ss_hr.h5.gz
         gunzip hm2012_ss_hr.h5.gz
-        mv hm2012_ss_hr.h5 $HOME/.trident
+        mv hm2012_ss_hr.h5 ~/.trident/
+        cp .github/scripts/config.tri ~/.trident/
+        ls ~/.trident
 
-    - name: Copy Trident config
-      run: |
-        cp .github/scripts/config.tri $HOME/.trident/
-        ls $HOME/.trident
-
-    - name: Install salsa
+    - name: Install SALSA`
       run: |
         pip install .
 
