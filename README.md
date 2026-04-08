@@ -1,7 +1,7 @@
 # SALSA
-[![Build Status](https://travis-ci.com/biboyd/SALSA.svg?branch=master)](https://travis-ci.com/biboyd/SALSA)
+[![Build Status](https://github.com/biboyd/SALSA/actions/workflows/python-app.yml/badge.svg?branch=master&event=push)](https://github.com/biboyd/SALSA/actions/workflows/python-app.yml)
 [![Documentation Status](https://readthedocs.org/projects/salsa/badge/?version=latest)](https://salsa.readthedocs.io/en/latest/?badge=latest)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/biboyd/SALSA/master?filepath=notebooks%2FExample_notebook.ipynb)
+<!-- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/biboyd/SALSA/master?filepath=notebooks%2FExample_notebook.ipynb) -->
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.02581/status.svg)](https://doi.org/10.21105/joss.02581)
 [![DOI](https://zenodo.org/badge/271633933.svg)](https://zenodo.org/badge/latestdoi/271633933)
 

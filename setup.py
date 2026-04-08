@@ -25,7 +25,7 @@ dev_deps=[
     ]
 
 setup(name="astro-salsa",
-      version="1.0.0",
+      version="2.0.0",
       description = ("Synthetic absorber catalog generator from astrophysical simulations"),
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -41,6 +41,6 @@ setup(name="astro-salsa",
                    "Programming Language :: Python :: 3.12",
                    "Programming Language :: Python :: 3.13",
                    "Programming Language :: Python :: 3.14"],
-      python_requires=">=3.11, <3.15",
+      python_requires=">=3.11",
       install_requires=dependecies,
       extras_require={'dev':dev_deps})
