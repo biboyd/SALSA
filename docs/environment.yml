@@ -1,0 +1,18 @@
+name: salsa
+channels:
+  - conda-forge
+dependencies:
+  - astropy
+  - h5py
+  - matplotlib
+  - numpy
+  - scipy
+  - sphinx
+  - sphinx_rtd_theme
+  - yt
+  - pip
+  - pip:
+    - mpi4py  # auto install OpenMPI
+    - trident
+    - sphinx_automodapi
+
