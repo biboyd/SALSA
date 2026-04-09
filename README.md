@@ -1,7 +1,7 @@
 # SALSA
-[![Build Status](https://github.com/biboyd/SALSA/actions/workflows/python-app.yml/badge.svg?branch=master&event=push)](https://github.com/biboyd/SALSA/actions/workflows/python-app.yml)
+[![Build Status](https://github.com/biboyd/SALSA/actions/workflows/python-app.yml/badge.svg?branch=main&event=push)](https://github.com/biboyd/SALSA/actions/workflows/python-app.yml)
 [![Documentation Status](https://readthedocs.org/projects/salsa/badge/?version=latest)](https://salsa.readthedocs.io/en/latest/?badge=latest)
-<!-- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/biboyd/SALSA/master?filepath=notebooks%2FExample_notebook.ipynb) -->
+<!-- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/biboyd/SALSA/main?filepath=notebooks%2FExample_notebook.ipynb) -->
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.02581/status.svg)](https://doi.org/10.21105/joss.02581)
 [![DOI](https://zenodo.org/badge/271633933.svg)](https://zenodo.org/badge/latestdoi/271633933)
 
@@ -74,7 +74,7 @@ installed in your conda environment!**
 
 ## Getting Started
 For an annotated example [go here](https://salsa.readthedocs.io/en/latest/annotated_example.html). Or launch an interactive jupyter hosted on Binder
-[here](https://mybinder.org/v2/gh/biboyd/SALSA/master?filepath=notebooks%2FExample_notebook.ipynb) (note that the notebook
+[here](https://mybinder.org/v2/gh/biboyd/SALSA/main?filepath=notebooks%2FExample_notebook.ipynb) (note that the notebook
 may take some time to load as it generally has to build the repository).
 
 If you want to explore on your own, the easiest way to get started is use
