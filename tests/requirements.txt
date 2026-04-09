@@ -1,8 +1,0 @@
-mpi4py
-matplotlib<=3.2.1
-numpy==1.16.6
-scipy
-yt
-pandas
-pytest
-pip

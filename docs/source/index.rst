@@ -6,30 +6,42 @@
 Welcome to SALSA's documentation!
 =================================
 
-Salsa is an open-source python module that creates a streamlined process to
+The Synthetic Absorption Line Surveyor Application (SALSA)
+is an open-source Python module that creates a streamlined process to
 generate synthetic absorber catalogs from galactic simulations. Multiple open-source software
-projects utilized to achieve this. Accessing simulation data is done using yt.
-Trident is used to generate synthetic sightlines/lightrays and generate synthetic
-spectra. Spectacle is used to fit voigt profiles to spectra and extract absorbers.
+projects utilized to achieve this: 
+accessing simulation data is done using `yt`_,
+while `Trident`_ is used to generate synthetic 
+sight lines/light rays and synthetic spectra. 
+`Astropy`_ ``QTables`` are used to store data about identified absorbers.
+
+.. _yt: https://yt-project.org/
+.. _Trident: https://trident-project.org/
+.. _Astropy: https://www.astropy.org/
 
 Observational studies generate large absorber catalogs by studying the absorption
-line spectra of distant quasars, as their light passes through intervening galaxies.
-Salsa can generate similar catalogs from cosmological and galactic simulations,
-allowing research to study these simulations from an observers perspective. This
+line spectra of distant quasars.
+As quasar light passes through intervening galaxies,
+each galaxy leaves its "imprint" on the quasar spectrum by absorbing some wavelength of light.
+SALSA can generate similar catalogs from cosmological and galactic simulations,
+allowing research to study these simulations from an observer's perspective. This
 can give new insights into the data as well as help facilitate comparisons and
 collaboration between simulations and observations
 
-In addition a novel method for extracting absorbers, the SPICE method. This uses
-cell level data to extract absorbers from a Trident lightray and returns a great
+SALSA includes a novel method for extracting absorbers, the SPICE method. This uses
+cell-level data to extract absorbers from a Trident ``LightRay`` and returns a great
 deal of information that can be further analyzed.
 
 .. toctree::
    :maxdepth: 2
 
-   installation.rst
-   annotated_example.rst
-   absorber_extraction.rst
-   reference.rst
+   installation
+   annotated_example
+   absorber_extraction
+   parallelism
+   lightray_solution
+   reference
+   changelog
 
 Index
 ==================

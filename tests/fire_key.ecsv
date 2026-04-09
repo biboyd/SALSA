@@ -1,0 +1,45 @@
+# %ECSV 1.0
+# ---
+# datatype:
+# - {name: name, datatype: string}
+# - {name: wave, unit: Angstrom, datatype: float64}
+# - {name: redshift, datatype: float64}
+# - {name: col_dens, unit: 1 / cm2, datatype: float64}
+# - {name: delta_v, unit: km / s, datatype: float64}
+# - {name: vel_dispersion, unit: km / s, datatype: float64}
+# - {name: interval_start, datatype: int64}
+# - {name: interval_end, datatype: int64}
+# - {name: temperature, unit: K, datatype: float64}
+# - {name: lightray_index, datatype: int64}
+# meta: !!omap
+# - __serialized_columns__:
+#     col_dens:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: 1 / cm2}
+#       value: !astropy.table.SerializedColumn {name: col_dens}
+#     delta_v:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: km / s}
+#       value: !astropy.table.SerializedColumn {name: delta_v}
+#     temperature:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: K}
+#       value: !astropy.table.SerializedColumn {name: temperature}
+#     vel_dispersion:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: km / s}
+#       value: !astropy.table.SerializedColumn {name: vel_dispersion}
+#     wave:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: Angstrom}
+#       value: !astropy.table.SerializedColumn {name: wave}
+# schema: astropy-2.0
+name wave redshift col_dens delta_v vel_dispersion interval_start interval_end temperature lightray_index
+"H I" 1215.67 0.0 11662408131990.367 67.00028996998681 8.275651414020675 66 168 993168.962038594 0
+"H I" 1215.67 0.0 14793704461420.033 176.21212554140484 12.220584574466358 451 555 974816.838380314 0
+"H I" 1215.67 0.0 26530928919377.492 -69.36033776876272 11.5032517088861 41 259 991569.5959190781 1
+"H I" 1215.67 0.0 22199619625736.16 -68.3165992868541 29.02284745539351 329 528 1006118.6027113845 1
+"H I" 1215.67 0.0 553858365415854.25 -17.700840777346535 4.641010014375177 529 589 427659.6421431659 1
+"C IV" 1548.187 0.0 13153023657631.963 -21.11794479238083 0.0 545 546 50643.418213437835 1
+"C IV" 1548.187 0.0 15546599961512.822 -16.04477153704445 0.0 547 548 45629.019700925885 1
+"C IV" 1548.187 0.0 13908425275968.508 -16.61271249223145 0.0 550 551 57818.79143520629 1

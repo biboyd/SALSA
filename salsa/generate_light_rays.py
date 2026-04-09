@@ -1,6 +1,8 @@
+import os
 import yt
 import trident
 import numpy as np
+import h5py
 
 from yt.data_objects.static_output import \
     Dataset
@@ -8,9 +10,16 @@ from yt.data_objects.static_output import \
 from mpi4py import MPI
 
 from scipy.spatial.transform import Rotation
-import matplotlib.pyplot as plt
 
-def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_impact_param=0, length=200):
+from unyt.array import unyt_quantity
+from astropy.units.quantity import Quantity
+
+def random_sightlines(ds_file,
+                      center,
+                      num_sightlines, 
+                      max_impact_param,
+                      min_impact_param=0,
+                      length=200):
     """
     randomly sample impact parameter to get random sightlines from a given galaxy center
 
@@ -26,15 +35,18 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
         number of sightlines to return
 
     max_impact_param : float
-        maximum impact param to sample from in kpc
+        maximum impact param to sample from. If no units are attached
+        (either unyt or astropy) it is assumed to be in kpc
 
     min_impact_param : float, optional
-        minimum impact param to sample from in kpc
+        minimum impact param to sample from. If no units are attached
+        (either unyt or astropy) it is assumed to be in kpc
         Default: 0.
 
     length : float, optional
-         length of the sightline in kpc
-         Default: 200
+        length of the sightline. f no units are attached
+        (either unyt or astropy) it is assumed to be in kpc
+        Default: 200
 
     Returns
     --------
@@ -45,7 +57,7 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
         2d array of the endpoints for each sightline in code_length
 
     impact_param : array
-        array of impact parameters for each ray created in kpc
+        array of impact parameters for each ray created in code_length
     """
 
     #set file names and ion name
@@ -54,14 +66,37 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
     elif isinstance(ds_file, Dataset):
         ds = ds_file
 
-    length = ds.quan(length, 'kpc').in_units('code_length')
+    # check for units (unyt or astropy) and convert to unyt/yt code_length
+    if isinstance(min_impact_param, unyt_quantity):
+        min_impact_param = ds.quan(min_impact_param).in_units('code_length')
+    elif isinstance(min_impact_param, Quantity):
+        min_impact_param = ds.quan(min_impact_param, 
+                                   str(min_impact_param.unit)).in_units('code_length')
+    else:
+        min_impact_param = ds.quan(min_impact_param, 'kpc').in_units('code_length')
+
+    if isinstance(max_impact_param, unyt_quantity):
+        max_impact_param = ds.quan(max_impact_param).in_units('code_length')
+    elif isinstance(max_impact_param, Quantity):
+        max_impact_param = ds.quan(max_impact_param, 
+                                   str(max_impact_param.unit)).in_units('code_length')
+    else:
+        max_impact_param = ds.quan(max_impact_param, 'kpc').in_units('code_length')
+
+    if isinstance(length, unyt_quantity):
+        length = ds.quan(length).in_units('code_length')
+    elif isinstance(length, Quantity):
+        length = ds.quan(length, 
+                         str(length.unit)).in_units('code_length')
+    else:
+        length = ds.quan(length, 'kpc').in_units('code_length')
     length = length.value
-    min_impact_param = ds.quan(min_impact_param, 'kpc').in_units('code_length')
-    max_impact_param = ds.quan(max_impact_param, 'kpc').in_units('code_length')
 
     #randomly select angle and distance from center of gal
     #take sqrt so that impact param is uniform in projected area space
-    impact_param = np.sqrt(np.random.uniform(min_impact_param.value**2, max_impact_param.value**2, num_sightlines))
+    impact_param = np.sqrt(np.random.uniform(min_impact_param**2,
+                                             max_impact_param**2,
+                                             num_sightlines))
 
     #theta represents polar angle. phi represents azimuthal
     theta = np.random.uniform(0, np.pi, num_sightlines)
@@ -102,11 +137,12 @@ def random_sightlines(ds_file, center, num_sightlines, max_impact_param, min_imp
 def construct_rays(ds_file,
         start_points,
         end_points,
+        impact_params,
         fld_params=None,
         line_list=None,
         other_fields=None,
         ftype='gas',
-        out_dir='./'):
+        ray_directory='./'):
     """
     Construct rays given a set of starting points and end points.
 
@@ -120,6 +156,10 @@ def construct_rays(ds_file,
 
     end_points : numpy array
         1d array of end points for each ray (code_length)
+
+    impact_params : numpy array
+        1d array of impact parameters for each ray (code_length).
+        Used to save the impact parameter to the ray dataset.
 
     fld_params: dict, optional
         Dictionary of parameters that will be passed to the lightrays. (ie
@@ -141,7 +181,7 @@ def construct_rays(ds_file,
         to be changed. 'PartType0' often works though it varies.
         See trident.make_simple_ray() for more information
 
-    out_dir : str/path
+    ray_directory : str/path
         where to save all of the lightrays
     """
     comm = MPI.COMM_WORLD
@@ -164,17 +204,27 @@ def construct_rays(ds_file,
     split_ray_nums = np.array_split(my_ray_nums, comm.size)
     my_ray_nums = split_ray_nums[ comm.rank]
 
+    if comm.rank == 0:
+        os.makedirs(ray_directory, exist_ok=True)
+    comm.Barrier()
+    
     for i in my_ray_nums:
         #construct ray
-        ray_filename = f"{out_dir}/ray{i:0{pad}d}.h5"
-        trident.make_simple_ray(ds_file,
-                                start_points[i],
-                                end_points[i],
-                                lines=line_list,
-                                fields=other_fields,
-                                ftype=ftype,
-                                field_parameters=fld_params,
-                                data_filename=ray_filename)
+        ray_filename = f"{ray_directory}/ray{i:0{pad}d}.h5"
+        yt_ray = trident.make_simple_ray(ds_file,
+                                         start_points[i],
+                                         end_points[i],
+                                         lines=line_list,
+                                         fields=other_fields,
+                                         ftype=ftype,
+                                         field_parameters=fld_params,
+                                         data_filename=ray_filename)
+        yt_ray.close()  # we no longer need the yt object in memory
+                        # even though this function doesn't actually do anything...
+
+        with h5py.File(ray_filename, "a") as f:
+            f.attrs["light_ray_solution_impact_parameter"] = [impact_params[i]]
+            f.attrs["light_ray_solution_impact_parameter_units"] = "code_length"
 
     comm.Barrier()
 
@@ -186,7 +236,7 @@ def generate_lrays(ds, center,
                 ion_list=['H I', 'C IV', 'O VI'],
                 fields=None,
                 ftype='gas',
-                out_dir='./'):
+                ray_directory='./'):
     """
     Generate a sample of trident lightrays that randomly, uniformly cover
     impact parameter.
@@ -224,7 +274,7 @@ def generate_lrays(ds, center,
         to be changed. 'PartType0' often works though it varies.
         See trident.add_ion_fields() for more information
 
-    out_dir : string
+    ray_directory : string
         path to where ray files will be written
 
     """
@@ -237,19 +287,21 @@ def generate_lrays(ds, center,
                                                  max_impact_param,
                                                  min_impact_param=min_impact_param,
                                                  length=length)
-        imp_param = ds.arr(imp_param, 'code_length').in_units('kpc')
-        np.save(f"{out_dir}/impact_parameter.npy", imp_param)
+        
+        # os.makedirs(ray_directory, exist_ok=True)
+        # imp_param = ds.arr(imp_param, 'code_length').in_units('kpc')
+        # np.save(f"{ray_directory}/impact_parameter.npy", imp_param)
 
     else:
         start_pnts= np.empty((n_rays, 3), dtype=np.float64)
         end_pnts= np.empty((n_rays, 3), dtype=np.float64)
-        #imp_param= np.empty(n_rays, dtype=np.float64)
+        imp_param= np.empty(n_rays, dtype=np.float64)
 
     # share sightline points
     comm.Barrier()
     comm.Bcast([start_pnts, MPI.DOUBLE])
     comm.Bcast([end_pnts, MPI.DOUBLE])
-    #comm.Bcast([imp_param, MPI.DOUBLE])
+    comm.Bcast([imp_param, MPI.DOUBLE])
 
     #add center to field parameters
     fld_params['center']=center
@@ -270,9 +322,9 @@ def generate_lrays(ds, center,
     #add ion fields to dataset if not already there
     trident.add_ion_fields(ds, ions=ion_list, ftype=ftype)
 
-    construct_rays(ds, start_pnts, end_pnts,
+    construct_rays(ds, start_pnts, end_pnts, imp_param,
                    fld_params=fld_params,
                    line_list=ion_list,
                    other_fields=construct_fields,
                    ftype=ftype,
-                   out_dir=out_dir)
+                   ray_directory=ray_directory)

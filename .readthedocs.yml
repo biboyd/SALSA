@@ -1,8 +1,12 @@
 version: 2
 
-conda:
-  environment: docs/rtd_environment.yml
 python:
-   install:
-      - method: setuptools
-        path: .
+  install:
+    - requirements: docs/requirements.txt
+    # Install our python package before building the docs
+    - method: pip
+      path: .
+
+sphinx:
+  configuration: docs/source/conf.py
+  fail_on_warning: true

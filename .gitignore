@@ -1,0 +1,13 @@
+*.egg-info/
+__pycache__/
+build/
+dist/
+
+tests/data/*
+yt.toml
+
+.vscode
+.ipynb_checkpoints
+.pytest_cache
+
+docs/source/api

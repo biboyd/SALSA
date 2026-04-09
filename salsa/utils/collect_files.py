@@ -2,7 +2,6 @@ from os import listdir
 import yt
 from astropy.table import QTable, vstack
 from mpi4py import MPI
-import pandas as pd
 import numpy as np
 
 def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
@@ -33,18 +32,21 @@ def collect_files(directory, file_ext='.h5', key_words=[], black_list=[]):
 
     """
 
-    all_files = listdir(directory)
+    try:
+        all_files = listdir(directory)
+    except FileNotFoundError: # directory doesn't exist
+        return []
 
     # get np files only
     files=[]
     for f in all_files:
         #check has file extension and not black listed
-        if file_ext in f and check_file(f, key_words, black_list):
+        if file_ext in f and _check_file(f, key_words, black_list):
             files.append(f)
 
     return files
 
-def check_file(file, key_words, black_list):
+def _check_file(file, key_words, black_list):
     """
     Check the file against a black list as well as check if it has keywords in
     it.
@@ -105,10 +107,15 @@ def check_rays(ray_dir, n_rays, fields, parallel=True):
 
     """
 
-    ray_files = np.array(collect_files(ray_dir, key_words=['ray']))
+    ray_files = collect_files(ray_dir, key_words=['ray'])
 
     #check if correct number
-    if len(ray_files) == n_rays:
+    if len(ray_files) == 0:
+        print(f"No rays found, Constructing new ones")
+        return False
+    elif len(ray_files) == n_rays:
+
+        ray_files = np.array(ray_files)
 
         if parallel:
             comm = MPI.COMM_WORLD
@@ -138,60 +145,13 @@ def check_rays(ray_dir, n_rays, fields, parallel=True):
         # all rays passed
         return True
     else:
-        if len(ray_files) == 0:
-            print(f"No rays found, Constructing new ones")
-            return False
-        else:
-            raise RuntimeError(f"found {len(ray_files)} rays instead of {n_rays}. Either delete rays or change number of rays to match")
+        raise RuntimeError(f"found {len(ray_files)} rays instead of {n_rays}. Either delete rays or change number of rays to match")
 
-def combine_astropy_files(directory, kw='ice', outfile=None):
-
-    #get files
-    files = collect_files(directory, key_words=['ray', kw])
-
-    tables = []
-    # open up tables
-    for f in files:
-        tables.append(QTable.read(f"{directory}/{f}"))
-
-    if len(tables) >0:
-        #combine tables
-        main_table = vstack(tables)
-
-        #write table
-        if outfile is not None:
-            main_table.write(outfile, overwrite=True)
-    else:
-        out_err = outfile.split('.')[0] + ".out"
-        #write out dummy
-        f= open(out_err, 'w')
-        f.write(f"No files found in {directory} using key_words= ['ray', {kw}]")
-        f.close()
-        main_table = None
-    return main_table
-
-def combine_pandas_files(directory, kw='ice', outfile=None):
-
-    #get files
-    files = collect_files(directory, key_words=['ray', kw])
-
-    dfs = []
-    # open up tables
-    for f in files:
-        dfs.append(pd.read_hdf(f"{directory}/{f}"))
-
-    if len(tables) >0:
-        #combine tables
-        main_table = pd.concat(dfs, ignore_index=True)
-
-        #write table
-        if outfile is not None:
-            main_table.write_hdf(outfile, mode='w')
-    else:
-        out_err = outfile.split('.')[0] + ".out"
-        #write out dummy
-        f= open(out_err, 'w')
-        f.write(f"No files found in {directory} using key_words= ['ray', {kw}]")
-        f.close()
-        main_table = None
-    return main_table
+def get_ray_num(file_path):
+    """
+    extract the ray's number from it's file name by removing 'ray' and '.h5' as
+    well as preceding path
+    """
+    filename = file_path.split('/')[-1]
+    num = filename[3:-3]
+    return int(num)
