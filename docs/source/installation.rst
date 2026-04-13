@@ -78,7 +78,7 @@ in the `SALSA repository`_. Below is some advice/guides to installing a couple o
 trickier packages.
 
 A Note on Conda
-***************
+---------------
 
 `Conda <https://docs.conda.io/en/latest/>`_ is a popular package manager that
 prefers to install wholly contained environments. This can cause issues with packages
@@ -103,7 +103,7 @@ Always make sure you are using the copy of pip associated with your Conda enviro
 .. _install-yt:
 
 Install yt
-**********
+----------
 
 The yt package offers instructions on how to install it on 
 `their website <https://yt-project.org/doc/installing.html#install-stable>`_. 
@@ -112,10 +112,11 @@ Note that if you want to work with a dataset from a particular simulation code,
 there may be additional dependencies that need to be installed. For example, Enzo
 datasets require you to install `h5py <https://docs.h5py.org/en/latest/build.html>`_.
 This in turn depends on having `HDF5 <https://www.hdfgroup.org/solutions/hdf5/>`.
+
 .. _install-trident:
 
 Install Trident
-****************
+---------------
 
 Trident can be installed via pip: ::
 
@@ -136,7 +137,7 @@ For more details see `Trident's documentation`_
 .. _install-mpi4py:
 
 Install mpi4py
-**************
+--------------
 
 The `mpi4py`_ package enables use of MPI parallelism with Python. SALSA uses this to split up light ray
 creation and absorber extraction across multiple processors which becomes necessary
