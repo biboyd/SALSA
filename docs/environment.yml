@@ -5,6 +5,7 @@ dependencies:
   - astropy
   - h5py
   - matplotlib
+  - mpi4py  # auto install OpenMPI
   - numpy
   - scipy
   - sphinx
@@ -12,7 +13,6 @@ dependencies:
   - yt
   - pip
   - pip:
-    - mpi4py  # auto install OpenMPI
     - trident
     - sphinx_automodapi
 
