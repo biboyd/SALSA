@@ -16,10 +16,11 @@
 
 
 # -- Project information -----------------------------------------------------
-
+from datetime import datetime
 project = 'SALSA'
-copyright = '2020, Brendan Boyd'
-author = 'Brendan Boyd'
+author = 'Brendan Boyd, Claire Kopenhafer'
+current_year = datetime.today().strftime("%Y")
+copyright = f'2020-{current_year}, {author}'
 
 # The full version, including alpha/beta/rc tags
 release = '1.0.0'
