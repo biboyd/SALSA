@@ -3,7 +3,7 @@
 [![Documentation Status](https://readthedocs.org/projects/salsa/badge/?version=latest)](https://salsa.readthedocs.io/en/latest/?badge=latest)
 <!-- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/biboyd/SALSA/main?filepath=notebooks%2FExample_notebook.ipynb) -->
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.02581/status.svg)](https://doi.org/10.21105/joss.02581)
-[![DOI](https://zenodo.org/badge/271633933.svg)](https://zenodo.org/badge/latestdoi/271633933)
+[![DOI](https://zenodo.org/badge/19559051.svg)](https://zenodo.org/badge/latestdoi/19559051)
 
 SALSA (Synthetic Absorption Line Surveyor Application) is a Python tool that
 constructs synthetic absorber catalogs from hydrodynamic galaxy simulations.
