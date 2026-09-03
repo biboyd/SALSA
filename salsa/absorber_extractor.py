@@ -263,6 +263,12 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         Set minimum resolution (in km/s) for SPICE to combine regions
         Default: 10
 
+    cell_velocity_res: float or None, optional
+        Maximum allowed line-of-sight velocity change between adjacent cells
+        in an absorber, in km/s. A larger jump starts a new absorber interval.
+        Set to None to disable the cell-to-cell velocity cut.
+        Default: None
+
     absorber_min: float, optional
         Minimum Log Column Density that will be used to define an absorber.
         If None, defaults to either default for specific ion or 13
@@ -281,12 +287,14 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
                  wavelength_center=None,
                  velocity_res=10,
                  absorber_min=None,
-                 frac=0.8):
+                 frac=0.8,
+                 cell_velocity_res=None):
         super().__init__(ds_filename,
                          ion_name, wavelength_center,
                          velocity_res, absorber_min)
 
         self.frac = frac
+        self.cell_velocity_res = cell_velocity_res
 
     def get_current_absorbers(self, fields=[], units_dict={}):
         """
@@ -607,10 +615,17 @@ class SPICEAbsorberExtractor(AbsorberExtractor):
         in_absorber = False
         intervals = []
 
+        velocity = self.ray_data['velocity_los'].in_units('km/s')
+        velocity_cut = None
+        if self.cell_velocity_res is not None:
+            velocity_cut = self.ds.quan(self.cell_velocity_res, 'km/s')
+
         #Iterate over values in field
         for i,value in enumerate(num_density):
-            #Check if started an absorber and if above cutoff
-            if in_absorber and value < cutoff:
+            #Check if started an absorber and if above cutoff and the cell to cell velcocity change is below threshold
+            velocity_break = (in_absorber and velocity_cut is not None and
+                              abs(velocity[i] - velocity[i - 1]) > velocity_cut)
+            if in_absorber and (value < cutoff or velocity_break):
                 in_absorber = False
                 #add interval to list
                 intervals.append((start,i))

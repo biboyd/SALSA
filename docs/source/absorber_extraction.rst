@@ -40,6 +40,11 @@ Quick rundown of SPICE method:
   velocity of each intervals are within a threshold (set by
   :class:`~salsa.AbsorberExtractor.velocity_res` parameter. Default is 10 km/s)
 
+  The cell-to-cell velocity threshold is controlled independently by the
+  ``cell_velocity_res`` parameter on :class:`~salsa.SPICEAbsorberExtractor` and
+  is disabled by default. Set it in ``extractor_kwargs`` to split intervals at
+  sharp velocity changes, for example ``{'cell_velocity_res': 25}``.
+
   7.) Now repeat process starting at step 3 until the total column density that
   is *left over* in the ``LightRay`` (ie not in an interval) is less than some
   the lowest detectable column density (set by :class:`~salsa.AbsorberExtractor.min_absorber`
